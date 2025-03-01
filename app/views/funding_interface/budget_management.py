@@ -1,8 +1,8 @@
 import os
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTreeWidget, 
                                  QLabel, QPushButton, QMessageBox, QSpinBox, QTableWidget, QTableWidgetItem,
                                  QStackedWidget, QTreeWidgetItem)
-from qfluentwidgets import TreeWidget, PrimaryPushButton, TitleLabel, FluentIcon, ToolButton, InfoBar, Dialog
+from qfluentwidgets import PrimaryPushButton, TitleLabel, FluentIcon, ToolButton, InfoBar, Dialog
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon
 from ...components.budget_dialog import BudgetDialog, TotalBudgetDialog
@@ -64,44 +64,57 @@ class BudgetManagementWindow(QWidget):
         layout.addLayout(button_layout)
         
         # 预算树形表格
-        self.budget_tree = TreeWidget()
-        self.budget_tree.setColumnCount(9)
+        self.budget_tree = QTreeWidget()
+        self.budget_tree.setColumnCount(6)  # 减少为6列，删除统计列
         
-        # 设置列宽
-        self.budget_tree.setColumnWidth(0, 115)
-        self.budget_tree.setColumnWidth(1, 100)
-        self.budget_tree.setColumnWidth(2, 100)
-        self.budget_tree.setColumnWidth(3, 100)
-        self.budget_tree.setColumnWidth(4, 100)
-        self.budget_tree.setColumnWidth(5, 100)
-        self.budget_tree.setColumnWidth(6, 100)
-        self.budget_tree.setColumnWidth(7, 300)  # 统计分析列宽度
-        self.budget_tree.setColumnWidth(8, 100)  # 新增空白列宽度
-
+        # 设置列度 
+        self.budget_tree.setColumnWidth(0, 140)  # 增加预算年度列宽度，因为要包含费用类别
+        self.budget_tree.setColumnWidth(1, 100)  # 预算额
+        self.budget_tree.setColumnWidth(2, 100)  # 支出额
+        self.budget_tree.setColumnWidth(3, 100)  # 结余额
+        self.budget_tree.setColumnWidth(4, 100)  # 执行率
+        self.budget_tree.setColumnWidth(5, 100)  # 操作
+        
         # 设置行高
         self.budget_tree.setStyleSheet("""
             QTreeWidget::item {
                 height: 36px;  /* 增加行高 */
                 padding: 2px;
             }
+            QTreeWidget {
+                background-color: transparent;
+                border: 1px solid rgba(0, 0, 0, 0.1);
+                border-radius: 8px;
+                selection-background-color: rgba(0, 120, 212, 0.1);
+                selection-color: black;
+            }
+            QTreeWidget::item:hover {
+                background-color: rgba(0, 0, 0, 0.05);
+            }
+            QHeaderView::section {
+                background-color: #f3f3f3;
+                color: #333333;
+                font-weight: 500;
+                padding: 8px;
+                border: none;
+                border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+                text-align: center;  /* 添加居中对齐 */
+            }
+            QHeaderView::section:hover {
+                background-color: #e5e5e5;
+            }
         """)        
         
         # 设置表头
         self.budget_tree.setHeaderLabels([
-            "预算年度", "费用类别", "预算额(万元)", 
-            "支出额(万元)", "结余额(万元)", "执行率", "操作", "统计分析", ""
+            "预算年度", "预算额(万元)", 
+            "支出额(万元)", "结余额(万元)", "执行率", "操作"
         ])
         self.budget_tree.setAlternatingRowColors(True)
-        self.budget_tree.setBorderRadius(8)
-        self.budget_tree.setBorderVisible(True)
-        
-        # 设置数值列右对齐
-        for col in [2, 3, 4, 5]:
-            self.budget_tree.headerItem().setTextAlignment(col, Qt.AlignRight | Qt.AlignVCenter)
         
         # 为执行率列设置进度条代理
         self.progress_delegate = ProgressBarDelegate(self.budget_tree)
-        self.budget_tree.setItemDelegateForColumn(5, self.progress_delegate)
+        self.budget_tree.setItemDelegateForColumn(4, self.progress_delegate)  # 调整执行率列的索引
 
         layout.addWidget(self.budget_tree)
         
@@ -141,8 +154,8 @@ class BudgetManagementWindow(QWidget):
             # 加载总预算
             total_budget = session.query(Budget).filter(
                 Budget.project_id == self.project.id,
-                Budget.year.is_(None),  # 总预算的year为None
-            ).first()
+                Budget.year.is_(None)
+            ).order_by(Budget.id.asc()).first()
             
             if not total_budget:
                 # 如果没有找到总预算，创建一个
@@ -185,18 +198,18 @@ class BudgetManagementWindow(QWidget):
             for i in range(6):  # 设置所有列的字体为加粗
                 total_item.setFont(i, font)
 
-            total_item.setTextAlignment(2, Qt.AlignRight | Qt.AlignVCenter)
-            total_item.setTextAlignment(3, Qt.AlignRight | Qt.AlignVCenter)
-            total_item.setTextAlignment(4, Qt.AlignRight | Qt.AlignVCenter)
-            total_item.setTextAlignment(5, Qt.AlignRight | Qt.AlignVCenter)
+            total_item.setTextAlignment(1, Qt.AlignRight | Qt.AlignVCenter)  # 预算额右对齐
+            total_item.setTextAlignment(2, Qt.AlignRight | Qt.AlignVCenter)  # 支出额右对齐
+            total_item.setTextAlignment(3, Qt.AlignRight | Qt.AlignVCenter)  # 结余额右对齐
+            total_item.setTextAlignment(4, Qt.AlignRight | Qt.AlignVCenter)  # 执行率右对齐
             
-            total_item.setText(2, f"{total_budget.total_amount:,.2f}")
-            total_item.setText(3, f"{total_spent:,.2f}")  # 使用计算的总支出
-            total_item.setText(4, f"{total_budget.total_amount - total_spent:,.2f}")
+            total_item.setText(1, f"{total_budget.total_amount:,.2f}")  # 预算额
+            total_item.setText(2, f"{total_spent:,.2f}")  # 支出额
+            total_item.setText(3, f"{total_budget.total_amount - total_spent:,.2f}")  # 结余额
             
             if total_budget.total_amount > 0:
                 execution_rate = (total_spent / total_budget.total_amount) * 100
-                total_item.setText(5, f"{execution_rate:.2f}%")
+                total_item.setText(4, f"{execution_rate:.2f}%")
             
             # 计算各科目的总支出
             category_totals = {}
@@ -220,52 +233,42 @@ class BudgetManagementWindow(QWidget):
                 child = QTreeWidgetItem(total_item)
                 if i == 0:
                     first_child = child
-                child.setText(1, category.value)
+                child.setText(0, category.value)
                 
                 # 设置子项字体为加粗
-                child.setFont(1, font)  # 科目名称加粗
-                child.setFont(2, font)  # 预算额加粗
-                child.setFont(3, font)  # 支出额加粗
-                child.setFont(4, font)  # 结余额加粗
-                child.setFont(5, font)  # 执行率加粗
+                child.setFont(0, font)  # 科目名称加粗
+                child.setFont(1, font)  # 预算额加粗
+                child.setFont(2, font)  # 支出额加粗
+                child.setFont(3, font)  # 结余额加粗
+                child.setFont(4, font)  # 执行率加粗
                 
-                child.setTextAlignment(1, Qt.AlignCenter | Qt.AlignVCenter)
+                child.setTextAlignment(0, Qt.AlignCenter | Qt.AlignVCenter)
+                child.setTextAlignment(1, Qt.AlignRight | Qt.AlignVCenter)
                 child.setTextAlignment(2, Qt.AlignRight | Qt.AlignVCenter)
                 child.setTextAlignment(3, Qt.AlignRight | Qt.AlignVCenter)
                 child.setTextAlignment(4, Qt.AlignRight | Qt.AlignVCenter)
-                child.setTextAlignment(5, Qt.AlignRight | Qt.AlignVCenter)
                 
                 # 查找该类别的预算子项
                 budget_item = next((item for item in budget_items if item.category == category), None)
                 if budget_item:
                     category_spent = category_totals[category]  # 使用计算的科目总支出
-                    child.setText(2, f"{budget_item.amount:,.2f}")
-                    child.setText(3, f"{category_spent:,.2f}")
-                    child.setText(4, f"{budget_item.amount - category_spent:,.2f}")
+                    child.setText(1, f"{budget_item.amount:,.2f}")
+                    child.setText(2, f"{category_spent:,.2f}")
+                    child.setText(3, f"{budget_item.amount - category_spent:,.2f}")
                     
                     if budget_item.amount > 0:
                         execution_rate = (category_spent / budget_item.amount) * 100
-                        child.setText(5, f"{execution_rate:.2f}%")
+                        child.setText(4, f"{execution_rate:.2f}%")
                 else:
                     # 如果没有找到预算子项，显示0
+                    child.setText(1, "0.00")
                     child.setText(2, "0.00")
                     child.setText(3, "0.00")
-                    child.setText(4, "0.00")
             
             # 创建总预算的统计图表并设置为跨越所有子项
             if first_child:
-                chart_widget = BudgetChartWidget()
-                chart_widget.plot_category_distribution(budget_items)
-                # 创建一个容器来承载图表
-                chart_container = QWidget()
-                chart_layout = QVBoxLayout(chart_container)
-                chart_layout.setContentsMargins(0, 0, 0, 0)
-                chart_layout.addWidget(chart_widget)
-                # 设置容器的固定高度以跨越所有子项
-                row_height = 36  # 与TreeWidget::item样式中设置的行高保持一致
-                chart_container.setFixedHeight(len(BudgetCategory) * row_height)
-                # 只在第一个子项中显示图表
-                self.budget_tree.setItemWidget(first_child, 7, chart_container)
+                # 移除统计图表相关代码
+                pass
             
             # 加载年度预算
             annual_budgets = session.query(Budget).filter(
@@ -277,18 +280,18 @@ class BudgetManagementWindow(QWidget):
                 year_item = QTreeWidgetItem(self.budget_tree)
                 year_item.setText(0, f" {budget.year}年度")
                
-                year_item.setTextAlignment(2, Qt.AlignRight | Qt.AlignVCenter)  # 预算额右对齐
-                year_item.setTextAlignment(3, Qt.AlignRight | Qt.AlignVCenter)  # 支出额右对齐
-                year_item.setTextAlignment(4, Qt.AlignRight | Qt.AlignVCenter)  # 结余额右对齐
-                year_item.setTextAlignment(5, Qt.AlignRight | Qt.AlignVCenter)  # 执行率右对齐
+                year_item.setTextAlignment(1, Qt.AlignRight | Qt.AlignVCenter)  # 预算额右对齐
+                year_item.setTextAlignment(2, Qt.AlignRight | Qt.AlignVCenter)  # 支出额右对齐
+                year_item.setTextAlignment(3, Qt.AlignRight | Qt.AlignVCenter)  # 结余额右对齐
+                year_item.setTextAlignment(4, Qt.AlignRight | Qt.AlignVCenter)  # 执行率右对齐
                 
-                year_item.setText(2, f"{budget.total_amount:,.2f}")
-                year_item.setText(3, f"{budget.spent_amount:,.2f}")
-                year_item.setText(4, f"{budget.total_amount - budget.spent_amount:,.2f}")
+                year_item.setText(1, f"{budget.total_amount:,.2f}")  # 预算额
+                year_item.setText(2, f"{budget.spent_amount:,.2f}")  # 支出额
+                year_item.setText(3, f"{budget.total_amount - budget.spent_amount:,.2f}")  # 结余额
                 
                 if budget.total_amount > 0:
                     execution_rate = (budget.spent_amount / budget.total_amount) * 100
-                    year_item.setText(5, f"{execution_rate:.2f}%")
+                    year_item.setText(4, f"{execution_rate:.2f}%")
                 
                 # 添加支出管理按钮
                 btn_widget = QWidget()
@@ -305,7 +308,7 @@ class BudgetManagementWindow(QWidget):
                 # 设置图标大小
                 expense_btn.setIconSize(QSize(18, 18))
                 
-                self.budget_tree.setItemWidget(year_item, 6, btn_widget)
+                self.budget_tree.setItemWidget(year_item, 5, btn_widget)
                 
                 # 添加年度预算的统计图表
                 chart_widget = BudgetChartWidget()
@@ -320,28 +323,28 @@ class BudgetManagementWindow(QWidget):
                 budget_items = session.query(BudgetItem).filter_by(budget_id=budget.id).all()
                 for category in BudgetCategory:
                     child = QTreeWidgetItem(year_item)
-                    child.setText(1, category.value)
-                    child.setTextAlignment(1, Qt.AlignCenter | Qt.AlignVCenter)  # 预算额右对齐
-                    child.setTextAlignment(2, Qt.AlignRight | Qt.AlignVCenter)  # 预算额右对齐
-                    child.setTextAlignment(3, Qt.AlignRight | Qt.AlignVCenter)  # 支出额右对齐
-                    child.setTextAlignment(4, Qt.AlignRight | Qt.AlignVCenter)  # 结余额右对齐
-                    child.setTextAlignment(5, Qt.AlignRight | Qt.AlignVCenter)  # 执行率右对齐
+                    child.setText(0, category.value)
+                    child.setTextAlignment(0, Qt.AlignCenter | Qt.AlignVCenter)  # 费用类别居中对齐
+                    child.setTextAlignment(1, Qt.AlignRight | Qt.AlignVCenter)  # 预算额右对齐
+                    child.setTextAlignment(2, Qt.AlignRight | Qt.AlignVCenter)  # 支出额右对齐
+                    child.setTextAlignment(3, Qt.AlignRight | Qt.AlignVCenter)  # 结余额右对齐
+                    child.setTextAlignment(4, Qt.AlignRight | Qt.AlignVCenter)  # 执行率右对齐
                     
                     # 查找该类别的预算子项
                     budget_item = next((item for item in budget_items if item.category == category), None)
                     if budget_item:
-                        child.setText(2, f"{budget_item.amount:,.2f}")
-                        child.setText(3, f"{budget_item.spent_amount:,.2f}")
-                        child.setText(4, f"{budget_item.amount - budget_item.spent_amount:,.2f}")
+                        child.setText(1, f"{budget_item.amount:,.2f}")
+                        child.setText(2, f"{budget_item.spent_amount:,.2f}")
+                        child.setText(3, f"{budget_item.amount - budget_item.spent_amount:,.2f}")
                         
                         if budget_item.amount > 0:
                             execution_rate = (budget_item.spent_amount / budget_item.amount) * 100
-                            child.setText(5, f"{execution_rate:.2f}%")
+                            child.setText(4, f"{execution_rate:.2f}%")
                     else:
                         # 如果没有找到预算子项，显示0
+                        child.setText(1, "0.00")
                         child.setText(2, "0.00")
                         child.setText(3, "0.00")
-                        child.setText(4, "0.00")
             
             self.budget_tree.expandAll()
             # 禁用自动调整列宽，使用手动设置的列宽
