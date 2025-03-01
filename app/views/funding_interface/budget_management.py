@@ -7,12 +7,13 @@ from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon
 from ...components.budget_dialog import BudgetDialog, TotalBudgetDialog
 from .expense_management import ExpenseManagementWindow
-from ...models.database import sessionmaker, Budget, BudgetCategory, BudgetItem
+from ...models.database import sessionmaker, Budget, BudgetCategory, BudgetItem, Expense
 from datetime import datetime
 from sqlalchemy import func
 from ...components.progress_bar_delegate import ProgressBarDelegate
 from ...utils.ui_utils import UIUtils
 from ...utils.db_utils import DBUtils
+from ...components.budget_chart_widget import BudgetChartWidget
 
 class BudgetManagementWindow(QWidget):
     def __init__(self, engine, project):   
@@ -64,9 +65,9 @@ class BudgetManagementWindow(QWidget):
         
         # 预算树形表格
         self.budget_tree = TreeWidget()
-        self.budget_tree.setColumnCount(8)
+        self.budget_tree.setColumnCount(9)
         
-        # 设置列度 
+        # 设置列宽
         self.budget_tree.setColumnWidth(0, 115)
         self.budget_tree.setColumnWidth(1, 100)
         self.budget_tree.setColumnWidth(2, 100)
@@ -74,7 +75,8 @@ class BudgetManagementWindow(QWidget):
         self.budget_tree.setColumnWidth(4, 100)
         self.budget_tree.setColumnWidth(5, 100)
         self.budget_tree.setColumnWidth(6, 100)
-        self.budget_tree.setColumnWidth(7, 100)  # 新增空白列宽度
+        self.budget_tree.setColumnWidth(7, 300)  # 统计分析列宽度
+        self.budget_tree.setColumnWidth(8, 100)  # 新增空白列宽度
 
         # 设置行高
         self.budget_tree.setStyleSheet("""
@@ -87,7 +89,7 @@ class BudgetManagementWindow(QWidget):
         # 设置表头
         self.budget_tree.setHeaderLabels([
             "预算年度", "费用类别", "预算额(万元)", 
-            "支出额(万元)", "结余额(万元)", "执行率", "操作", ""
+            "支出额(万元)", "结余额(万元)", "执行率", "操作", "统计分析", ""
         ])
         self.budget_tree.setAlternatingRowColors(True)
         self.budget_tree.setBorderRadius(8)
@@ -139,7 +141,7 @@ class BudgetManagementWindow(QWidget):
             # 加载总预算
             total_budget = session.query(Budget).filter(
                 Budget.project_id == self.project.id,
-                Budget.year.is_(None)  # 总预算的year为None
+                Budget.year.is_(None),  # 总预算的year为None
             ).first()
             
             if not total_budget:
@@ -173,8 +175,11 @@ class BudgetManagementWindow(QWidget):
             # 创建总预算树项
             total_item = QTreeWidgetItem(self.budget_tree)
             total_item.setText(0, " 总预算")
-
-             # 设置总预算行的字体为加粗和行高
+            
+            # 获取总预算子项
+            budget_items = session.query(BudgetItem).filter_by(budget_id=total_budget.id).all()
+            
+            # 设置总预算行的字体为加粗和行高
             font = total_item.font(0)
             font.setBold(True)
             for i in range(6):  # 设置所有列的字体为加粗
@@ -210,8 +215,11 @@ class BudgetManagementWindow(QWidget):
             
             # 添加总预算子项
             budget_items = session.query(BudgetItem).filter_by(budget_id=total_budget.id).all()
-            for category in BudgetCategory:
+            first_child = None
+            for i, category in enumerate(BudgetCategory):
                 child = QTreeWidgetItem(total_item)
+                if i == 0:
+                    first_child = child
                 child.setText(1, category.value)
                 
                 # 设置子项字体为加粗
@@ -243,6 +251,21 @@ class BudgetManagementWindow(QWidget):
                     child.setText(2, "0.00")
                     child.setText(3, "0.00")
                     child.setText(4, "0.00")
+            
+            # 创建总预算的统计图表并设置为跨越所有子项
+            if first_child:
+                chart_widget = BudgetChartWidget()
+                chart_widget.plot_category_distribution(budget_items)
+                # 创建一个容器来承载图表
+                chart_container = QWidget()
+                chart_layout = QVBoxLayout(chart_container)
+                chart_layout.setContentsMargins(0, 0, 0, 0)
+                chart_layout.addWidget(chart_widget)
+                # 设置容器的固定高度以跨越所有子项
+                row_height = 36  # 与TreeWidget::item样式中设置的行高保持一致
+                chart_container.setFixedHeight(len(BudgetCategory) * row_height)
+                # 只在第一个子项中显示图表
+                self.budget_tree.setItemWidget(first_child, 7, chart_container)
             
             # 加载年度预算
             annual_budgets = session.query(Budget).filter(
@@ -283,6 +306,15 @@ class BudgetManagementWindow(QWidget):
                 expense_btn.setIconSize(QSize(18, 18))
                 
                 self.budget_tree.setItemWidget(year_item, 6, btn_widget)
+                
+                # 添加年度预算的统计图表
+                chart_widget = BudgetChartWidget()
+                # 获取该年度的支出记录
+                expenses = session.query(Expense).filter(
+                    Expense.budget_id == budget.id
+                ).all()
+                chart_widget.update_charts(budget_items=budget_items, expenses=expenses)
+                self.budget_tree.setItemWidget(year_item, 7, chart_widget)
                 
                 # 加载年度预算子项
                 budget_items = session.query(BudgetItem).filter_by(budget_id=budget.id).all()

@@ -5,9 +5,8 @@ import sys
 def run_nuitka_build():
     # 获取项目根目录
     project_root = os.path.dirname(os.path.abspath(__file__))
-    src_dir = os.path.join(project_root, 'src')
-    main_file = os.path.join(src_dir, 'main.py')
-    icon_file = os.path.join(src_dir, 'assets', 'icon.ico')
+    main_file = os.path.join(project_root, 'run.py')
+    icon_file = os.path.join(project_root, 'app', 'assets', 'icon.ico')
     
     # 构建Nuitka命令
     cmd = [
@@ -19,8 +18,10 @@ def run_nuitka_build():
         '--include-package=dateutil',  # 包含python-dateutil包
         '--include-package=sqlalchemy',  # 包含SQLAlchemy包
         '--include-package=openpyxl',  # 包含openpyxl包
+        '--include-package=matplotlib',  # 包含matplotlib包
+        '--include-package=qfluentwidgets',  # 包含qfluentwidgets包
         '--include-package-data=matplotlib',  # 包含matplotlib数据文件
-        '--include-data-dir=%s=assets' % os.path.join(src_dir, 'assets'),  # 包含assets目录
+        '--include-data-dir=%s=app/assets' % os.path.join(project_root, 'app', 'assets'),  # 包含assets目录
         '--output-dir=%s' % os.path.join(project_root, 'dist'),  # 输出目录
         '--assume-yes-for-downloads',  # 自动下载依赖
         '--jobs=4',  # 使用4个CPU核心编译

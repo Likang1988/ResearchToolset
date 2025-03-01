@@ -4,10 +4,15 @@ from PySide6.QtWidgets import QApplication
 from app.views.main_window import MainWindow
 from app.models.database import init_db, migrate_db, Base
 import logging
+import matplotlib as mpl
 
 def main():
     # 设置日志
     logging.basicConfig(level=logging.DEBUG)
+    
+    # 设置matplotlib中文字体
+    mpl.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'Arial']
+    mpl.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
     
     # Create Qt application
     app = QApplication(sys.argv)
