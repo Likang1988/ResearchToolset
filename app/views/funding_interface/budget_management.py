@@ -71,13 +71,13 @@ class BudgetManagementWindow(QWidget):
         header = self.budget_tree.header()
         header.setDefaultAlignment(Qt.AlignCenter)  # 设置表头默认对齐方式为居中对齐
         
-        # 设置列度 
-        self.budget_tree.setColumnWidth(0, 140)  # 增加预算年度列宽度，因为要包含费用类别
+        # 设置列宽
+        self.budget_tree.setColumnWidth(0, 140)  # 预算年度
         self.budget_tree.setColumnWidth(1, 100)  # 预算额
         self.budget_tree.setColumnWidth(2, 100)  # 支出额
         self.budget_tree.setColumnWidth(3, 100)  # 结余额
         self.budget_tree.setColumnWidth(4, 100)  # 执行率
-        self.budget_tree.setColumnWidth(5, 100)  # 操作
+        self.budget_tree.setColumnWidth(5, 300)  # 操作/统计图表
         
         # 设置行高
         self.budget_tree.setStyleSheet("""
@@ -111,7 +111,7 @@ class BudgetManagementWindow(QWidget):
         # 设置表头
         self.budget_tree.setHeaderLabels([
             "预算年度", "预算额(万元)", 
-            "支出额(万元)", "结余额(万元)", "执行率", "操作"
+            "支出额(万元)", "结余额(万元)", "执行率", "操作 / 统计"
         ])
        
 
@@ -270,10 +270,31 @@ class BudgetManagementWindow(QWidget):
                     child.setText(2, "0.00")
                     child.setText(3, "0.00")
             
-            # 创建总预算的统计图表并设置为跨越所有子项
-            if first_child:
-                # 移除统计图表相关代码
-                pass
+            # 创建总预算的统计图表
+            chart_widget = BudgetChartWidget()
+            # 获取总预算的支出记录
+            expenses = session.query(Expense).filter(
+                Expense.budget_id.in_(
+                    session.query(Budget.id).filter(
+                        Budget.project_id == self.project.id
+                    )
+                )
+            ).all()
+            # 获取总预算项
+            total_budget_items = session.query(BudgetItem).filter_by(
+                budget_id=total_budget.id
+            ).all()
+            chart_widget.update_charts(budget_items=total_budget_items, expenses=expenses)
+            
+            # 将图表添加到第6列（索引为5）
+            self.budget_tree.setItemWidget(total_item, 5, chart_widget)
+            
+            # 连接折叠信号
+            self.budget_tree.itemExpanded.connect(lambda item: chart_widget.setVisible(True) if item == total_item else None)
+            self.budget_tree.itemCollapsed.connect(lambda item: chart_widget.setVisible(False) if item == total_item else None)
+            
+            # 初始状态根据父项是否展开
+            chart_widget.setVisible(total_item.isExpanded())
             
             # 加载年度预算
             annual_budgets = session.query(Budget).filter(
@@ -321,8 +342,21 @@ class BudgetManagementWindow(QWidget):
                 expenses = session.query(Expense).filter(
                     Expense.budget_id == budget.id
                 ).all()
-                chart_widget.update_charts(budget_items=budget_items, expenses=expenses)
-                self.budget_tree.setItemWidget(year_item, 7, chart_widget)
+                # 获取当前年度的预算项
+                current_budget_items = session.query(BudgetItem).filter_by(
+                    budget_id=budget.id
+                ).all()
+                chart_widget.update_charts(budget_items=current_budget_items, expenses=expenses)
+                
+                # 将图表添加到第6列（索引为5）
+                self.budget_tree.setItemWidget(year_item, 5, chart_widget)
+                
+                # 连接折叠信号
+                self.budget_tree.itemExpanded.connect(lambda item: chart_widget.setVisible(True) if item == year_item else None)
+                self.budget_tree.itemCollapsed.connect(lambda item: chart_widget.setVisible(False) if item == year_item else None)
+                
+                # 初始状态根据父项是否展开
+                chart_widget.setVisible(year_item.isExpanded())
                 
                 # 加载年度预算子项
                 budget_items = session.query(BudgetItem).filter_by(budget_id=budget.id).all()
