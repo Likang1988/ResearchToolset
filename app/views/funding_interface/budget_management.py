@@ -67,6 +67,10 @@ class BudgetManagementWindow(QWidget):
         self.budget_tree = QTreeWidget()
         self.budget_tree.setColumnCount(6)  # 减少为6列，删除统计列
         
+        # 获取表头并设置居中对齐
+        header = self.budget_tree.header()
+        header.setDefaultAlignment(Qt.AlignCenter)  # 设置表头默认对齐方式为居中对齐
+        
         # 设置列度 
         self.budget_tree.setColumnWidth(0, 140)  # 增加预算年度列宽度，因为要包含费用类别
         self.budget_tree.setColumnWidth(1, 100)  # 预算额
@@ -91,14 +95,13 @@ class BudgetManagementWindow(QWidget):
             QTreeWidget::item:hover {
                 background-color: rgba(0, 0, 0, 0.05);
             }
-            QHeaderView::section {
+            QTreeWidget QHeaderView::section {
                 background-color: #f3f3f3;
                 color: #333333;
                 font-weight: 500;
                 padding: 8px;
                 border: none;
                 border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-                text-align: center;  /* 添加居中对齐 */
             }
             QHeaderView::section:hover {
                 background-color: #e5e5e5;
@@ -110,7 +113,9 @@ class BudgetManagementWindow(QWidget):
             "预算年度", "预算额(万元)", 
             "支出额(万元)", "结余额(万元)", "执行率", "操作"
         ])
-        self.budget_tree.setAlternatingRowColors(True)
+       
+
+        self.budget_tree.setAlternatingRowColors(True)  # 启用交替行颜色
         
         # 为执行率列设置进度条代理
         self.progress_delegate = ProgressBarDelegate(self.budget_tree)
@@ -303,10 +308,10 @@ class BudgetManagementWindow(QWidget):
                 expense_btn.setToolTip("支出管理")
                 expense_btn.clicked.connect(lambda checked=False, b=budget: self.open_expense_management(b))
                 btn_layout.addWidget(expense_btn)
-                # 按钮大小
-                expense_btn.setFixedSize(24, 24)
+                # 按钮大小 - 增加尺寸以提高用户体验
+                expense_btn.setFixedSize(28, 28)
                 # 设置图标大小
-                expense_btn.setIconSize(QSize(18, 18))
+                expense_btn.setIconSize(QSize(22, 22))
                 
                 self.budget_tree.setItemWidget(year_item, 5, btn_widget)
                 
