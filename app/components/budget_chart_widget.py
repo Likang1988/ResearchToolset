@@ -46,9 +46,11 @@ class BudgetChartBase(ABC):
         chart.legend().setAlignment(Qt.AlignBottom)
         
         series = QPieSeries()
+        total_amount = sum(amount for amount in data_dict.values() if amount > 0)
         for i, (label, amount) in enumerate(sorted(data_dict.items())):
             if amount > 0:
-                slice = QPieSlice(f"{label}: {amount:.2f}万元", amount)
+                percentage = (amount / total_amount) * 100
+                slice = QPieSlice(f"{label}: {amount:.2f}万元 ({percentage:.1f}%)", amount)
                 slice.setLabelVisible(True)
                 slice.setBrush(self.colors[i % len(self.colors)])
                 series.append(slice)
@@ -77,8 +79,9 @@ class TotalBudgetChart(BudgetChartBase):
     def show_category_distribution(self):
         """显示总预算的类别分布"""
         category_amounts = defaultdict(float)
-        for item in self.budget_items:
-            category_amounts[item.category.value] += item.amount / 10000
+        # 统计所有年度预算中各类费用的支出金额
+        for expense in self.expenses:
+            category_amounts[expense.category.value] += expense.amount / 10000
         
         return self.create_pie_chart("总预算类别分布", category_amounts)
     
