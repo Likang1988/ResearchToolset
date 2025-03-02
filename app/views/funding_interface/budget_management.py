@@ -286,15 +286,14 @@ class BudgetManagementWindow(QWidget):
             ).all()
             chart_widget.update_charts(budget_items=total_budget_items, expenses=expenses)
             
-            # 将图表添加到第6列（索引为5）
-            self.budget_tree.setItemWidget(total_item, 5, chart_widget)
-            
-            # 连接折叠信号
-            self.budget_tree.itemExpanded.connect(lambda item: chart_widget.setVisible(True) if item == total_item else None)
-            self.budget_tree.itemCollapsed.connect(lambda item: chart_widget.setVisible(False) if item == total_item else None)
-            
-            # 初始状态根据父项是否展开
-            chart_widget.setVisible(total_item.isExpanded())
+            # 将图表添加到设备费类别的单元格中
+            if first_child:
+                self.budget_tree.setItemWidget(first_child, 5, chart_widget)
+                # 连接折叠信号
+                self.budget_tree.itemExpanded.connect(lambda item: chart_widget.setVisible(True) if item == total_item else None)
+                self.budget_tree.itemCollapsed.connect(lambda item: chart_widget.setVisible(False) if item == total_item else None)
+                # 初始状态根据父项是否展开
+                chart_widget.setVisible(total_item.isExpanded())
             
             # 加载年度预算
             annual_budgets = session.query(Budget).filter(
@@ -348,15 +347,20 @@ class BudgetManagementWindow(QWidget):
                 ).all()
                 chart_widget.update_charts(budget_items=current_budget_items, expenses=expenses)
                 
-                # 将图表添加到第6列（索引为5）
-                self.budget_tree.setItemWidget(year_item, 5, chart_widget)
+                # 将图表添加到设备费类别的单元格中
+                first_child = None
+                for child in range(year_item.childCount()):
+                    if year_item.child(child).text(0) == BudgetCategory.EQUIPMENT.value:
+                        first_child = year_item.child(child)
+                        break
                 
-                # 连接折叠信号
-                self.budget_tree.itemExpanded.connect(lambda item: chart_widget.setVisible(True) if item == year_item else None)
-                self.budget_tree.itemCollapsed.connect(lambda item: chart_widget.setVisible(False) if item == year_item else None)
-                
-                # 初始状态根据父项是否展开
-                chart_widget.setVisible(year_item.isExpanded())
+                if first_child:
+                    self.budget_tree.setItemWidget(first_child, 5, chart_widget)
+                    # 连接折叠信号
+                    self.budget_tree.itemExpanded.connect(lambda item: chart_widget.setVisible(True) if item == year_item else None)
+                    self.budget_tree.itemCollapsed.connect(lambda item: chart_widget.setVisible(False) if item == year_item else None)
+                    # 初始状态根据父项是否展开
+                    chart_widget.setVisible(year_item.isExpanded())
                 
                 # 加载年度预算子项
                 budget_items = session.query(BudgetItem).filter_by(budget_id=budget.id).all()
@@ -384,6 +388,31 @@ class BudgetManagementWindow(QWidget):
                         child.setText(1, "0.00")
                         child.setText(2, "0.00")
                         child.setText(3, "0.00")
+                    
+                    # 如果是设备费类别，保存引用以便后续添加图表
+                    if category == BudgetCategory.EQUIPMENT:
+                        first_child = child
+
+                # 创建年度预算的统计图表
+                chart_widget = BudgetChartWidget()
+                # 获取该年度的支出记录
+                expenses = session.query(Expense).filter(
+                    Expense.budget_id == budget.id
+                ).all()
+                # 获取当前年度的预算项
+                current_budget_items = session.query(BudgetItem).filter_by(
+                    budget_id=budget.id
+                ).all()
+                chart_widget.update_charts(budget_items=current_budget_items, expenses=expenses)
+                
+                # 将图表添加到设备费类别的单元格中
+                if first_child:
+                    self.budget_tree.setItemWidget(first_child, 5, chart_widget)
+                    # 连接折叠信号
+                    self.budget_tree.itemExpanded.connect(lambda item: chart_widget.setVisible(True) if item == year_item else None)
+                    self.budget_tree.itemCollapsed.connect(lambda item: chart_widget.setVisible(False) if item == year_item else None)
+                    # 初始状态根据父项是否展开
+                    chart_widget.setVisible(year_item.isExpanded())
             
             self.budget_tree.expandAll()
             # 禁用自动调整列宽，使用手动设置的列宽
