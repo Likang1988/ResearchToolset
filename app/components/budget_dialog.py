@@ -133,6 +133,51 @@ class TotalBudgetDialog(QDialog):
         total = sum(spinbox.value() for spinbox in self.amount_inputs.values())
         self.total_label.setText(f"{total:.2f}")
                 
+    def update_balance_amounts(self):
+        """更新各费用类别的结余金额显示"""
+        Session = sessionmaker(bind=self.parent().engine)
+        session = Session()
+        
+        try:
+            # 获取总预算
+            total_budget = session.query(Budget).filter(
+                Budget.project_id == self.parent().project.id,
+                Budget.year.is_(None)
+            ).first()
+            
+            if total_budget:
+                # 获取总预算子项
+                total_budget_items = session.query(BudgetItem).filter_by(
+                    budget_id=total_budget.id
+                ).all()
+                
+                # 获取所有年度预算的支出总和（按类别）
+                category_totals = {}
+                for category in BudgetCategory:
+                    category_spent = session.query(func.sum(BudgetItem.spent_amount)).filter(
+                        BudgetItem.budget_id.in_(
+                            session.query(Budget.id).filter(
+                                Budget.project_id == self.parent().project.id,
+                                Budget.year.isnot(None)  # 只计算年度预算
+                            )
+                        ),
+                        BudgetItem.category == category
+                    ).scalar() or 0.0
+                    category_totals[category] = category_spent
+                
+                # 更新结余金额显示
+                for category in BudgetCategory:
+                    budget_item = next((item for item in total_budget_items if item.category == category), None)
+                    if budget_item:
+                        category_spent = category_totals[category]
+                        balance = budget_item.amount - category_spent
+                        self.balance_labels[category].setText(f"{balance:.2f} 万元")
+                    else:
+                        self.balance_labels[category].setText("0.00 万元")
+            
+        finally:
+            session.close()
+            
     def validate_and_accept(self):
         """验证并保存总预算数据"""
         total = sum(spinbox.value() for spinbox in self.amount_inputs.values())
@@ -187,6 +232,7 @@ class BudgetDialog(QDialog):
         else:
             self.setWindowTitle("添加年度预算")
             self.year_spin.setEnabled(True)  # 添加时启用年份选择
+            self.update_balance_amounts()  # 添加时更新结余金额
             
     def setup_ui(self):
         """
@@ -209,18 +255,41 @@ class BudgetDialog(QDialog):
         # 预算金额输入
         amount_group = QGroupBox("预算金额")
         amount_layout = QGridLayout()
+        amount_layout.setSpacing(10)
+        
+        # 添加表头
+        header_category = BodyLabel("费用类别")
+        header_budget = BodyLabel("预算金额")
+        header_balance = BodyLabel("结余金额")
+        amount_layout.addWidget(header_category, 0, 0)
+        amount_layout.addWidget(header_budget, 0, 1)
+        amount_layout.addWidget(header_balance, 0, 2)
         
         self.amount_inputs = {}
+        self.balance_labels = {}
         for i, category in enumerate(BudgetCategory):
+            # 费用类别标签
             label = BodyLabel(f"{category.value}:")
+            label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+            
+            # 预算金额输入框
             spinbox = DoubleSpinBox()
             spinbox.setRange(0, 999999999)
             spinbox.setDecimals(2)
             spinbox.setSuffix(" 万元")
             spinbox.setValue(0.00)
+            spinbox.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
             self.amount_inputs[category] = spinbox
-            amount_layout.addWidget(label, i // 2, (i % 2) * 2)
-            amount_layout.addWidget(spinbox, i // 2, (i % 2) * 2 + 1)
+            
+            # 结余金额标签
+            balance_label = BodyLabel("0.00 万元")
+            balance_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+            self.balance_labels[category] = balance_label
+            
+            # 添加到布局
+            amount_layout.addWidget(label, i + 1, 0)
+            amount_layout.addWidget(spinbox, i + 1, 1)
+            amount_layout.addWidget(balance_label, i + 1, 2)
             
         amount_group.setLayout(amount_layout)
         
@@ -287,6 +356,51 @@ class BudgetDialog(QDialog):
         total = sum(spinbox.value() for spinbox in self.amount_inputs.values())
         self.total_label.setText(f"{total:.2f} 万元")
         
+    def update_balance_amounts(self):
+        """更新各费用类别的结余金额显示"""
+        Session = sessionmaker(bind=self.parent().engine)
+        session = Session()
+        
+        try:
+            # 获取总预算
+            total_budget = session.query(Budget).filter(
+                Budget.project_id == self.parent().project.id,
+                Budget.year.is_(None)
+            ).first()
+            
+            if total_budget:
+                # 获取总预算子项
+                total_budget_items = session.query(BudgetItem).filter_by(
+                    budget_id=total_budget.id
+                ).all()
+                
+                # 获取所有年度预算的支出总和（按类别）
+                category_totals = {}
+                for category in BudgetCategory:
+                    category_spent = session.query(func.sum(BudgetItem.spent_amount)).filter(
+                        BudgetItem.budget_id.in_(
+                            session.query(Budget.id).filter(
+                                Budget.project_id == self.parent().project.id,
+                                Budget.year.isnot(None)  # 只计算年度预算
+                            )
+                        ),
+                        BudgetItem.category == category
+                    ).scalar() or 0.0
+                    category_totals[category] = category_spent
+                
+                # 更新结余金额显示
+                for category in BudgetCategory:
+                    budget_item = next((item for item in total_budget_items if item.category == category), None)
+                    if budget_item:
+                        category_spent = category_totals[category]
+                        balance = budget_item.amount - category_spent
+                        self.balance_labels[category].setText(f"{balance:.2f} 万元")
+                    else:
+                        self.balance_labels[category].setText("0.00 万元")
+            
+        finally:
+            session.close()
+            
     def validate_and_accept(self):
         """验证并保存预算数据"""
         total = sum(spinbox.value() for spinbox in self.amount_inputs.values())
