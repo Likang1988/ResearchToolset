@@ -445,7 +445,7 @@ class BudgetManagementWindow(QWidget):
             ).with_for_update().first()
             
             if not total_budget or total_budget.total_amount <= 0:
-                InfoBar.warning(
+                UIUtils.show_warning(
                     title="警告", 
                     content="请先设置总预算！",
                     parent=self
@@ -460,7 +460,7 @@ class BudgetManagementWindow(QWidget):
             
             remaining_budget = total_budget.total_amount - annual_total
             if remaining_budget <= 0:
-                InfoBar.warning(
+                UIUtils.show_warning(
                     title="警告", 
                     content="已达到总预算限额，无法添加新的年度预算！",
                     parent=self
@@ -484,7 +484,7 @@ class BudgetManagementWindow(QWidget):
                     ).with_for_update().first()
                     
                     if existing_budget:
-                        InfoBar.warning(                            
+                        UIUtils.show_warning(                            
                             title="警告",
                             content=f"{data['year']}年度的预算已存在！\n请选择其他年度或编辑现有预算。",
                             parent=self
@@ -499,7 +499,7 @@ class BudgetManagementWindow(QWidget):
                     
                     remaining_budget = total_budget.total_amount - annual_total
                     if data['total_amount'] > remaining_budget:
-                        InfoBar.warning(
+                        UIUtils.show_warning(
                             title="警告", 
                             content=f"年度预算({data['total_amount']}万元)超出剩余总预算({remaining_budget:.2f}万元)！",
                             parent=self
@@ -534,7 +534,7 @@ class BudgetManagementWindow(QWidget):
                     session.rollback()
                     error_msg = f"添加预算失败：\n错误类型：{type(e).__name__}\n错误信息：{str(e)}"
                     print(error_msg)  # 打印错误信息到控制台
-                    InfoBar.error(
+                    UIUtils.show_error(
                         title= "错误", 
                         content=error_msg,
                         parent=self
@@ -546,7 +546,7 @@ class BudgetManagementWindow(QWidget):
             session.rollback()
             error_msg = f"添加预算失败：\n错误类型：{type(e).__name__}\n错误信息：{str(e)}"
             print(error_msg)  # 打印错误信息到控制台
-            InfoBar.error(
+            UIUtils.show_error(
                 title= "错误", 
                 content=error_msg,
                 parent=self
@@ -559,7 +559,7 @@ class BudgetManagementWindow(QWidget):
         """删除预算"""
         current_item = self.budget_tree.currentItem()
         if not current_item:
-            InfoBar.warning(
+            UIUtils.show_warning(
                 title= "警告", 
                 content="请选择要删除的预算！",
                 parent=self
@@ -568,7 +568,7 @@ class BudgetManagementWindow(QWidget):
             
         budget_type = current_item.text(0)
         if budget_type == " 总预算":
-            InfoBar.warning(
+            UIUtils.show_warning(
                 title= "警告", 
                 content="不能删除总预算！",
                 parent=self
@@ -602,14 +602,14 @@ class BudgetManagementWindow(QWidget):
                     session.delete(budget)
                     session.commit()
                     self.load_budgets()
-                    InfoBar.success(
+                    UIUtils.show_success(
                         title= "成功", 
                         content= f"{budget_type}预算已删除",
                         parent=self
                         )
                     
                 else:
-                    InfoBar.error(
+                    UIUtils.show_error(
                         title= "错误", 
                         content="未找到要删除的预算！",
                         parent=self
@@ -619,7 +619,7 @@ class BudgetManagementWindow(QWidget):
             session.rollback()
             error_msg = f"删除预算时发生错误：\n错误类型：{type(e).__name__}\n错误信息：{str(e)}"
             print(error_msg)  # 打印错误信息到控制台
-            InfoBar.error(
+            UIUtils.show_error(
                 title= "错误", 
                 content=error_msg,
                 parent=self
@@ -631,7 +631,7 @@ class BudgetManagementWindow(QWidget):
         """编辑预算"""
         current_item = self.budget_tree.currentItem()
         if not current_item:
-            InfoBar.warning(
+            UIUtils.show_warning(
                 title='警告',
                 content='请选择要编辑的预算！',
                 parent=self
@@ -641,7 +641,7 @@ class BudgetManagementWindow(QWidget):
         # 验证选中项是否为有效的预算项
         budget_type = current_item.text(0)
         if not (" 总预算" in budget_type or budget_type.endswith("年度")):
-            InfoBar.warning(
+            UIUtils.show_warning(
                 title='警告',
                 content='请选择有效的预算项进行编辑！',
                 parent=self
@@ -685,21 +685,21 @@ class BudgetManagementWindow(QWidget):
                             except Exception as e:
                                 session.rollback()
                                 print(f"更新总预算时发生错误：{str(e)}")  # 调试信息
-                                InfoBar.error(
+                                UIUtils.show_error(
                             title='错误',
                             content=f'更新总预算失败：{str(e)}',
                             parent=self
                         )
                     except Exception as e:
                         print(f"打开总预算编辑对话框时发生错误：{str(e)}")
-                        InfoBar.error(
+                        UIUtils.show_error(
                             title='错误',
                             content=f'无法打开总预算编辑对话框：{str(e)}',
                             parent=self
                         )
                         return
                 else:
-                    InfoBar.error(
+                    UIUtils.show_error(
                         title='错误',
                         content='未找到总预算数据！',
                         parent=self
@@ -738,21 +738,21 @@ class BudgetManagementWindow(QWidget):
                                 print(f"处理预算数据时发生错误: {str(e)}")
                                 raise
                     else:
-                        InfoBar.error(
+                        UIUtils.show_error(
                             title='错误',
                             content='未找到预算数据！',
                             parent=self
                         )
                         
                 except ValueError:
-                    InfoBar.error(
+                    UIUtils.show_error(
                         title='错误',
                         content='无效的预算年度格式',
                         parent=self
                     )
                     
             else:
-                InfoBar.warning(
+                UIUtils.show_warning(
                     title='警告',
                     content='请选择总预算或年度预算进行编辑',
                     parent=self
@@ -762,7 +762,7 @@ class BudgetManagementWindow(QWidget):
             session.rollback()
             error_msg = f"编辑预算时发生错误：\n错误类型：{type(e).__name__}\n错误信息：{str(e)}"
             print(error_msg)  # 打印错误信息到控制台
-            InfoBar.error(
+            UIUtils.show_error(
                 title='错误',
                 content=error_msg,
                 parent=self

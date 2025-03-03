@@ -391,7 +391,7 @@ class ExpenseManagementWindow(QWidget):
             session.close()
             
         except Exception as e:
-            InfoBar.error(
+            UIUtils.show_error(
                 title='错误',
                 content=f'加载支出数据失败：{str(e)}',
                 parent=self
@@ -572,7 +572,7 @@ class ExpenseManagementWindow(QWidget):
             
         except Exception as e:
             session.rollback()
-            InfoBar.error(
+            UIUtils.show_error(
                 title='错误',
                 content=f"批量导入支出失败：{str(e)}",
                 parent=self
@@ -625,7 +625,7 @@ class ExpenseManagementWindow(QWidget):
                     # 发送信号通知预算管理窗口更新数据
                     self.expense_updated.emit()
                     
-                    InfoBar.success(
+                    UIUtils.show_success(
                         title='成功',
                         content='支出记录已添加！',
                         parent=self
@@ -633,7 +633,7 @@ class ExpenseManagementWindow(QWidget):
                     
                 except Exception as e:
                     session.rollback()
-                    InfoBar.error(
+                    UIUtils.show_error(
                         title='错误',
                         content=f'添加支出失败：{str(e)}',
                         parent=self
@@ -642,7 +642,7 @@ class ExpenseManagementWindow(QWidget):
                     session.close()
                     
             except Exception as e:
-                InfoBar.error(
+                UIUtils.show_error(
                     title='错误',
                     content=f'获取表单数据失败：{str(e)}',
                     parent=self
@@ -653,7 +653,7 @@ class ExpenseManagementWindow(QWidget):
         # 获取当前选中的行
         selected_items = self.expense_table.selectedItems()
         if not selected_items:
-            InfoBar.warning(
+            UIUtils.show_warning(
                 title='警告',
                 content='请选择一条要编辑的支出记录！',
                 parent=self
@@ -664,7 +664,7 @@ class ExpenseManagementWindow(QWidget):
         selected_row = selected_items[0].row()
         id_item = self.expense_table.item(selected_row, 8)  # 第8列是支出ID
         if not id_item:
-            InfoBar.warning(
+            UIUtils.show_warning(
                 title='警告',
                 content='无法获取支出记录ID！',
                 parent=self
@@ -729,7 +729,7 @@ class ExpenseManagementWindow(QWidget):
                         # 发送信号通知预算管理窗口更新数据
                         self.expense_updated.emit()
                         
-                        InfoBar.success(
+                        UIUtils.show_success(
                             title='成功',
                             content='支出记录已更新！',
                             parent=self
@@ -737,20 +737,20 @@ class ExpenseManagementWindow(QWidget):
                         
                     except Exception as e:
                         session.rollback()
-                        InfoBar.error(
+                        UIUtils.show_error(
                             title='错误',
                             content=f'编辑支出失败：{str(e)}',
                             parent=self
                         )
             else:
-                InfoBar.warning(
+                UIUtils.show_warning(
                     title='警告',
                     content='获取支出记录失败！',
                     parent=self
                 )
                         
         except Exception as e:
-            InfoBar.error(
+            UIUtils.show_error(
                 title='错误',
                 content=f'获取支出记录失败：{str(e)}',
                 parent=self
@@ -764,7 +764,7 @@ class ExpenseManagementWindow(QWidget):
         # 获取当前选中的行
         selected_items = self.expense_table.selectedItems()
         if not selected_items:
-            InfoBar.warning(
+            UIUtils.show_warning(
                 title='警告',
                 content='请选择要删除的支出记录！',
                 parent=self
@@ -775,7 +775,7 @@ class ExpenseManagementWindow(QWidget):
         selected_row = selected_items[0].row()
         id_item = self.expense_table.item(selected_row, 8)  # 第8列是支出ID
         if not id_item:
-            InfoBar.warning(
+            UIUtils.show_warning(
                 title='警告',
                 content='无法获取支出记录ID！',
                 parent=self
@@ -823,14 +823,14 @@ class ExpenseManagementWindow(QWidget):
                     # 发送信号通知预算管理窗口更新数据
                     self.expense_updated.emit()
                     
-                    InfoBar.success(
+                    UIUtils.show_success(
                         title='成功',
                         content='支出记录已删除！',
                         parent=self
                     )
                     
                 else:
-                    InfoBar.warning(
+                    UIUtils.show_warning(
                         title='警告',
                         content='未找到要删除的支出记录！',
                         parent=self
@@ -838,7 +838,7 @@ class ExpenseManagementWindow(QWidget):
                     
             except Exception as e:
                 session.rollback()
-                InfoBar.error(
+                UIUtils.show_error(
                     title='错误',
                     content=f'删除支出失败：{str(e)}',
                     parent=self
@@ -917,7 +917,7 @@ class ExpenseManagementWindow(QWidget):
                     else:  # Linux或其他系统
                         subprocess.run(['xdg-open', current_path])
                 except Exception as e:
-                    InfoBar.warning(
+                    UIUtils.show_warning(
                         title='警告',
                         content=f"打开凭证文件失败: {str(e)}",
                         parent=self
@@ -981,7 +981,7 @@ class ExpenseManagementWindow(QWidget):
                 sender.setProperty("voucher_path", target_path)
                 
             except Exception as e:
-                InfoBar.warning(
+                UIUtils.show_warning(
                 title='警告',
                 content=f"上传凭证失败: {str(e)}",
                 parent=self
@@ -1001,7 +1001,7 @@ class ExpenseManagementWindow(QWidget):
             else:  # Linux或其他系统
                 subprocess.run(['xdg-open', voucher_path])
         except Exception as e:
-            InfoBar.warning(
+            UIUtils.show_warning(
                 title='警告',
                 content=f"打开凭证文件失败: {str(e)}",
                 parent=self
@@ -1042,14 +1042,14 @@ class ExpenseManagementWindow(QWidget):
                 """)
                 btn.setProperty("voucher_path", None)
                 
-                InfoBar.success(
+                UIUtils.show_success(
                     title='成功',
                     content='凭证已成功删除',
                     parent=self
                 )
                 
             except Exception as e:
-                InfoBar.error(
+                UIUtils.show_error(
                     title='错误',
                     content=f"删除凭证失败: {str(e)}",
                     parent=self
@@ -1143,7 +1143,7 @@ class ExpenseManagementWindow(QWidget):
                 self.expense_table.setCellWidget(row, 7, upload_btn)
                 
         except Exception as e:
-            InfoBar.error(
+            UIUtils.show_error(
                 title='错误',
                 content=f"应用筛选条件失败：{str(e)}",
                 parent=self
@@ -1197,7 +1197,7 @@ class ExpenseManagementWindow(QWidget):
             # 保存Excel文件
             df.to_excel(excel_path, index=False, engine='openpyxl')
             
-            InfoBar.success(
+            UIUtils.show_success(
                 title='成功',
                 content=f"支出记录已导出到：\n{excel_path}",
                 parent=self
@@ -1207,7 +1207,7 @@ class ExpenseManagementWindow(QWidget):
             os.startfile(export_dir)
             
         except Exception as e:
-            InfoBar.error(
+            UIUtils.show_error(
                 title='错误',
                 content=f"导出支出信息失败：{str(e)}",
                 parent=self
@@ -1270,7 +1270,7 @@ class ExpenseManagementWindow(QWidget):
                 session.close()
             
             if exported_count > 0:
-                InfoBar.success(
+                UIUtils.show_success(
                     title='导出成功',
                     content=f"已导出 {exported_count} 个支出凭证到：\n{vouchers_dir}",
                     parent=self
@@ -1278,14 +1278,14 @@ class ExpenseManagementWindow(QWidget):
                 # 在文件资源管理器中打开导出目录
                 os.startfile(vouchers_dir)
             else:
-                InfoBar.info(
+                UIUtils.show_info(
                     title='提示',
                     content= "当前筛选结果中没有可导出的支出凭证",
                     parent=self
                 )
             
         except Exception as e:
-            InfoBar.error(
+            UIUtils.show_error(
                     title='错误',
                     content= f"导出支出凭证失败：{str(e)}",
                     parent=self
@@ -1306,7 +1306,7 @@ class ExpenseManagementWindow(QWidget):
             # 确保金额不为负数
             if amount < 0:
                 sender.setText('')
-                InfoBar.warning(
+                UIUtils.show_warning(
                     title='警告',
                     content='金额不能为负数',
                     parent=self
@@ -1314,7 +1314,7 @@ class ExpenseManagementWindow(QWidget):
         except ValueError:
             # 如果转换失败，清空输入并显示警告
             sender.setText('')
-            InfoBar.warning(
+            UIUtils.show_warning(
                 title='警告',
                 content='请输入有效的金额',
                 parent=self
