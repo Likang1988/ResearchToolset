@@ -9,6 +9,7 @@ from .budget_management import BudgetManagementWindow
 from ...models.database import init_db, add_project_to_db, sessionmaker, Project, Budget
 from ...utils.ui_utils import UIUtils
 from ...utils.db_utils import DBUtils
+from sqlalchemy import func
 import os
 
 class ProjectManagementWindow(QWidget):
@@ -107,19 +108,24 @@ class ProjectManagementWindow(QWidget):
                 self.project_table.setItem(row_position, 5, QTableWidgetItem(str(project.end_date)))
                 self.project_table.setItem(row_position, 6, QTableWidgetItem(str(project.total_budget)))
                 
-                # 计算并添加执行率
-                if project.total_budget > 0:
-                    # 获取项目的总支出
-                    total_spent = session.query(Budget.spent_amount).filter(
+                # 获取总预算执行率
+                total_budget = session.query(Budget).filter(
+                    Budget.project_id == project.id,
+                    Budget.year.is_(None)
+                ).first()
+                
+                if total_budget and total_budget.total_amount > 0:
+                    # 计算所有年度预算的总支出
+                    total_spent = session.query(func.sum(Budget.spent_amount)).filter(
                         Budget.project_id == project.id,
                         Budget.year.isnot(None)  # 只计算年度预算
                     ).scalar() or 0.0
-                    execution_rate = (total_spent / project.total_budget) * 100
-                    execution_rate_item = QTableWidgetItem(f"{execution_rate:.2f}%")
+                    
+                    execution_rate = (total_spent / total_budget.total_amount) * 100
+                    self.project_table.setItem(row_position, 7, QTableWidgetItem(f"{execution_rate:.2f}%"))
                 else:
-                    execution_rate_item = QTableWidgetItem("0.00%")
-                execution_rate_item.setTextAlignment(Qt.AlignCenter)
-                self.project_table.setItem(row_position, 7, execution_rate_item)
+                    self.project_table.setItem(row_position, 7, QTableWidgetItem("0.00%"))
+                
                 
                 # 预算管理按钮
                 btn_widget = QWidget()  # 创建一个新的QWidget

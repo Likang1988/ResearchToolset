@@ -55,14 +55,17 @@ class ExpenseManagementWindow(QWidget):
         splitter.setHandleWidth(1)  # 设置分割条宽度
         splitter.setStyleSheet("""
             QSplitter::handle {
-                background-color: #009FAA;  // 分割条颜色
-                margin: 1px;   // 调整边距
+                background-color: rgba(0, 0, 0, 0.1);
+                margin: 1px;
+                border-radius: 2px;
             }
-            QSplitter::handle:hover {  // 悬停时的样式
+            QSplitter::handle:hover {
                 background-color: #0078D4;
+                margin: 1px;
             }
-            QSplitter::handle:pressed {  // 按下时的样式
-                background-color: #009FAA;
+            QSplitter::handle:pressed {
+                background-color: #005A9E;
+                margin: 1px;
             }
         """)
         
@@ -534,13 +537,8 @@ class ExpenseManagementWindow(QWidget):
         
         try:
             for data in expenses_data:
-                # 生成8位唯一ID
-                import uuid
-                expense_id = str(uuid.uuid4().int)[:8]
-                
                 # 创建支出记录
                 expense = Expense(
-                    id=expense_id,
                     project_id=self.project.id,
                     budget_id=self.budget.id,
                     category=BudgetCategory(data['类别']),

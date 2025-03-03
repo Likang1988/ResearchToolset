@@ -414,7 +414,8 @@ class BudgetManagementWindow(QWidget):
                     # 初始状态根据父项是否展开
                     chart_widget.setVisible(year_item.isExpanded())
             
-            self.budget_tree.expandAll()
+            # 默认折叠所有项
+            self.budget_tree.collapseAll()
             # 禁用自动调整列宽，使用手动设置的列宽
             # for i in range(self.budget_tree.columnCount()):
             #     self.budget_tree.resizeColumnToContents(i)
