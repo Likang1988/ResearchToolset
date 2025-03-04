@@ -4,7 +4,7 @@ from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QColor, QPainter
 from PySide6.QtCharts import QChart, QChartView, QPieSeries, QPieSlice
 from qfluentwidgets import ToolButton, FluentIcon
-from ..models.database import BudgetCategory, Expense
+from ..models.funding_db import BudgetCategory, Expense
 from datetime import datetime
 from collections import defaultdict
 from abc import ABC, abstractmethod

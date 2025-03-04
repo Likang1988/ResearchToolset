@@ -7,7 +7,7 @@ from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon
 from ...components.budget_dialog import BudgetDialog, TotalBudgetDialog
 from .expense_management import ExpenseManagementWindow
-from ...models.database import sessionmaker, Budget, BudgetCategory, BudgetItem, Expense
+from ...models.funding_db import sessionmaker, Budget, BudgetCategory, BudgetItem, Expense
 from datetime import datetime
 from sqlalchemy import func
 from ...components.progress_bar_delegate import ProgressBarDelegate

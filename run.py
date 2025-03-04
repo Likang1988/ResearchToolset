@@ -2,7 +2,7 @@ import sys
 import os
 from PySide6.QtWidgets import QApplication
 from app.views.main_window import MainWindow
-from app.models.database import init_db, migrate_db, Base
+from app.models.funding_db import init_db, migrate_db, Base
 import logging
 import matplotlib as mpl
 

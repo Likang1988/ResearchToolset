@@ -5,7 +5,7 @@ from PySide6.QtCore import Qt, QDate
 from PySide6.QtGui import QIcon
 from qfluentwidgets import (LineEdit, EditableComboBox, DateEdit, PushButton, InfoBar,
                           FluentIcon, setTheme, Theme, setThemeColor)
-from app.models.database import Budget, BudgetItem
+from app.models.funding_db import Budget, BudgetItem
 from ..utils.ui_utils import UIUtils
 from sqlalchemy.orm import sessionmaker
 

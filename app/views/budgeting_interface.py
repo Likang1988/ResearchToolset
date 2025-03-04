@@ -3,7 +3,7 @@ from PySide6.QtCore import Qt, QTimer
 from qfluentwidgets import FluentIcon, PushButton, InfoBar
 from app.utils.ui_utils import UIUtils
 from enum import Enum
-from ..models.budget_edit import BudgetEditProject, BudgetEditItem, BudgetEditCategory, BudgetEditSubCategory
+from ..models.budgeting_db import BudgetEditProject, BudgetEditItem, BudgetEditCategory, BudgetEditSubCategory
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 import os
@@ -26,7 +26,7 @@ class BudgetingInterface(QWidget):
         self.Session = sessionmaker(bind=self.engine)
         
         # 确保数据库表存在
-        from ..models.budget_edit import Base
+        from ..models.budgeting_db import Base
         Base.metadata.create_all(self.engine)
         
         # 加载已保存的项目数据
