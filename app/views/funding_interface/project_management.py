@@ -9,6 +9,7 @@ from .budget_management import BudgetManagementWindow
 from ...models.database import init_db, add_project_to_db, sessionmaker, Project, Budget
 from ...utils.ui_utils import UIUtils
 from ...utils.db_utils import DBUtils
+from sqlalchemy import func
 import os
 
 class ProjectManagementWindow(QWidget):
@@ -107,19 +108,24 @@ class ProjectManagementWindow(QWidget):
                 self.project_table.setItem(row_position, 5, QTableWidgetItem(str(project.end_date)))
                 self.project_table.setItem(row_position, 6, QTableWidgetItem(str(project.total_budget)))
                 
-                # 计算并添加执行率
-                if project.total_budget > 0:
-                    # 获取项目的总支出
-                    total_spent = session.query(Budget.spent_amount).filter(
+                # 获取总预算执行率
+                total_budget = session.query(Budget).filter(
+                    Budget.project_id == project.id,
+                    Budget.year.is_(None)
+                ).first()
+                
+                if total_budget and total_budget.total_amount > 0:
+                    # 计算所有年度预算的总支出
+                    total_spent = session.query(func.sum(Budget.spent_amount)).filter(
                         Budget.project_id == project.id,
                         Budget.year.isnot(None)  # 只计算年度预算
                     ).scalar() or 0.0
-                    execution_rate = (total_spent / project.total_budget) * 100
-                    execution_rate_item = QTableWidgetItem(f"{execution_rate:.2f}%")
+                    
+                    execution_rate = (total_spent / total_budget.total_amount) * 100
+                    self.project_table.setItem(row_position, 7, QTableWidgetItem(f"{execution_rate:.2f}%"))
                 else:
-                    execution_rate_item = QTableWidgetItem("0.00%")
-                execution_rate_item.setTextAlignment(Qt.AlignCenter)
-                self.project_table.setItem(row_position, 7, execution_rate_item)
+                    self.project_table.setItem(row_position, 7, QTableWidgetItem("0.00%"))
+                
                 
                 # 预算管理按钮
                 btn_widget = QWidget()  # 创建一个新的QWidget
@@ -133,9 +139,9 @@ class ProjectManagementWindow(QWidget):
                 budget_btn.clicked.connect(lambda checked=False, p=project: self.open_budget_management(p))  # 传递项目对象
                 btn_layout.addWidget(budget_btn)  # 将按钮添加到布局中
                 # 按钮大小
-                budget_btn.setFixedSize(24, 24)
+                budget_btn.setFixedSize(28, 28)
                 # 图标大小
-                budget_btn.setIconSize(QSize(18, 18))
+                budget_btn.setIconSize(QSize(20, 20))
 
                 self.project_table.setCellWidget(row_position, 8, btn_widget)  # 将按钮放置在第9列（操作列）
             
@@ -176,7 +182,7 @@ class ProjectManagementWindow(QWidget):
 
         except Exception as e:
             session.rollback()
-            InfoBar.error(
+            UIUtils.show_error(self,
                 title='错误',
                 content=f'刷新项目列表失败：{str(e)}',
                 parent=self
@@ -224,7 +230,7 @@ class ProjectManagementWindow(QWidget):
                 self.refresh_project_table()
                 
                 # 显示成功消息
-                InfoBar.success(
+                UIUtils.show_success(self,
                     title='成功',
                     content='项目添加成功',
                     parent=self
@@ -232,7 +238,7 @@ class ProjectManagementWindow(QWidget):
                 
             except Exception as e:
                 session.rollback()
-                InfoBar.error(
+                UIUtils.show_error(self,
                     title='错误',
                     content=f'添加项目失败：{str(e)}',
                     parent=self
@@ -242,7 +248,7 @@ class ProjectManagementWindow(QWidget):
     def edit_project(self):
         selected_rows = self.project_table.selectedItems()
         if not selected_rows:
-            InfoBar.warning(
+            UIUtils.show_warning(
                 title='警告',
                 content='请选择要编辑的项目！',
                 parent=self
@@ -280,7 +286,7 @@ class ProjectManagementWindow(QWidget):
                     session.commit()
                     self.refresh_project_table()
             else:
-                InfoBar.warning(
+                UIUtils.show_warning(
                     title='警告',
                     content='未找到选中的项目！',
                     parent=self
@@ -288,7 +294,7 @@ class ProjectManagementWindow(QWidget):
                 
         except Exception as e:
             session.rollback()
-            InfoBar.error(
+            UIUtils.show_error(self,
                 title='错误',
                 content=f'编辑项目失败：{str(e)}',
                 parent=self
@@ -299,7 +305,7 @@ class ProjectManagementWindow(QWidget):
     def delete_selected_project(self):
         selected_rows = self.project_table.selectedItems()
         if not selected_rows:
-            InfoBar.warning(
+            UIUtils.show_warning(
                 title='警告',
                 content='请选择要删除的项目！',
                 parent=self
@@ -324,14 +330,14 @@ class ProjectManagementWindow(QWidget):
                 session.query(Project).filter(Project.id == project_id).delete()
                 session.commit()
                 self.refresh_project_table()
-                InfoBar.success(
+                UIUtils.show_success(self,
                     title='成功',
                     content='项目已成功删除',
                     parent=self
                 )
             except Exception as e:
                 session.rollback()
-                InfoBar.error(
+                UIUtils.show_error(self,
                     title='错误',
                     content=f'删除项目失败：{str(e)}',
                     parent=self

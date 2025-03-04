@@ -67,13 +67,17 @@ class BudgetManagementWindow(QWidget):
         self.budget_tree = QTreeWidget()
         self.budget_tree.setColumnCount(6)  # 减少为6列，删除统计列
         
-        # 设置列度 
-        self.budget_tree.setColumnWidth(0, 140)  # 增加预算年度列宽度，因为要包含费用类别
+        # 获取表头并设置居中对齐
+        header = self.budget_tree.header()
+        header.setDefaultAlignment(Qt.AlignCenter)  # 设置表头默认对齐方式为居中对齐
+        
+        # 设置列宽
+        self.budget_tree.setColumnWidth(0, 140)  # 预算年度
         self.budget_tree.setColumnWidth(1, 100)  # 预算额
         self.budget_tree.setColumnWidth(2, 100)  # 支出额
         self.budget_tree.setColumnWidth(3, 100)  # 结余额
         self.budget_tree.setColumnWidth(4, 100)  # 执行率
-        self.budget_tree.setColumnWidth(5, 100)  # 操作
+        self.budget_tree.setColumnWidth(5, 300)  # 操作/统计图表
         
         # 设置行高
         self.budget_tree.setStyleSheet("""
@@ -91,14 +95,13 @@ class BudgetManagementWindow(QWidget):
             QTreeWidget::item:hover {
                 background-color: rgba(0, 0, 0, 0.05);
             }
-            QHeaderView::section {
+            QTreeWidget QHeaderView::section {
                 background-color: #f3f3f3;
                 color: #333333;
                 font-weight: 500;
                 padding: 8px;
                 border: none;
                 border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-                text-align: center;  /* 添加居中对齐 */
             }
             QHeaderView::section:hover {
                 background-color: #e5e5e5;
@@ -108,9 +111,11 @@ class BudgetManagementWindow(QWidget):
         # 设置表头
         self.budget_tree.setHeaderLabels([
             "预算年度", "预算额(万元)", 
-            "支出额(万元)", "结余额(万元)", "执行率", "操作"
+            "支出额(万元)", "结余额(万元)", "执行率", "操作 / 统计"
         ])
-        self.budget_tree.setAlternatingRowColors(True)
+       
+
+        self.budget_tree.setAlternatingRowColors(True)  # 启用交替行颜色
         
         # 为执行率列设置进度条代理
         self.progress_delegate = ProgressBarDelegate(self.budget_tree)
@@ -265,10 +270,30 @@ class BudgetManagementWindow(QWidget):
                     child.setText(2, "0.00")
                     child.setText(3, "0.00")
             
-            # 创建总预算的统计图表并设置为跨越所有子项
+            # 创建总预算的统计图表
+            chart_widget = BudgetChartWidget()
+            # 获取总预算的支出记录
+            expenses = session.query(Expense).filter(
+                Expense.budget_id.in_(
+                    session.query(Budget.id).filter(
+                        Budget.project_id == self.project.id
+                    )
+                )
+            ).all()
+            # 获取总预算项
+            total_budget_items = session.query(BudgetItem).filter_by(
+                budget_id=total_budget.id
+            ).all()
+            chart_widget.update_charts(budget_items=total_budget_items, expenses=expenses)
+            
+            # 将图表添加到设备费类别的单元格中
             if first_child:
-                # 移除统计图表相关代码
-                pass
+                self.budget_tree.setItemWidget(first_child, 5, chart_widget)
+                # 连接折叠信号
+                self.budget_tree.itemExpanded.connect(lambda item: chart_widget.setVisible(True) if item == total_item else None)
+                self.budget_tree.itemCollapsed.connect(lambda item: chart_widget.setVisible(False) if item == total_item else None)
+                # 初始状态根据父项是否展开
+                chart_widget.setVisible(total_item.isExpanded())
             
             # 加载年度预算
             annual_budgets = session.query(Budget).filter(
@@ -303,10 +328,10 @@ class BudgetManagementWindow(QWidget):
                 expense_btn.setToolTip("支出管理")
                 expense_btn.clicked.connect(lambda checked=False, b=budget: self.open_expense_management(b))
                 btn_layout.addWidget(expense_btn)
-                # 按钮大小
-                expense_btn.setFixedSize(24, 24)
+                # 按钮大小 - 增加尺寸以提高用户体验
+                expense_btn.setFixedSize(28, 28)
                 # 设置图标大小
-                expense_btn.setIconSize(QSize(18, 18))
+                expense_btn.setIconSize(QSize(22, 22))
                 
                 self.budget_tree.setItemWidget(year_item, 5, btn_widget)
                 
@@ -316,8 +341,26 @@ class BudgetManagementWindow(QWidget):
                 expenses = session.query(Expense).filter(
                     Expense.budget_id == budget.id
                 ).all()
-                chart_widget.update_charts(budget_items=budget_items, expenses=expenses)
-                self.budget_tree.setItemWidget(year_item, 7, chart_widget)
+                # 获取当前年度的预算项
+                current_budget_items = session.query(BudgetItem).filter_by(
+                    budget_id=budget.id
+                ).all()
+                chart_widget.update_charts(budget_items=current_budget_items, expenses=expenses)
+                
+                # 将图表添加到设备费类别的单元格中
+                first_child = None
+                for child in range(year_item.childCount()):
+                    if year_item.child(child).text(0) == BudgetCategory.EQUIPMENT.value:
+                        first_child = year_item.child(child)
+                        break
+                
+                if first_child:
+                    self.budget_tree.setItemWidget(first_child, 5, chart_widget)
+                    # 连接折叠信号
+                    self.budget_tree.itemExpanded.connect(lambda item: chart_widget.setVisible(True) if item == year_item else None)
+                    self.budget_tree.itemCollapsed.connect(lambda item: chart_widget.setVisible(False) if item == year_item else None)
+                    # 初始状态根据父项是否展开
+                    chart_widget.setVisible(year_item.isExpanded())
                 
                 # 加载年度预算子项
                 budget_items = session.query(BudgetItem).filter_by(budget_id=budget.id).all()
@@ -345,8 +388,34 @@ class BudgetManagementWindow(QWidget):
                         child.setText(1, "0.00")
                         child.setText(2, "0.00")
                         child.setText(3, "0.00")
+                    
+                    # 如果是设备费类别，保存引用以便后续添加图表
+                    if category == BudgetCategory.EQUIPMENT:
+                        first_child = child
+
+                # 创建年度预算的统计图表
+                chart_widget = BudgetChartWidget()
+                # 获取该年度的支出记录
+                expenses = session.query(Expense).filter(
+                    Expense.budget_id == budget.id
+                ).all()
+                # 获取当前年度的预算项
+                current_budget_items = session.query(BudgetItem).filter_by(
+                    budget_id=budget.id
+                ).all()
+                chart_widget.update_charts(budget_items=current_budget_items, expenses=expenses)
+                
+                # 将图表添加到设备费类别的单元格中
+                if first_child:
+                    self.budget_tree.setItemWidget(first_child, 5, chart_widget)
+                    # 连接折叠信号
+                    self.budget_tree.itemExpanded.connect(lambda item: chart_widget.setVisible(True) if item == year_item else None)
+                    self.budget_tree.itemCollapsed.connect(lambda item: chart_widget.setVisible(False) if item == year_item else None)
+                    # 初始状态根据父项是否展开
+                    chart_widget.setVisible(year_item.isExpanded())
             
-            self.budget_tree.expandAll()
+            # 默认折叠所有项
+            self.budget_tree.collapseAll()
             # 禁用自动调整列宽，使用手动设置的列宽
             # for i in range(self.budget_tree.columnCount()):
             #     self.budget_tree.resizeColumnToContents(i)
@@ -376,7 +445,7 @@ class BudgetManagementWindow(QWidget):
             ).with_for_update().first()
             
             if not total_budget or total_budget.total_amount <= 0:
-                InfoBar.warning(
+                UIUtils.show_warning(
                     title="警告", 
                     content="请先设置总预算！",
                     parent=self
@@ -391,7 +460,7 @@ class BudgetManagementWindow(QWidget):
             
             remaining_budget = total_budget.total_amount - annual_total
             if remaining_budget <= 0:
-                InfoBar.warning(
+                UIUtils.show_warning(
                     title="警告", 
                     content="已达到总预算限额，无法添加新的年度预算！",
                     parent=self
@@ -415,7 +484,7 @@ class BudgetManagementWindow(QWidget):
                     ).with_for_update().first()
                     
                     if existing_budget:
-                        InfoBar.warning(                            
+                        UIUtils.show_warning(                            
                             title="警告",
                             content=f"{data['year']}年度的预算已存在！\n请选择其他年度或编辑现有预算。",
                             parent=self
@@ -430,7 +499,7 @@ class BudgetManagementWindow(QWidget):
                     
                     remaining_budget = total_budget.total_amount - annual_total
                     if data['total_amount'] > remaining_budget:
-                        InfoBar.warning(
+                        UIUtils.show_warning(
                             title="警告", 
                             content=f"年度预算({data['total_amount']}万元)超出剩余总预算({remaining_budget:.2f}万元)！",
                             parent=self
@@ -465,7 +534,7 @@ class BudgetManagementWindow(QWidget):
                     session.rollback()
                     error_msg = f"添加预算失败：\n错误类型：{type(e).__name__}\n错误信息：{str(e)}"
                     print(error_msg)  # 打印错误信息到控制台
-                    InfoBar.error(
+                    UIUtils.show_error(
                         title= "错误", 
                         content=error_msg,
                         parent=self
@@ -477,7 +546,7 @@ class BudgetManagementWindow(QWidget):
             session.rollback()
             error_msg = f"添加预算失败：\n错误类型：{type(e).__name__}\n错误信息：{str(e)}"
             print(error_msg)  # 打印错误信息到控制台
-            InfoBar.error(
+            UIUtils.show_error(
                 title= "错误", 
                 content=error_msg,
                 parent=self
@@ -490,7 +559,7 @@ class BudgetManagementWindow(QWidget):
         """删除预算"""
         current_item = self.budget_tree.currentItem()
         if not current_item:
-            InfoBar.warning(
+            UIUtils.show_warning(
                 title= "警告", 
                 content="请选择要删除的预算！",
                 parent=self
@@ -499,7 +568,7 @@ class BudgetManagementWindow(QWidget):
             
         budget_type = current_item.text(0)
         if budget_type == " 总预算":
-            InfoBar.warning(
+            UIUtils.show_warning(
                 title= "警告", 
                 content="不能删除总预算！",
                 parent=self
@@ -533,14 +602,14 @@ class BudgetManagementWindow(QWidget):
                     session.delete(budget)
                     session.commit()
                     self.load_budgets()
-                    InfoBar.success(
+                    UIUtils.show_success(
                         title= "成功", 
                         content= f"{budget_type}预算已删除",
                         parent=self
                         )
                     
                 else:
-                    InfoBar.error(
+                    UIUtils.show_error(
                         title= "错误", 
                         content="未找到要删除的预算！",
                         parent=self
@@ -550,7 +619,7 @@ class BudgetManagementWindow(QWidget):
             session.rollback()
             error_msg = f"删除预算时发生错误：\n错误类型：{type(e).__name__}\n错误信息：{str(e)}"
             print(error_msg)  # 打印错误信息到控制台
-            InfoBar.error(
+            UIUtils.show_error(
                 title= "错误", 
                 content=error_msg,
                 parent=self
@@ -562,7 +631,7 @@ class BudgetManagementWindow(QWidget):
         """编辑预算"""
         current_item = self.budget_tree.currentItem()
         if not current_item:
-            InfoBar.warning(
+            UIUtils.show_warning(
                 title='警告',
                 content='请选择要编辑的预算！',
                 parent=self
@@ -572,7 +641,7 @@ class BudgetManagementWindow(QWidget):
         # 验证选中项是否为有效的预算项
         budget_type = current_item.text(0)
         if not (" 总预算" in budget_type or budget_type.endswith("年度")):
-            InfoBar.warning(
+            UIUtils.show_warning(
                 title='警告',
                 content='请选择有效的预算项进行编辑！',
                 parent=self
@@ -616,21 +685,21 @@ class BudgetManagementWindow(QWidget):
                             except Exception as e:
                                 session.rollback()
                                 print(f"更新总预算时发生错误：{str(e)}")  # 调试信息
-                                InfoBar.error(
+                                UIUtils.show_error(
                             title='错误',
                             content=f'更新总预算失败：{str(e)}',
                             parent=self
                         )
                     except Exception as e:
                         print(f"打开总预算编辑对话框时发生错误：{str(e)}")
-                        InfoBar.error(
+                        UIUtils.show_error(
                             title='错误',
                             content=f'无法打开总预算编辑对话框：{str(e)}',
                             parent=self
                         )
                         return
                 else:
-                    InfoBar.error(
+                    UIUtils.show_error(
                         title='错误',
                         content='未找到总预算数据！',
                         parent=self
@@ -669,21 +738,21 @@ class BudgetManagementWindow(QWidget):
                                 print(f"处理预算数据时发生错误: {str(e)}")
                                 raise
                     else:
-                        InfoBar.error(
+                        UIUtils.show_error(
                             title='错误',
                             content='未找到预算数据！',
                             parent=self
                         )
                         
                 except ValueError:
-                    InfoBar.error(
+                    UIUtils.show_error(
                         title='错误',
                         content='无效的预算年度格式',
                         parent=self
                     )
                     
             else:
-                InfoBar.warning(
+                UIUtils.show_warning(
                     title='警告',
                     content='请选择总预算或年度预算进行编辑',
                     parent=self
@@ -693,7 +762,7 @@ class BudgetManagementWindow(QWidget):
             session.rollback()
             error_msg = f"编辑预算时发生错误：\n错误类型：{type(e).__name__}\n错误信息：{str(e)}"
             print(error_msg)  # 打印错误信息到控制台
-            InfoBar.error(
+            UIUtils.show_error(
                 title='错误',
                 content=error_msg,
                 parent=self

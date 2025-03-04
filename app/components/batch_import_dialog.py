@@ -4,6 +4,7 @@ import pandas as pd
 from datetime import datetime
 from qfluentwidgets import (InfoBar, PushButton, BodyLabel, FluentIcon)
 from ..models.database import BudgetCategory
+from..utils.ui_utils import UIUtils
 
 class BatchImportDialog(QDialog):
     def __init__(self, project_id, parent=None):
@@ -118,14 +119,14 @@ class BatchImportDialog(QDialog):
                         header=False
                     )
                     
-                InfoBar.success(
+                UIUtils.show_success(
                     title='成功',
                     content=f'模板已保存至: {save_path}',
                     parent=self
                 )
                 
         except Exception as e:
-            InfoBar.error(
+            UIUtils.show_error(
                 title='错误',
                 content=f'保存模板失败: {str(e)}',
                 parent=self
@@ -134,7 +135,7 @@ class BatchImportDialog(QDialog):
     def import_data(self):
         """导入数据"""
         if not self.file_path.text() or self.file_path.text() == "未选择文件":
-            InfoBar.warning(
+            UIUtils.show_warning(
                 title='警告',
                 content='请先选择文件！',
                 parent=self
@@ -156,7 +157,7 @@ class BatchImportDialog(QDialog):
             # 检查必要列
             missing_required = [col for col in required_columns if col not in df.columns]
             if missing_required:
-                InfoBar.warning(
+                UIUtils.show_warning(
                     title='警告',
                     content=f'文件缺少必要列！\n缺失列：{', '.join(missing_required)}\n必须包含：{', '.join(required_columns)}',
                     parent=self
@@ -170,7 +171,7 @@ class BatchImportDialog(QDialog):
                     empty_required.append(col)
             
             if empty_required:
-                InfoBar.warning(
+                UIUtils.show_warning(
                     title='警告',
                     content=f'以下必填列存在空值：{', '.join(empty_required)}',
                     parent=self
@@ -182,7 +183,7 @@ class BatchImportDialog(QDialog):
             invalid_categories = df[~df['费用类别'].isin(valid_categories)]['费用类别'].unique()
             
             if len(invalid_categories) > 0:
-                InfoBar.warning(
+                UIUtils.show_warning(
                     title='警告',
                     content=f'存在无效的费用类别：{', '.join(invalid_categories)}\n有效的费用类别包括：{', '.join(valid_categories)}',
                     parent=self
@@ -193,7 +194,7 @@ class BatchImportDialog(QDialog):
             try:
                 df['报账金额'] = pd.to_numeric(df['报账金额'])
             except Exception:
-                InfoBar.warning(
+                UIUtils.show_warning(
                     title='警告',
                     content='报账金额列包含无效的数字格式',
                     parent=self
@@ -201,7 +202,7 @@ class BatchImportDialog(QDialog):
                 return
 
             if (df['报账金额'] <= 0).any():
-                InfoBar.warning(
+                UIUtils.show_warning(
                     title='警告',
                     content='报账金额必须大于0',
                     parent=self
@@ -213,7 +214,7 @@ class BatchImportDialog(QDialog):
                 try:
                     df['报账日期'] = pd.to_datetime(df['报账日期'])
                 except Exception:
-                    InfoBar.warning(
+                    UIUtils.show_warning(
                         title='警告',
                         content='报账日期格式无效，请使用YYYY-MM-DD格式',
                         parent=self
@@ -245,7 +246,7 @@ class BatchImportDialog(QDialog):
             if self.parent():
                 self.parent().add_expenses(expenses)
                 
-            InfoBar.success(
+            UIUtils.show_success(
                 title='成功',
                 content=f'成功导入 {len(expenses)} 条记录！',
                 parent=self
@@ -253,13 +254,13 @@ class BatchImportDialog(QDialog):
             self.accept()
             
         except pd.errors.EmptyDataError:
-            InfoBar.error(
+            UIUtils.show_error(
                 title='错误',
                 content='导入的文件为空！',
                 parent=self
             )
         except Exception as e:
-            InfoBar.error(
+            UIUtils.show_error(
                 title='错误',
                 content=f'导入失败: {str(e)}',
                 parent=self

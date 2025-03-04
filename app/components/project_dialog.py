@@ -6,6 +6,7 @@ from PySide6.QtGui import QIcon
 from qfluentwidgets import (LineEdit, EditableComboBox, DateEdit, PushButton, InfoBar,
                           FluentIcon, setTheme, Theme, setThemeColor)
 from app.models.database import Budget, BudgetItem
+from ..utils.ui_utils import UIUtils
 from sqlalchemy.orm import sessionmaker
 
 class ProjectDialog(QDialog):
@@ -117,7 +118,7 @@ class ProjectDialog(QDialog):
         """保存项目信息"""
         # 数据验证
         if not self.financial_code.text().strip():
-            InfoBar.error(
+            UIUtils.show_error(
                 title='错误',
                 content='请输入财务编号！',
                 parent=self
@@ -125,7 +126,7 @@ class ProjectDialog(QDialog):
             return
             
         if not self.project_name.text().strip():
-            InfoBar.error(
+            UIUtils.show_error(
                 title='错误',
                 content='请输入项目名称！',
                 parent=self
@@ -133,7 +134,7 @@ class ProjectDialog(QDialog):
             return
             
         if not self.total_budget.text().strip():
-            InfoBar.error(
+            UIUtils.show_error(
                 title='错误',
                 content='请输入项目总经费！',
                 parent=self
@@ -143,7 +144,7 @@ class ProjectDialog(QDialog):
         try:
             float(self.total_budget.text())
         except ValueError:
-            InfoBar.error(
+            UIUtils.show_error(
                 title='错误',
                 content='项目总经费必须是数字！',
                 parent=self
@@ -205,7 +206,7 @@ class ProjectDialog(QDialog):
                     self.project_type.addItem(new_type)
                     self.project_type.setCurrentText(new_type)
                 else:
-                    InfoBar.warning(
+                    UIUtils.show_warning(
                         title='警告',
                         content='该项目类别已存在！',
                         parent=self

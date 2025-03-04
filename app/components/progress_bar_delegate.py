@@ -37,18 +37,22 @@ class ProgressBarDelegate(QStyledItemDelegate):
         if option.state & QStyle.State_Selected:
             painter.fillRect(option.rect, option.palette.highlight())
 
-        # 创建渐变色
-        gradient = QLinearGradient(progress_bar.rect.topLeft(), progress_bar.rect.topRight())
+        # 根据执行率计算颜色
         if rate >= 100:
-            # 执行率超过100%：纯红色
-            gradient.setColorAt(0, QColor(255, 0, 0))
-            gradient.setColorAt(1, QColor(255, 0, 0))
+            # 执行率超过100%：浅红色
+            color = QColor(255, 153, 153)
         else:
-            # 从绿色渐变到红色
-            green_component = int(255 * (1 - rate / 100))
-            red_component = int(255 * (rate / 100))
-            gradient.setColorAt(0, QColor(red_component, green_component, 0))
-            gradient.setColorAt(1, QColor(red_component, green_component, 0))
+            # 根据执行率在浅绿色和浅红色之间插值
+            progress_ratio = min(rate / 100.0, 1.0)
+            # 浅绿色的RGB分量
+            start_r, start_g, start_b = 153, 255, 153
+            # 浅红色的RGB分量
+            end_r, end_g, end_b = 255, 153, 153
+            # 线性插值计算当前颜色
+            r = int(start_r + (end_r - start_r) * progress_ratio)
+            g = int(start_g + (end_g - start_g) * progress_ratio)
+            b = int(start_b + (end_b - start_b) * progress_ratio)
+            color = QColor(r, g, b)
 
         # 绘制进度条背景
         painter.setPen(Qt.NoPen)
@@ -59,7 +63,7 @@ class ProgressBarDelegate(QStyledItemDelegate):
         progress_rect = QRect(progress_bar.rect)
         progress_width = min(int(progress_rect.width() * rate / 100), progress_rect.width())
         progress_rect.setWidth(progress_width)
-        painter.setBrush(gradient)
+        painter.setBrush(color)
         painter.drawRoundedRect(progress_rect, 1, 1)  # 圆角矩形
 
         # 绘制文本

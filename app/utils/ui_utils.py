@@ -1,10 +1,12 @@
 from PySide6.QtWidgets import (QWidget, QTableWidget, QHeaderView, QVBoxLayout,
                              QHBoxLayout, QLabel)
 from PySide6.QtCore import Qt
-from qfluentwidgets import TitleLabel, PrimaryPushButton, FluentIcon
+from qfluentwidgets import TitleLabel, PrimaryPushButton, FluentIcon, InfoBar
 import os
 
 class UIUtils:
+    # 统一设置InfoBar的显示时间为15秒
+    DEFAULT_INFOBAR_DURATION = 5000
   
     @staticmethod
     def set_table_style(table: QTableWidget):
@@ -87,3 +89,23 @@ class UIUtils:
         else:
             button = PrimaryPushButton(text)
         return button
+
+    @staticmethod
+    def show_info(parent, title, content):
+        """显示信息提示"""
+        InfoBar.info(title=title, content=content, parent=parent, duration=UIUtils.DEFAULT_INFOBAR_DURATION)
+    
+    @staticmethod
+    def show_success(parent, title, content):
+        """显示成功提示"""
+        InfoBar.success(title=title, content=content, parent=parent, duration=UIUtils.DEFAULT_INFOBAR_DURATION)
+    
+    @staticmethod
+    def show_warning(parent, title, content):
+        """显示警告提示"""
+        InfoBar.warning(title=title, content=content, parent=parent, duration=UIUtils.DEFAULT_INFOBAR_DURATION)
+    
+    @staticmethod
+    def show_error(parent, title, content):
+        """显示错误提示"""
+        InfoBar.error(title=title, content=content, parent=parent, duration=UIUtils.DEFAULT_INFOBAR_DURATION)
