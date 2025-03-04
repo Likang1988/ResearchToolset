@@ -5,6 +5,7 @@ from qfluentwidgets import (LineEdit, PushButton, DateEdit,
 from .batch_import_dialog import BatchImportDialog
 from PySide6.QtCore import Qt, QDate
 from ..models.database import BudgetCategory
+from ..utils.ui_utils import UIUtils
 
 class ExpenseDialog(QDialog):
     def __init__(self, project_id, parent=None):
@@ -43,7 +44,7 @@ class ExpenseDialog(QDialog):
             self.supplier.addItems([s[0] for s in suppliers if s[0]])
             
         except Exception as e:
-            InfoBar.error(
+            UIUtils.show_error(
                 title='错误',
                 content=f'加载历史数据失败: {str(e)}',
                 parent=self
@@ -146,7 +147,7 @@ class ExpenseDialog(QDialog):
             # 验证金额
             amount = float(self.amount.text())
             if amount <= 0:
-                InfoBar.warning(
+                UIUtils.show_warning(
                     title='警告',
                     content='支出金额必须大于0',
                     parent=self
@@ -155,7 +156,7 @@ class ExpenseDialog(QDialog):
             
             # 验证必填字段
             if not self.content.currentText().strip():
-                InfoBar.warning(
+                UIUtils.show_warning(
                     title='警告',
                     content='开支内容不能为空',
                     parent=self
@@ -165,7 +166,7 @@ class ExpenseDialog(QDialog):
             super().accept()
             
         except ValueError:
-            InfoBar.warning(
+            UIUtils.show_warning(
                 title='警告',
                 content='请输入有效的金额',
                 parent=self

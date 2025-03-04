@@ -85,7 +85,6 @@ def generate_random_expense_data(num_records=10):
         BudgetCategory.CONFERENCE: travel_contents + meeting_contents,  # 会议差旅费用
         BudgetCategory.PUBLICATION: publication_contents,  # 出版文献费用
         BudgetCategory.FUEL: material_contents,  # 燃动费暂时使用材料费的内容
-
         BudgetCategory.OUTSOURCING: processing_contents,  # 外协费使用加工服务的内容
         BudgetCategory.CONSULTING: meeting_contents + international_contents,  # 专家咨询费使用会议和国际交流内容
         BudgetCategory.LABOR: labor_contents  # 劳务费使用劳务费内容

@@ -391,7 +391,7 @@ class ExpenseManagementWindow(QWidget):
             session.close()
             
         except Exception as e:
-            InfoBar.error(
+            UIUtils.show_error(
                 title='错误',
                 content=f'加载支出数据失败：{str(e)}',
                 parent=self
@@ -572,7 +572,7 @@ class ExpenseManagementWindow(QWidget):
             
         except Exception as e:
             session.rollback()
-            InfoBar.error(
+            UIUtils.show_error(
                 title='错误',
                 content=f"批量导入支出失败：{str(e)}",
                 parent=self
@@ -625,7 +625,7 @@ class ExpenseManagementWindow(QWidget):
                     # 发送信号通知预算管理窗口更新数据
                     self.expense_updated.emit()
                     
-                    InfoBar.success(
+                    UIUtils.show_success(
                         title='成功',
                         content='支出记录已添加！',
                         parent=self
@@ -633,7 +633,7 @@ class ExpenseManagementWindow(QWidget):
                     
                 except Exception as e:
                     session.rollback()
-                    InfoBar.error(
+                    UIUtils.show_error(
                         title='错误',
                         content=f'添加支出失败：{str(e)}',
                         parent=self
@@ -642,7 +642,7 @@ class ExpenseManagementWindow(QWidget):
                     session.close()
                     
             except Exception as e:
-                InfoBar.error(
+                UIUtils.show_error(
                     title='错误',
                     content=f'获取表单数据失败：{str(e)}',
                     parent=self
@@ -653,7 +653,7 @@ class ExpenseManagementWindow(QWidget):
         # 获取当前选中的行
         selected_items = self.expense_table.selectedItems()
         if not selected_items:
-            InfoBar.warning(
+            UIUtils.show_warning(
                 title='警告',
                 content='请选择一条要编辑的支出记录！',
                 parent=self
@@ -664,7 +664,7 @@ class ExpenseManagementWindow(QWidget):
         selected_row = selected_items[0].row()
         id_item = self.expense_table.item(selected_row, 8)  # 第8列是支出ID
         if not id_item:
-            InfoBar.warning(
+            UIUtils.show_warning(
                 title='警告',
                 content='无法获取支出记录ID！',
                 parent=self
@@ -729,7 +729,7 @@ class ExpenseManagementWindow(QWidget):
                         # 发送信号通知预算管理窗口更新数据
                         self.expense_updated.emit()
                         
-                        InfoBar.success(
+                        UIUtils.show_success(
                             title='成功',
                             content='支出记录已更新！',
                             parent=self
@@ -737,20 +737,20 @@ class ExpenseManagementWindow(QWidget):
                         
                     except Exception as e:
                         session.rollback()
-                        InfoBar.error(
+                        UIUtils.show_error(
                             title='错误',
                             content=f'编辑支出失败：{str(e)}',
                             parent=self
                         )
             else:
-                InfoBar.warning(
+                UIUtils.show_warning(
                     title='警告',
                     content='获取支出记录失败！',
                     parent=self
                 )
                         
         except Exception as e:
-            InfoBar.error(
+            UIUtils.show_error(
                 title='错误',
                 content=f'获取支出记录失败：{str(e)}',
                 parent=self
@@ -764,7 +764,7 @@ class ExpenseManagementWindow(QWidget):
         # 获取当前选中的行
         selected_items = self.expense_table.selectedItems()
         if not selected_items:
-            InfoBar.warning(
+            UIUtils.show_warning(
                 title='警告',
                 content='请选择要删除的支出记录！',
                 parent=self
@@ -775,7 +775,7 @@ class ExpenseManagementWindow(QWidget):
         selected_row = selected_items[0].row()
         id_item = self.expense_table.item(selected_row, 8)  # 第8列是支出ID
         if not id_item:
-            InfoBar.warning(
+            UIUtils.show_warning(
                 title='警告',
                 content='无法获取支出记录ID！',
                 parent=self
@@ -823,14 +823,14 @@ class ExpenseManagementWindow(QWidget):
                     # 发送信号通知预算管理窗口更新数据
                     self.expense_updated.emit()
                     
-                    InfoBar.success(
+                    UIUtils.show_success(
                         title='成功',
                         content='支出记录已删除！',
                         parent=self
                     )
                     
                 else:
-                    InfoBar.warning(
+                    UIUtils.show_warning(
                         title='警告',
                         content='未找到要删除的支出记录！',
                         parent=self
@@ -838,7 +838,7 @@ class ExpenseManagementWindow(QWidget):
                     
             except Exception as e:
                 session.rollback()
-                InfoBar.error(
+                UIUtils.show_error(
                     title='错误',
                     content=f'删除支出失败：{str(e)}',
                     parent=self
@@ -917,7 +917,7 @@ class ExpenseManagementWindow(QWidget):
                     else:  # Linux或其他系统
                         subprocess.run(['xdg-open', current_path])
                 except Exception as e:
-                    InfoBar.warning(
+                    UIUtils.show_warning(
                         title='警告',
                         content=f"打开凭证文件失败: {str(e)}",
                         parent=self
@@ -970,7 +970,6 @@ class ExpenseManagementWindow(QWidget):
                 sender.setIconSize(QSize(16, 16)) # 设置图标大小
                 sender.setStyleSheet("""
                     QPushButton {
-                        border: none;
                         background: transparent;
                     }
                     QPushButton:hover {
@@ -981,7 +980,7 @@ class ExpenseManagementWindow(QWidget):
                 sender.setProperty("voucher_path", target_path)
                 
             except Exception as e:
-                InfoBar.warning(
+                UIUtils.show_warning(
                 title='警告',
                 content=f"上传凭证失败: {str(e)}",
                 parent=self
@@ -1001,7 +1000,7 @@ class ExpenseManagementWindow(QWidget):
             else:  # Linux或其他系统
                 subprocess.run(['xdg-open', voucher_path])
         except Exception as e:
-            InfoBar.warning(
+            UIUtils.show_warning(
                 title='警告',
                 content=f"打开凭证文件失败: {str(e)}",
                 parent=self
@@ -1042,14 +1041,14 @@ class ExpenseManagementWindow(QWidget):
                 """)
                 btn.setProperty("voucher_path", None)
                 
-                InfoBar.success(
+                UIUtils.show_success(
                     title='成功',
                     content='凭证已成功删除',
                     parent=self
                 )
                 
             except Exception as e:
-                InfoBar.error(
+                UIUtils.show_error(
                     title='错误',
                     content=f"删除凭证失败: {str(e)}",
                     parent=self
@@ -1136,14 +1135,56 @@ class ExpenseManagementWindow(QWidget):
                 self.expense_table.setItem(row, 6, item)
                 
                 # 添加凭证按钮
-                upload_btn = PushButton("上传凭证" if not expense.voucher_path else "查看凭证")
+                upload_btn = ToolButton()
+                upload_btn.setFixedSize(30, 30)  # 设置按钮大小
+                if not expense.voucher_path:
+                    # 显示添加图标
+                    upload_btn.setIcon(FluentIcon.ADD_TO)
+                    upload_btn.setIconSize(QSize(16, 16))
+                    upload_btn.setStyleSheet("""
+                        QPushButton {
+                            background: transparent;
+                        }
+                        QPushButton:hover {
+                            background: rgba(24, 144, 255, 0.1);
+                            border-radius: 4px;
+                        }
+                    """)
+                else:
+                    # 显示凭证图标
+                    upload_btn.setIcon(FluentIcon.CERTIFICATE)
+                    upload_btn.setIconSize(QSize(16, 16))
+                    upload_btn.setStyleSheet("""
+                        QPushButton {
+                            background: transparent;
+                        }
+                        QPushButton:hover {
+                            background: rgba(24, 144, 255, 0.1);
+                            border-radius: 4px;  
+                        }
+                    """)
                 upload_btn.setProperty("expense_id", expense.id)
                 upload_btn.setProperty("voucher_path", expense.voucher_path)
                 upload_btn.mousePressEvent = lambda event, btn=upload_btn: self.handle_voucher(event, btn)
-                self.expense_table.setCellWidget(row, 7, upload_btn)
                 
+                # 创建容器widget用于居中显示按钮
+                container = QWidget()
+                layout = QHBoxLayout(container)
+                layout.setContentsMargins(0, 0, 0, 0)
+                layout.setSpacing(0)
+                layout.setAlignment(Qt.AlignCenter)
+                layout.addWidget(upload_btn, 0, Qt.AlignCenter)
+                self.expense_table.setCellWidget(row, 7, container)
+                
+                # 添加支出ID列
+                id_item = QTableWidgetItem(str(expense.id))
+                id_item.setTextAlignment(Qt.AlignCenter)
+                self.expense_table.setItem(row, 8, id_item)
+                
+            session.close()
+            
         except Exception as e:
-            InfoBar.error(
+            UIUtils.show_error(
                 title='错误',
                 content=f"应用筛选条件失败：{str(e)}",
                 parent=self
@@ -1197,7 +1238,7 @@ class ExpenseManagementWindow(QWidget):
             # 保存Excel文件
             df.to_excel(excel_path, index=False, engine='openpyxl')
             
-            InfoBar.success(
+            UIUtils.show_success(
                 title='成功',
                 content=f"支出记录已导出到：\n{excel_path}",
                 parent=self
@@ -1207,7 +1248,7 @@ class ExpenseManagementWindow(QWidget):
             os.startfile(export_dir)
             
         except Exception as e:
-            InfoBar.error(
+            UIUtils.show_error(
                 title='错误',
                 content=f"导出支出信息失败：{str(e)}",
                 parent=self
@@ -1270,7 +1311,7 @@ class ExpenseManagementWindow(QWidget):
                 session.close()
             
             if exported_count > 0:
-                InfoBar.success(
+                UIUtils.show_success(
                     title='导出成功',
                     content=f"已导出 {exported_count} 个支出凭证到：\n{vouchers_dir}",
                     parent=self
@@ -1278,14 +1319,14 @@ class ExpenseManagementWindow(QWidget):
                 # 在文件资源管理器中打开导出目录
                 os.startfile(vouchers_dir)
             else:
-                InfoBar.info(
+                UIUtils.show_info(
                     title='提示',
                     content= "当前筛选结果中没有可导出的支出凭证",
                     parent=self
                 )
             
         except Exception as e:
-            InfoBar.error(
+            UIUtils.show_error(
                     title='错误',
                     content= f"导出支出凭证失败：{str(e)}",
                     parent=self
@@ -1306,7 +1347,7 @@ class ExpenseManagementWindow(QWidget):
             # 确保金额不为负数
             if amount < 0:
                 sender.setText('')
-                InfoBar.warning(
+                UIUtils.show_warning(
                     title='警告',
                     content='金额不能为负数',
                     parent=self
@@ -1314,29 +1355,27 @@ class ExpenseManagementWindow(QWidget):
         except ValueError:
             # 如果转换失败，清空输入并显示警告
             sender.setText('')
-            InfoBar.warning(
+            UIUtils.show_warning(
                 title='警告',
                 content='请输入有效的金额',
                 parent=self
             )
 
     def sort_table(self, column):
-        """根据列排序表格"""
+        """排序表格"""
         # 获取当前排序顺序
-        header = self.expense_table.horizontalHeader()
-        order = header.sortIndicatorOrder()
+        order = self.expense_table.horizontalHeader().sortIndicatorOrder()
         
         # 获取所有行的数据
-        rows = []
+        rows_data = []
         for row in range(self.expense_table.rowCount()):
             row_data = []
             for col in range(self.expense_table.columnCount()):
-                if col == 7:  # 处理凭证列
-                    # 获取凭证按钮的容器
+                if col == 7:  # 支出凭证列
                     container = self.expense_table.cellWidget(row, col)
                     if container:
                         # 从容器中获取按钮
-                        btn = container.findChild(PushButton)
+                        btn = container.findChild(ToolButton)
                         if btn:
                             row_data.append({
                                 'expense_id': btn.property("expense_id"),
@@ -1346,77 +1385,67 @@ class ExpenseManagementWindow(QWidget):
                             row_data.append(None)
                     else:
                         row_data.append(None)
-                    continue
-                
-                item = self.expense_table.item(row, col)
-                if col == 4:  # 金额列，转换为数字
-                    value = float(item.text())
-                elif col == 5:  # 日期列，转换为日期对象
-                    value = datetime.strptime(item.text(), "%Y-%m-%d")
                 else:
-                    value = item.text()
-                row_data.append(value)
-            rows.append(row_data)
+                    item = self.expense_table.item(row, col)
+                    row_data.append(item.text() if item else "")
+            rows_data.append(row_data)
         
-        # 根据选定的列进行排序
-        if column != 7:  # 不对凭证列排序
-            rows.sort(key=lambda x: x[column], reverse=(order == Qt.DescendingOrder))
+        # 根据选定列排序
+        if column != 7:  # 不对支出凭证列进行排序
+            rows_data.sort(key=lambda x: float(x[column]) if x[column].replace('.', '').isdigit() else x[column],
+                          reverse=(order == Qt.DescendingOrder))
         
-        # 重新填充表格
-        self.expense_table.setRowCount(0)  # 清空表格
-        self.expense_table.setRowCount(len(rows))  # 重新设置行数
-        
-        for i, row_data in enumerate(rows):
-            for col in range(self.expense_table.columnCount()):
-                if col == 7:  # 处理凭证按钮
-                    btn_data = row_data[col]
-                    if btn_data:
-                        # 创建新的按钮容器
+        # 更新表格数据
+        for row, row_data in enumerate(rows_data):
+            for col, cell_data in enumerate(row_data):
+                if col == 7:  # 支出凭证列
+                    if cell_data:
+                        # 创建新的按钮和容器
+                        upload_btn = ToolButton()
+                        upload_btn.setFixedSize(30, 30)
+                        if not cell_data['voucher_path']:
+                            upload_btn.setIcon(FluentIcon.ADD_TO)
+                            upload_btn.setIconSize(QSize(16, 16))
+                            upload_btn.setStyleSheet("""
+                                QToolButton {
+                                    background: transparent;
+                                }
+                                QToolButton:hover {
+                                    background: rgba(24, 144, 255, 0.1);
+                                    border-radius: 4px;
+                                }
+                            """)
+                        else:
+                            upload_btn.setIcon(FluentIcon.CERTIFICATE)
+                            upload_btn.setIconSize(QSize(16, 16))
+                            upload_btn.setStyleSheet("""
+                                QToolButton {
+                                    background: transparent;
+                                }
+                                QToolButton:hover {
+                                    background: rgba(24, 144, 255, 0.1);
+                                    border-radius: 4px;
+                                }
+                            """)
+                        upload_btn.setProperty("expense_id", cell_data['expense_id'])
+                        upload_btn.setProperty("voucher_path", cell_data['voucher_path'])
+                        upload_btn.mousePressEvent = lambda event, btn=upload_btn: self.handle_voucher(event, btn)
+                        
                         container = QWidget()
                         layout = QHBoxLayout(container)
                         layout.setContentsMargins(0, 0, 0, 0)
                         layout.setSpacing(0)
                         layout.setAlignment(Qt.AlignCenter)
-                        
-                        # 创建新按钮
-                        upload_btn = PushButton()
-                        upload_btn.setFixedSize(30, 30)
-                        
-                        # 设置按钮属性和样式
-                        if not btn_data['voucher_path']:
-                            upload_btn.setIcon(FluentIcon.ADD_TO)
-                        else:
-                            upload_btn.setIcon(FluentIcon.CERTIFICATE)
-                        upload_btn.setIconSize(QSize(16, 16))
-                        upload_btn.setStyleSheet("""
-                            QPushButton {
-                                background: transparent;
-                            }
-                            QPushButton:hover {
-                                background: rgba(24, 144, 255, 0.1);
-                                border-radius: 4px;
-                            }
-                        """)
-                        
-                        # 设置按钮属性
-                        upload_btn.setProperty("expense_id", btn_data['expense_id'])
-                        upload_btn.setProperty("voucher_path", btn_data['voucher_path'])
-                        upload_btn.mousePressEvent = lambda event, btn=upload_btn: self.handle_voucher(event, btn)
-                        
-                        # 将按钮添加到容器中
                         layout.addWidget(upload_btn, 0, Qt.AlignCenter)
-                        self.expense_table.setCellWidget(i, col, container)
+                        self.expense_table.setCellWidget(row, col, container)
                 else:
-                    # 处理普通单元格
-                    item = QTableWidgetItem()
-                    value = row_data[col]
-                    if isinstance(value, float):  # 金额
-                        item.setText(f"{value:.2f}")
-                        item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-                    elif isinstance(value, datetime):  # 日期
-                        item.setText(value.strftime("%Y-%m-%d"))
+                    item = QTableWidgetItem(str(cell_data))
+                    if col == 0:  # 费用类别列
                         item.setTextAlignment(Qt.AlignCenter)
-                    else:  # 其他文本
-                        item.setText(str(value))
-                        item.setTextAlignment(Qt.AlignCenter if col != 1 else Qt.AlignLeft | Qt.AlignVCenter)
-                    self.expense_table.setItem(i, col, item)
+                    elif col == 1:  # 开支内容列
+                        item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+                    elif col == 4:  # 报账金额列
+                        item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                    else:  # 其他列
+                        item.setTextAlignment(Qt.AlignCenter)
+                    self.expense_table.setItem(row, col, item)

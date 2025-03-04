@@ -182,7 +182,7 @@ class ProjectManagementWindow(QWidget):
 
         except Exception as e:
             session.rollback()
-            InfoBar.error(
+            UIUtils.show_error(self,
                 title='错误',
                 content=f'刷新项目列表失败：{str(e)}',
                 parent=self
@@ -230,7 +230,7 @@ class ProjectManagementWindow(QWidget):
                 self.refresh_project_table()
                 
                 # 显示成功消息
-                InfoBar.success(
+                UIUtils.show_success(self,
                     title='成功',
                     content='项目添加成功',
                     parent=self
@@ -238,7 +238,7 @@ class ProjectManagementWindow(QWidget):
                 
             except Exception as e:
                 session.rollback()
-                InfoBar.error(
+                UIUtils.show_error(self,
                     title='错误',
                     content=f'添加项目失败：{str(e)}',
                     parent=self
@@ -248,7 +248,7 @@ class ProjectManagementWindow(QWidget):
     def edit_project(self):
         selected_rows = self.project_table.selectedItems()
         if not selected_rows:
-            InfoBar.warning(
+            UIUtils.show_warning(
                 title='警告',
                 content='请选择要编辑的项目！',
                 parent=self
@@ -286,7 +286,7 @@ class ProjectManagementWindow(QWidget):
                     session.commit()
                     self.refresh_project_table()
             else:
-                InfoBar.warning(
+                UIUtils.show_warning(
                     title='警告',
                     content='未找到选中的项目！',
                     parent=self
@@ -294,7 +294,7 @@ class ProjectManagementWindow(QWidget):
                 
         except Exception as e:
             session.rollback()
-            InfoBar.error(
+            UIUtils.show_error(self,
                 title='错误',
                 content=f'编辑项目失败：{str(e)}',
                 parent=self
@@ -305,7 +305,7 @@ class ProjectManagementWindow(QWidget):
     def delete_selected_project(self):
         selected_rows = self.project_table.selectedItems()
         if not selected_rows:
-            InfoBar.warning(
+            UIUtils.show_warning(
                 title='警告',
                 content='请选择要删除的项目！',
                 parent=self
@@ -330,14 +330,14 @@ class ProjectManagementWindow(QWidget):
                 session.query(Project).filter(Project.id == project_id).delete()
                 session.commit()
                 self.refresh_project_table()
-                InfoBar.success(
+                UIUtils.show_success(self,
                     title='成功',
                     content='项目已成功删除',
                     parent=self
                 )
             except Exception as e:
                 session.rollback()
-                InfoBar.error(
+                UIUtils.show_error(self,
                     title='错误',
                     content=f'删除项目失败：{str(e)}',
                     parent=self

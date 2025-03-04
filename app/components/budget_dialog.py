@@ -12,10 +12,11 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QDate, Signal
 from qfluentwidgets import (
     SpinBox, DoubleSpinBox, PushButton, BodyLabel, FluentIcon, 
-    setTheme, Theme, setThemeColor
+    setTheme, Theme, setThemeColor, InfoBar
 )
 from ..models.database import BudgetCategory, Budget, BudgetItem, sessionmaker
 from sqlalchemy.orm import sessionmaker
+from ..utils.ui_utils import UIUtils
 from sqlalchemy import func
 
 class TotalBudgetDialog(QDialog):
@@ -51,7 +52,7 @@ class TotalBudgetDialog(QDialog):
         total_layout.addStretch()  #
         
         # 预算子项输入
-        amount_group = QGroupBox("预算金额")
+        amount_group = QGroupBox("")
         amount_layout = QGridLayout()
         
         self.amount_inputs = {}
@@ -120,7 +121,7 @@ class TotalBudgetDialog(QDialog):
                 self.update_total()
                 
         except Exception as e:
-            InfoBar.warning(
+            UIUtils.show_warning(
                 title='警告',
                 content=f'加载总预算数据失败：{str(e)}',
                 parent=self
@@ -131,7 +132,7 @@ class TotalBudgetDialog(QDialog):
     def update_total(self):
         """根据子项金额更新总金额"""
         total = sum(spinbox.value() for spinbox in self.amount_inputs.values())
-        self.total_label.setText(f"{total:.2f}")
+        self.total_label.setText(f"{total:.2f}万元")
                 
     def update_balance_amounts(self):
         """更新各费用类别的结余金额显示"""
@@ -153,6 +154,7 @@ class TotalBudgetDialog(QDialog):
                 
                 # 获取所有年度预算的支出总和（按类别）
                 category_totals = {}
+                total_balance = 0.0  # 初始化总结余
                 for category in BudgetCategory:
                     category_spent = session.query(func.sum(BudgetItem.spent_amount)).filter(
                         BudgetItem.budget_id.in_(
@@ -171,9 +173,13 @@ class TotalBudgetDialog(QDialog):
                     if budget_item:
                         category_spent = category_totals[category]
                         balance = budget_item.amount - category_spent
+                        total_balance += balance  # 累加到总结余
                         self.balance_labels[category].setText(f"{balance:.2f} 万元")
                     else:
                         self.balance_labels[category].setText("0.00 万元")
+                
+                # 更新总计结余显示
+                self.total_balance_label.setText(f"{total_balance:.2f} 万元")
             
         finally:
             session.close()
@@ -182,7 +188,7 @@ class TotalBudgetDialog(QDialog):
         """验证并保存总预算数据"""
         total = sum(spinbox.value() for spinbox in self.amount_inputs.values())
         if total <= 0:
-            InfoBar.warning(
+            UIUtils.show_warning(
                 title='警告',
                 content='总预算金额必须大于0！',
                 parent=self
@@ -253,7 +259,7 @@ class BudgetDialog(QDialog):
         year_layout.addStretch()
         
         # 预算金额输入
-        amount_group = QGroupBox("预算金额")
+        amount_group = QGroupBox("")
         amount_layout = QGridLayout()
         amount_layout.setSpacing(10)
         
@@ -261,10 +267,13 @@ class BudgetDialog(QDialog):
         header_category = BodyLabel("费用类别")
         header_budget = BodyLabel("预算金额")
         header_balance = BodyLabel("结余金额")
-        amount_layout.addWidget(header_category, 0, 0)
+        amount_layout.addWidget(header_category, 0, 0) 
         amount_layout.addWidget(header_budget, 0, 1)
         amount_layout.addWidget(header_balance, 0, 2)
-        
+        # 表头居中对齐
+        header_budget.setAlignment(Qt.AlignCenter)
+
+
         self.amount_inputs = {}
         self.balance_labels = {}
         for i, category in enumerate(BudgetCategory):
@@ -295,11 +304,23 @@ class BudgetDialog(QDialog):
         
         # 总计
         total_layout = QHBoxLayout()
+        total_layout.setSpacing(10)
+        
+        # 总计标签（对应费用类别列）
         total_label = BodyLabel("总计:")
-        self.total_label = BodyLabel("0.00 万元")
+        total_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         total_layout.addWidget(total_label)
+        
+        # 总预算金额（对应预算金额列）
+        self.total_label = BodyLabel("0.00 万元")
+        self.total_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         total_layout.addWidget(self.total_label)
         
+        # 总结余金额（对应结余金额列）
+        self.total_balance_label = BodyLabel("0.00 万元")
+        self.total_balance_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        total_layout.addWidget(self.total_balance_label)
+
         # 按钮
         button_layout = QHBoxLayout()
         button_layout.setSpacing(12)
@@ -348,6 +369,9 @@ class BudgetDialog(QDialog):
             for item in budget_items:
                 if item.category in self.amount_inputs:
                     self.amount_inputs[item.category].setValue(item.amount)
+            
+            # 更新结余金额显示
+            self.update_balance_amounts()
         finally:
             session.close()
             
@@ -376,6 +400,7 @@ class BudgetDialog(QDialog):
                 
                 # 获取所有年度预算的支出总和（按类别）
                 category_totals = {}
+                total_balance = 0.0  # 初始化总结余
                 for category in BudgetCategory:
                     category_spent = session.query(func.sum(BudgetItem.spent_amount)).filter(
                         BudgetItem.budget_id.in_(
@@ -394,9 +419,13 @@ class BudgetDialog(QDialog):
                     if budget_item:
                         category_spent = category_totals[category]
                         balance = budget_item.amount - category_spent
+                        total_balance += balance  # 累加到总结余
                         self.balance_labels[category].setText(f"{balance:.2f} 万元")
                     else:
                         self.balance_labels[category].setText("0.00 万元")
+                
+                # 更新总计结余显示
+                self.total_balance_label.setText(f"{total_balance:.2f} 万元")
             
         finally:
             session.close()
@@ -405,7 +434,7 @@ class BudgetDialog(QDialog):
         """验证并保存预算数据"""
         total = sum(spinbox.value() for spinbox in self.amount_inputs.values())
         if total <= 0:
-            InfoBar.warning(
+            UIUtils.show_warning(
                 title='警告',
                 content='预算总额必须大于0！',
                 parent=self
@@ -426,7 +455,7 @@ class BudgetDialog(QDialog):
             ).with_for_update().first()  # 添加行级锁
             
             if existing_budget and (not self.budget or self.budget.id != existing_budget.id):
-                InfoBar.warning(
+                UIUtils.show_warning(
                     title='警告',
                     content=f'{year}年度的预算已存在！\n请选择其他年度或编辑现有预算。',
                     parent=self
@@ -437,9 +466,9 @@ class BudgetDialog(QDialog):
             self.accept()
             
         except Exception as e:
-            InfoBar.error(
+            UIUtils.show_error(
                 title='错误',
-                content=f'验证预算失败：{str(e)}',
+                content=f'添加预算失败：{str(e)}',
                 parent=self
             )
             
