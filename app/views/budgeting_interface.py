@@ -77,6 +77,9 @@ class BudgetingInterface(QWidget):
                                     
                                     # 递归加载子项
                                     load_items(budget_item, [i for i in items if i.parent_id == item.id])
+                                    
+                                    # 初始化计算父项金额
+                                    self.update_parent_amount(budget_item)
                 
                 # 获取项目的所有预算项
                 items = session.query(BudgetEditItem).filter_by(project_id=project.id).all()
@@ -227,13 +230,30 @@ class BudgetingInterface(QWidget):
         if parent:
             # 计算所有子项的经费数额之和
             total_amount = 0.0
+            total_quantity = 0
             for i in range(parent.childCount()):
                 child = parent.child(i)
-                amount = float(child.text(4)) if child.text(4) else 0.0
-                total_amount += amount
+                try:
+                    amount = float(child.text(4)) if child.text(4) else 0.0
+                    quantity = int(child.text(3)) if child.text(3) else 0
+                    total_amount += amount
+                    total_quantity += quantity
+                except ValueError:
+                    # 如果子项金额格式错误，跳过该子项
+                    continue
             
-            # 更新父项的经费数额
-            parent.setText(4, f"{total_amount:.2f}")
+            # 更新父项的经费数额，确保显示两位小数
+            parent.setText(4, f"{round(total_amount, 2):.2f}")
+            
+            # 更新父项的数量
+            parent.setText(3, str(total_quantity))
+            
+            # 如果总数量大于0，计算平均单价
+            if total_quantity > 0:
+                avg_unit_price = total_amount / total_quantity
+                parent.setText(2, f"{round(avg_unit_price, 2):.2f}")
+            else:
+                parent.setText(2, "0.00")
             
             # 递归更新上级父项
             self.update_parent_amount(parent)

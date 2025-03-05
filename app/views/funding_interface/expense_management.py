@@ -256,12 +256,12 @@ class ExpenseManagementWindow(QWidget):
         
         # 设置整体样式
         self.setStyleSheet("""     
-            QSplitter::handle {
+            QSplitter::handle {   // 分割条样式
                 background-color: rgba(0, 0, 0, 0.1);
                 margin: 2px 0px;  // 上下边距
             }
             QLabel {
-                color: #333333;
+                color: #333333;   // 文本颜色
             }
         """)
         

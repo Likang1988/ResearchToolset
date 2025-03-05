@@ -4,6 +4,122 @@ from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QColor, QPainter
 from PySide6.QtCharts import QChart, QChartView, QPieSeries, QPieSlice
 from qfluentwidgets import ToolButton, FluentIcon
+from ..models.funding_db import BudgetCategory, Expense
+from datetime import datetime
+from collections import defaultdict
+from abc import ABC, abstractmethod
+
+class BudgetChartBase(ABC):
+    """预算图表基类，定义图表的基本接口和共用方法"""
+    
+    def __init__(self):
+        self.colors = [
+            QColor("#FF9999"), QColor("#66B2FF"), QColor("#99FF99"), 
+            QColor("#FFCC99"), QColor("#CC99FF"), QColor("#FF99CC"),
+            QColor("#99CCFF"), QColor("#CCFF99"), QColor("#FFFF99")
+        ]
+    
+    def create_empty_chart(self, title):
+        """创建空的饼图"""
+        chart = QChart()
+        chart.setTitle(title)
+        chart.setAnimationOptions(QChart.SeriesAnimations)
+        chart.legend().setVisible(True)
+        chart.legend().setAlignment(Qt.AlignBottom)
+        
+        series = QPieSeries()
+        empty_slice = QPieSlice("暂无数据", 1)
+        empty_slice.setLabelVisible(True)
+        series.append(empty_slice)
+        chart.addSeries(series)
+        return chart
+    
+    def create_pie_chart(self, title, data_dict):
+        """创建带数据的饼图"""
+        if not data_dict or sum(data_dict.values()) <= 0:
+            return self.create_empty_chart(title)
+            
+        chart = QChart()
+        chart.setTitle(title)
+        chart.setAnimationOptions(QChart.SeriesAnimations)
+        chart.legend().setVisible(True)
+        chart.legend().setAlignment(Qt.AlignBottom)
+        
+        series = QPieSeries()
+        total_amount = sum(amount for amount in data_dict.values() if amount > 0)
+        for i, (label, amount) in enumerate(sorted(data_dict.items())):
+            if amount > 0:
+                percentage = (amount / total_amount) * 100
+                slice = QPieSlice(f"{label}: {amount:.2f}万元 ({percentage:.1f}%)", amount)
+                slice.setLabelVisible(True)
+                slice.setBrush(self.colors[i % len(self.colors)])
+                series.append(slice)
+                
+        chart.addSeries(series)
+        return chart
+    
+    @abstractmethod
+    def show_category_distribution(self):
+        """显示类别分布图表"""
+        pass
+    
+    @abstractmethod
+    def show_time_distribution(self):
+        """显示时间分布图表"""
+        pass
+
+class TotalBudgetChart(BudgetChartBase):
+    """总预算图表类，处理总预算的图表展示"""
+    
+    def __init__(self, budget_items, expenses):
+        super().__init__()
+        self.budget_items = budget_items
+        self.expenses = expenses
+    
+    def show_category_distribution(self):
+        """显示总预算的类别分布"""
+        category_amounts = defaultdict(float)
+        # 统计所有年度预算中各类费用的支出金额
+        for expense in self.expenses:
+            category_amounts[expense.category.value] += expense.amount / 10000
+        
+        return self.create_pie_chart("总预算类别分布", category_amounts)
+    
+    def show_time_distribution(self):
+        """显示总预算的年度分布"""
+        year_amounts = defaultdict(float)
+        for expense in self.expenses:
+            year = expense.date.year
+            year_amounts[f"{year}年"] += expense.amount / 10000
+        
+        return self.create_pie_chart("总预算年度支出分布", year_amounts)
+
+class AnnualBudgetChart(BudgetChartBase):
+    """年度预算图表类，处理年度预算的图表展示"""
+    
+    def __init__(self, budget_items, expenses):
+        super().__init__()
+        self.budget_items = budget_items
+        self.expenses = expenses
+        self.total_budget = sum(item.amount for item in budget_items) if budget_items else 0
+    
+    def show_category_distribution(self):
+        """显示年度预算的类别分布"""
+        category_amounts = defaultdict(float)
+        for expense in self.expenses:
+            category_amounts[expense.category.value] += expense.amount / 10000
+        
+        return self.create_pie_chart("类别支出分布", category_amounts)
+    
+    def show_time_distribution(self):
+        """显示年度预算的月度分布"""
+        month_amounts = defaultdict(float)
+        for expense in self.expenses:
+            month = expense.date.month
+            month_amounts[f"{month}月"] += expense.amount / 10000
+        
+        title = f"月度支出分布 (总预算: {self.total_budget:.2f}万元)" if self.total_budget > 0 else "月度支出分布"
+        return self.create_pie_chart(title, month_amounts)
 
 class BudgetChartWidget(QWidget):
     """预算图表组件，用于显示预算和支出的饼图统计
