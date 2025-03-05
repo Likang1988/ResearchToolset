@@ -262,7 +262,7 @@ def add_project_to_db(engine, name, financial_code, project_code, project_type, 
 
 if __name__ == "__main__":
     # 初始化数据库
-    db_path = "database/funds.db"
+    db_path = "database/database.db"
     engine = create_engine(f'sqlite:///{db_path}')
     migrate_db(engine)
     print("数据库迁移完成")

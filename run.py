@@ -27,7 +27,7 @@ def main():
         print(f"图标文件不存在: {icon_path}")
     
     # 获取数据库路径
-    db_path = os.path.join(os.path.dirname(__file__), 'database', 'funds.db')
+    db_path = os.path.join(os.path.dirname(__file__), 'database', 'database.db')
     
     # 确保数据库目录存在
     db_dir = os.path.dirname(db_path)

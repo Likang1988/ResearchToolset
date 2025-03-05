@@ -182,7 +182,7 @@ class ProjectManagementWindow(QWidget):
 
         except Exception as e:
             session.rollback()
-            UIUtils.show_error(self,
+            UIUtils.show_error(
                 title='错误',
                 content=f'刷新项目列表失败：{str(e)}',
                 parent=self
@@ -238,7 +238,7 @@ class ProjectManagementWindow(QWidget):
                 
             except Exception as e:
                 session.rollback()
-                UIUtils.show_error(self,
+                UIUtils.show_error(
                     title='错误',
                     content=f'添加项目失败：{str(e)}',
                     parent=self
@@ -294,7 +294,7 @@ class ProjectManagementWindow(QWidget):
                 
         except Exception as e:
             session.rollback()
-            UIUtils.show_error(self,
+            UIUtils.show_error(
                 title='错误',
                 content=f'编辑项目失败：{str(e)}',
                 parent=self
@@ -337,7 +337,7 @@ class ProjectManagementWindow(QWidget):
                 )
             except Exception as e:
                 session.rollback()
-                UIUtils.show_error(self,
+                UIUtils.show_error(
                     title='错误',
                     content=f'删除项目失败：{str(e)}',
                     parent=self

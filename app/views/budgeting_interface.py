@@ -18,7 +18,7 @@ class BudgetingInterface(QWidget):
         self.setup_ui()
         
         # 初始化数据库连接
-        db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'database', 'budgets.db')
+        db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'database', 'database.db')
         db_dir = os.path.dirname(db_path)
         if not os.path.exists(db_dir):
             os.makedirs(db_dir)
@@ -26,8 +26,10 @@ class BudgetingInterface(QWidget):
         self.Session = sessionmaker(bind=self.engine)
         
         # 确保数据库表存在
-        from ..models.budgeting_db import Base
-        Base.metadata.create_all(self.engine)
+        from ..models.budgeting_db import Base as BudgetingBase
+        from ..models.funding_db import Base as FundingBase
+        BudgetingBase.metadata.create_all(self.engine)
+        FundingBase.metadata.create_all(self.engine)
         
         # 加载已保存的项目数据
         self.load_saved_projects()
