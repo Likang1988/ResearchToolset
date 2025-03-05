@@ -4,8 +4,7 @@ from qfluentwidgets import (LineEdit, PushButton, DateEdit,
                           InfoBar, MessageBox, FluentIcon, ComboBox, EditableComboBox, BodyLabel)
 from .batch_import_dialog import BatchImportDialog
 from PySide6.QtCore import Qt, QDate
-from ..models.funding_db import BudgetCategory
-from ..utils.ui_utils import UIUtils
+from ..models.database import BudgetCategory
 
 class ExpenseDialog(QDialog):
     def __init__(self, project_id, parent=None):

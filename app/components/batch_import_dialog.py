@@ -3,8 +3,7 @@ from PySide6.QtCore import Qt
 import pandas as pd
 from datetime import datetime
 from qfluentwidgets import (InfoBar, PushButton, BodyLabel, FluentIcon)
-from ..models.funding_db import BudgetCategory
-from..utils.ui_utils import UIUtils
+from ..models.database import BudgetCategory
 
 class BatchImportDialog(QDialog):
     def __init__(self, project_id, parent=None):
