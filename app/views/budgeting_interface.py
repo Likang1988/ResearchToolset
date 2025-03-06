@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTreeWidget, QTreeWidgetItem,
                              QLabel, QPushButton, QMessageBox, QSpinBox, QDoubleSpinBox, QHeaderView)
 from PySide6.QtCore import Qt, Signal
-from qfluentwidgets import TitleLabel, FluentIcon, PushButton
+from qfluentwidgets import TitleLabel, FluentIcon, PrimaryPushButton
 from ..models.database import BudgetCategory, BudgetPlan, BudgetPlanItem, sessionmaker
 from ..utils.ui_utils import UIUtils
 from sqlalchemy.orm import Session
@@ -29,17 +29,25 @@ class BudgetingInterface(QWidget):
         
         # 按钮栏
         button_layout = QHBoxLayout()
-        add_btn = PushButton('添加预算', self, FluentIcon.ADD)
-        add_same_level_btn = PushButton('增加同级', self, FluentIcon.ADD_TO)
-        add_sub_level_btn = PushButton('增加子级', self, FluentIcon.DOWNLOAD)
-        delete_level_btn = PushButton('删除该级', self, FluentIcon.DELETE)
+        add_btn = PrimaryPushButton('添加预算', self, FluentIcon.ADD)
+        add_same_level_btn = PrimaryPushButton('增加同级', self, FluentIcon.MENU)
+        add_sub_level_btn = PrimaryPushButton('增加子级', self, FluentIcon.DOWN)
+        delete_level_btn = PrimaryPushButton('删除该级', self, FluentIcon.DELETE)
+        save_btn = PrimaryPushButton('保存数据', self, FluentIcon.SAVE)
+        export_btn = PrimaryPushButton('导出数据', self, FluentIcon.DOWNLOAD)
         
         button_layout.addWidget(add_btn)
         button_layout.addWidget(add_same_level_btn)
         button_layout.addWidget(add_sub_level_btn)
         button_layout.addWidget(delete_level_btn)
         button_layout.addStretch()
+        button_layout.addWidget(save_btn)
+        button_layout.addWidget(export_btn)
         layout.addLayout(button_layout)
+        
+        # 设置新按钮样式
+        save_btn.setStyleSheet(add_btn.styleSheet())
+        export_btn.setStyleSheet(add_btn.styleSheet())
         
         # 禁用层级管理按钮，直到选中项目
         add_same_level_btn.setEnabled(False)
@@ -65,12 +73,18 @@ class BudgetingInterface(QWidget):
         for i in range(2, 6):
             header.setSectionResizeMode(i, QHeaderView.ResizeToContents)  # 其他列根据内容调整宽度
         
+        add_same_level_btn.setStyleSheet(add_btn.styleSheet())
+        add_sub_level_btn.setStyleSheet(add_btn.styleSheet())
+        delete_level_btn.setStyleSheet(add_btn.styleSheet())
+
         # 设置树形列表样式
         self.tree.setStyleSheet("""
             QTreeWidget {
                 background-color: transparent;
                 border: 1px solid rgba(0, 0, 0, 0.1);
                 border-radius: 8px;
+                selection-background-color: rgba(0, 120, 212, 0.1);
+                selection-color: black;
             }
             QTreeWidget::item {
                 height: 36px;
@@ -83,7 +97,19 @@ class BudgetingInterface(QWidget):
                 background-color: rgba(0, 120, 212, 0.1);
                 color: black;
             }
+            QTreeWidget QHeaderView::section {
+                background-color: #f3f3f3;
+                color: #333333;
+                font-weight: 500;
+                padding: 8px;
+                border: none;
+                border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            }
+            QHeaderView::section:hover {
+                background-color: #e5e5e5;
+            }
         """)
+        self.tree.setAlternatingRowColors(True)  # 启用交替行颜色
         
         layout.addWidget(self.tree)
         
@@ -92,6 +118,8 @@ class BudgetingInterface(QWidget):
         add_same_level_btn.clicked.connect(self.add_same_level_item)
         add_sub_level_btn.clicked.connect(self.add_sub_level_item)
         delete_level_btn.clicked.connect(self.delete_level_item)
+        save_btn.clicked.connect(self.save_all_budget_data)
+        export_btn.clicked.connect(self.export_budget_data)
         self.tree.itemChanged.connect(self.on_item_changed)
         self.tree.itemSelectionChanged.connect(self.on_selection_changed)
         
@@ -196,14 +224,49 @@ class BudgetingInterface(QWidget):
         )
         
         if reply == QMessageBox.Yes:
-            parent = current_item.parent()
-            if parent:
-                parent.removeChild(current_item)
-                self.update_parent_amount(parent)
-            else:
-                index = self.tree.indexOfTopLevelItem(current_item)
-                self.tree.takeTopLevelItem(index)
+            session = Session(self.engine)
+            try:
+                # 如果是项目节点，删除整个预算计划
+                if item_type == "project":
+                    name = current_item.text(0)
+                    budget_plan = session.query(BudgetPlan).filter_by(name=name).first()
+                    if budget_plan:
+                        session.delete(budget_plan)
+                        session.commit()
+                # 如果是预算子项，删除对应的预算项
+                elif item_type == "budget_item":
+                    parent = current_item.parent()
+                    if parent:
+                        category = current_item.data(0, Qt.UserRole)
+                        budget_plan = session.query(BudgetPlan).filter_by(name=parent.text(0)).first()
+                        if budget_plan:
+                            plan_item = session.query(BudgetPlanItem).filter_by(
+                                budget_plan_id=budget_plan.id,
+                                category=category
+                            ).first()
+                            if plan_item:
+                                session.delete(plan_item)
+                                session.commit()
                 
+                # 从树形控件中移除节点
+                parent = current_item.parent()
+                if parent:
+                    parent.removeChild(current_item)
+                    self.update_parent_amount(parent)
+                else:
+                    index = self.tree.indexOfTopLevelItem(current_item)
+                    self.tree.takeTopLevelItem(index)
+                    
+            except Exception as e:
+                session.rollback()
+                UIUtils.show_error(
+                    title='错误',
+                    content=f'删除预算项失败：{str(e)}',
+                    parent=self
+                )
+            finally:
+                session.close()
+    
     def on_selection_changed(self):
         """处理选择变化"""
         current_item = self.tree.currentItem()
@@ -322,6 +385,7 @@ class BudgetingInterface(QWidget):
                         session.add(plan_item)
                         
                     try:
+                        # 保存所有字段
                         plan_item.specification = child.text(1)
                         plan_item.unit_price = float(child.text(2) or 0)
                         plan_item.quantity = int(child.text(3) or 0)
@@ -330,7 +394,7 @@ class BudgetingInterface(QWidget):
                     except ValueError:
                         pass
                         
-            session.commit()
+                session.commit()
             
         except Exception as e:
             session.rollback()
@@ -360,3 +424,80 @@ class BudgetingInterface(QWidget):
         total_item = self.tree.topLevelItem(0)
         if total_item:
             total_item.setText(4, f"{total_amount:.2f}")
+            
+    def save_all_budget_data(self):
+        """保存所有预算数据"""
+        try:
+            root = self.tree.invisibleRootItem()
+            for i in range(root.childCount()):
+                project_item = root.child(i)
+                self.save_budget_data(project_item)
+            UIUtils.show_success(
+                title='成功',
+                content='预算数据保存成功！',
+                parent=self
+            )
+        except Exception as e:
+            UIUtils.show_error(
+                title='错误',
+                content=f'保存预算数据失败：{str(e)}',
+                parent=self
+            )
+    
+    def export_budget_data(self):
+        """导出预算数据到Excel"""
+        try:
+            import pandas as pd
+            from PySide6.QtWidgets import QFileDialog
+            
+            # 创建数据列表
+            data = []
+            root = self.tree.invisibleRootItem()
+            
+            # 遍历所有项目
+            for i in range(root.childCount()):
+                project_item = root.child(i)
+                project_name = project_item.text(0)
+                
+                # 遍历项目下的预算类别
+                for j in range(project_item.childCount()):
+                    category_item = project_item.child(j)
+                    category_name = category_item.text(0)
+                    
+                    # 收集预算数据
+                    row = {
+                        '项目名称': project_name,
+                        '预算类别': category_name,
+                        '型号规格': category_item.text(1),
+                        '单价（元）': category_item.text(2),
+                        '数量': category_item.text(3),
+                        '经费数额': category_item.text(4),
+                        '备注': category_item.text(5)
+                    }
+                    data.append(row)
+            
+            # 创建DataFrame
+            df = pd.DataFrame(data)
+            
+            # 选择保存路径
+            file_path, _ = QFileDialog.getSaveFileName(
+                self,
+                "导出预算数据",
+                "预算编制数据.xlsx",
+                "Excel文件 (*.xlsx)"
+            )
+            
+            if file_path:
+                # 保存到Excel
+                df.to_excel(file_path, index=False)
+                UIUtils.show_success(
+                    title='成功',
+                    content=f'预算数据已导出至：{file_path}',
+                    parent=self
+                )
+        except Exception as e:
+            UIUtils.show_error(
+                title='错误',
+                content=f'导出预算数据失败：{str(e)}',
+                parent=self
+            )

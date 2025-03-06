@@ -163,8 +163,8 @@ class BudgetManagementWindow(QWidget):
         splitter.addWidget(right_widget)
         
         # 设置分割器比例
-        splitter.setStretchFactor(0, 4)  # 左侧占60%
-        splitter.setStretchFactor(1, 16)  # 右侧占40%
+        splitter.setStretchFactor(0, 12.6)  # 左侧占60%
+        splitter.setStretchFactor(1, 5)  # 右侧占40%
         splitter.setChildrenCollapsible(False)  # 防止完全折叠
         
         layout.addWidget(splitter)
@@ -316,7 +316,15 @@ class BudgetManagementWindow(QWidget):
                     child.setText(2, "0.00")
                     child.setText(3, "0.00")
             
-            # 移除统计图表相关代码
+            # 更新总预算图表
+            total_expenses = session.query(Expense).filter(
+                Expense.budget_id.in_(
+                    session.query(Budget.id).filter(
+                        Budget.project_id == self.project.id
+                    )
+                )
+            ).all()
+            self.chart_widget.update_charts(budget_items=budget_items, expenses=total_expenses)
             
             # 加载年度预算
             annual_budgets = session.query(Budget).filter(
