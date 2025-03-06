@@ -4,7 +4,7 @@ from qfluentwidgets import (LineEdit, PushButton, DateEdit,
                           InfoBar, MessageBox, FluentIcon, ComboBox, EditableComboBox, BodyLabel)
 from .batch_import_dialog import BatchImportDialog
 from PySide6.QtCore import Qt, QDate
-from ..models.funding_db import BudgetCategory
+from ..models.database import BudgetCategory
 from ..utils.ui_utils import UIUtils
 
 class ExpenseDialog(QDialog):
@@ -17,7 +17,7 @@ class ExpenseDialog(QDialog):
         
     def load_history_data(self):
         """从数据库加载历史数据"""
-        from ..models.funding_db import sessionmaker, Expense
+        from ..models.database import sessionmaker, Expense
         try:
             # 遍历父窗口链，找到包含engine属性的窗口
             parent = self.parent()

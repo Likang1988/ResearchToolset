@@ -6,7 +6,7 @@ from PySide6.QtGui import QIcon
 from qfluentwidgets import FluentIcon, TableWidget, TableItemDelegate, TitleLabel
 from ...components.project_dialog import ProjectDialog
 from .budget_management import BudgetManagementWindow
-from ...models.funding_db import init_db, add_project_to_db, sessionmaker, Project, Budget
+from ...models.database import init_db, add_project_to_db, sessionmaker, Project, Budget
 from ...utils.ui_utils import UIUtils
 from ...utils.db_utils import DBUtils
 from sqlalchemy import func

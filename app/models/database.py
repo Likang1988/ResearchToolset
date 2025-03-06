@@ -92,6 +92,32 @@ class Expense(Base):
     project = relationship("Project", backref="expenses")
     budget = relationship("Budget", back_populates="expenses")
 
+class BudgetPlan(Base):
+    """预算编制"""
+    __tablename__ = 'budget_plans'
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False)
+    total_amount = Column(Float, default=0.0)
+    created_at = Column(Date, default=datetime.now)
+    budget_plan_items = relationship("BudgetPlanItem", back_populates="budget_plan", cascade="all, delete-orphan")
+
+class BudgetPlanItem(Base):
+    """预算编制子项"""
+    __tablename__ = 'budget_plan_items'
+    
+    id = Column(Integer, primary_key=True)
+    budget_plan_id = Column(Integer, ForeignKey('budget_plans.id'), nullable=False)
+    category = Column(SQLEnum(BudgetCategory), nullable=False)
+    content = Column(String(200))  # 预算内容
+    specification = Column(String(100))  # 型号规格
+    unit_price = Column(Float, default=0.0)  # 单价
+    quantity = Column(Integer, default=0)  # 数量
+    amount = Column(Float, default=0.0)  # 经费数额
+    remarks = Column(String(200))  # 备注
+    
+    budget_plan = relationship("BudgetPlan", back_populates="budget_plan_items")
+
 def get_budget_usage(session, project_id, budget_id=None):
     """获取预算使用情况
     

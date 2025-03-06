@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
 from PySide6.QtCore import Qt, Signal, QDate, QSize
 from qfluentwidgets import (FluentIcon, TableWidget, PushButton, ComboBox, CalendarPicker, 
                            LineEdit, SpinBox, TableItemDelegate, TitleLabel, InfoBar, Dialog, RoundMenu, PrimaryPushButton, ToolButton, Action)
-from ...models.funding_db import sessionmaker, Budget, BudgetCategory, Expense, BudgetItem
+from ...models.database import sessionmaker, Budget, BudgetCategory, Expense, BudgetItem
 from datetime import datetime
 from ...components.expense_dialog import ExpenseDialog
 from ...utils.ui_utils import UIUtils

@@ -14,7 +14,7 @@ from qfluentwidgets import (
     SpinBox, DoubleSpinBox, PushButton, BodyLabel, FluentIcon, 
     setTheme, Theme, setThemeColor, InfoBar
 )
-from ..models.funding_db import BudgetCategory, Budget, BudgetItem, sessionmaker
+from ..models.database import BudgetCategory, Budget, BudgetItem, sessionmaker
 from sqlalchemy.orm import sessionmaker
 from ..utils.ui_utils import UIUtils
 from sqlalchemy import func

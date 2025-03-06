@@ -26,7 +26,7 @@ class MainWindow(FluentWindow):
         self.funding_interface.setObjectName("fundingInterface")
         
         # 创建预算编制界面实例
-        self.budget_edit_interface = BudgetingInterface()
+        self.budget_edit_interface = BudgetingInterface(self.engine)
         self.budget_edit_interface.setObjectName("budgetingInterface")
         
         self.help_interface = HelpInterface()
