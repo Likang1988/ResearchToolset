@@ -157,7 +157,7 @@ class ProjectManagementWindow(QWidget):
             self.project_table.setColumnWidth(5, 90)  # 结束日期列宽
             self.project_table.setColumnWidth(6, 70)  # 总经费列宽
             self.project_table.setColumnWidth(7, 70)  # 执行率列宽
-            self.project_table.setColumnWidth(8, 90)  # 操作列宽
+            self.project_table.setColumnWidth(8, 80)  # 操作列宽
 
             # 禁止直接编辑
             self.project_table.setEditTriggers(TableWidget.NoEditTriggers)

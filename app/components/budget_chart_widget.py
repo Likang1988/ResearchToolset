@@ -1,8 +1,8 @@
 import os
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QButtonGroup
 from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QColor, QPainter
-from PySide6.QtCharts import QChart, QChartView, QPieSeries, QPieSlice
+from PySide6.QtGui import QColor, QPainter, QFont
+from PySide6.QtCharts import QChart, QChartView, QPieSeries, QPieSlice, QLegend
 from qfluentwidgets import ToolButton, FluentIcon
 from ..models.funding_db import BudgetCategory, Expense
 from datetime import datetime
@@ -24,8 +24,7 @@ class BudgetChartBase(ABC):
         chart = QChart()
         chart.setTitle(title)
         chart.setAnimationOptions(QChart.SeriesAnimations)
-        chart.legend().setVisible(True)
-        chart.legend().setAlignment(Qt.AlignBottom)
+        chart.legend().setVisible(False)  # 隐藏图例标签
         
         series = QPieSeries()
         empty_slice = QPieSlice("暂无数据", 1)
@@ -42,16 +41,24 @@ class BudgetChartBase(ABC):
         chart = QChart()
         chart.setTitle(title)
         chart.setAnimationOptions(QChart.SeriesAnimations)
-        chart.legend().setVisible(True)
-        chart.legend().setAlignment(Qt.AlignBottom)
+        chart.legend().setVisible(False)  # 隐藏图例标签
         
         series = QPieSeries()
+        series.setPieSize(0.5)  # 设置饼图大小为视图的60%
+        series.setHorizontalPosition(0.5)  # 水平居中
+        series.setVerticalPosition(0.6)  # 稍微向上偏移，为底部图例留出空间
+        
         total_amount = sum(amount for amount in data_dict.values() if amount > 0)
         for i, (label, amount) in enumerate(sorted(data_dict.items())):
             if amount > 0:
                 percentage = (amount / total_amount) * 100
-                slice = QPieSlice(f"{label}: {amount:.2f}万元 ({percentage:.1f}%)", amount)
+                # 将标签文本分行显示，使用HTML格式实现换行
+                label_text = f"<div style='text-align: center;'>{label}<br/>{amount:.2f}万元<br/>({percentage:.1f}%)</div>"
+                slice = QPieSlice("", amount)  # 先创建一个空标签的切片
                 slice.setLabelVisible(True)
+                slice.setLabel(label_text)  # 设置HTML格式的标签
+                slice.setLabelPosition(QPieSlice.LabelOutside)  # 将标签放在饼图外部
+                slice.setLabelArmLengthFactor(0.40)  # 调整标签引线长度
                 slice.setBrush(self.colors[i % len(self.colors)])
                 series.append(slice)
                 
@@ -142,11 +149,24 @@ class BudgetChartWidget(QWidget):
         self.main_layout.setContentsMargins(0, 0, 0, 0)
         self.main_layout.setSpacing(5)
         
-        # 按钮组布局
-        button_layout = QHBoxLayout()
-        button_layout.setContentsMargins(0, 0, 0, 0)
+        # 创建图表视图
+        self.chart_view = QChartView()
+        self.chart_view.setRenderHint(QPainter.Antialiasing)  # 抗锯齿
+        self.chart_view.setMinimumHeight(200)  # 最小高度
+        self.chart_view.setStyleSheet("""
+            QChartView {
+                background-color: transparent;
+                border: 1px solid rgba(0, 0, 0, 0.1);
+                border-radius: 8px;
+            }
+        """)
+        
+        # 创建按钮容器
+        button_container = QWidget(self.chart_view)
+        button_layout = QHBoxLayout(button_container)
+        button_layout.setContentsMargins(10, 10, 10, 0)
         button_layout.setSpacing(5)
-        button_layout.setAlignment(Qt.AlignCenter)
+        button_layout.setAlignment(Qt.AlignTop | Qt.AlignRight)
         
         # 创建按钮组
         self.button_group = QButtonGroup(self)
@@ -158,21 +178,21 @@ class BudgetChartWidget(QWidget):
         self.category_btn.setFixedHeight(28)
         self.category_btn.setStyleSheet("""
             QPushButton {
-                background-color: #f0f0f0;
-                border: 1px solid #dcdcdc;
+                background-color: rgba(240, 240, 240, 0.8);
+                border: 1px solid rgba(220, 220, 220, 0.8);
                 border-radius: 4px;
                 padding: 4px 8px;
                 color: #333333;
             }
             QPushButton:checked {
-                background-color: #0078d4;
+                background-color: rgba(0, 120, 212, 0.8);
                 color: white;
             }
             QPushButton:hover {
-                background-color: #e5e5e5;
+                background-color: rgba(229, 229, 229, 0.8);
             }
             QPushButton:checked:hover {
-                background-color: #006cc1;
+                background-color: rgba(0, 108, 193, 0.8);
             }
         """)
         
@@ -189,15 +209,6 @@ class BudgetChartWidget(QWidget):
         # 添加按钮到布局
         button_layout.addWidget(self.category_btn)
         button_layout.addWidget(self.time_btn)
-        
-        # 添加按钮布局到主布局
-        self.main_layout.addLayout(button_layout)
-        
-        # 创建图表视图
-        self.chart_view = QChartView()
-        self.chart_view.setRenderHint(QPainter.Antialiasing)  # 抗锯齿
-        self.chart_view.setMinimumHeight(200)  # 设置最小高度
-        self.chart_view.setStyleSheet("background-color: transparent;")
         
         # 添加图表视图到主布局
         self.main_layout.addWidget(self.chart_view)

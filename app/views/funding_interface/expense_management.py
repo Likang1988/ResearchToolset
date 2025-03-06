@@ -97,14 +97,14 @@ class ExpenseManagementWindow(QWidget):
         
         # 设置初始列宽
         header.resizeSection(0, 100)  # 费用类别
-        header.resizeSection(1, 220)  # 开支内容
+        header.resizeSection(1, 260)  # 开支内容
         header.resizeSection(2, 140)  # 规格型号
         header.resizeSection(3, 140)  # 供应商
         header.resizeSection(4, 100)  # 报账金额
         header.resizeSection(5, 100)  # 报账日期
-        header.resizeSection(6, 120)  # 备注
-        header.resizeSection(7, 100)  # 支出凭证
-        header.resizeSection(8, 80)  # 支出ID
+        header.resizeSection(6, 140)  # 备注
+        header.resizeSection(7, 80)  # 支出凭证
+        header.resizeSection(8, 70)  # 支出ID
         
         # 允许用户调整列宽
         header.setSectionsMovable(True) # 可移动列
@@ -120,7 +120,7 @@ class ExpenseManagementWindow(QWidget):
         # 添加筛选工具栏
         filter_toolbar = QWidget()
         filter_layout = QHBoxLayout(filter_toolbar)
-        filter_layout.setContentsMargins(0, 5, 0, 15)  # 设置边距，增加上下间距
+        filter_layout.setContentsMargins(0, 5, 0, 12)  # 设置边距，增加上下间距
         
         # 类别筛选
         filter_layout.addWidget(QLabel("费用类别:"))
@@ -196,7 +196,7 @@ class ExpenseManagementWindow(QWidget):
         # 下部 - 统计表格
         bottom_widget = TableWidget()   # 创建下部widget
         bottom_layout = QVBoxLayout(bottom_widget)  # 垂直布局
-        bottom_layout.setContentsMargins(0, 15, 0, 0)   #上下边距为10
+        bottom_layout.setContentsMargins(0, 12, 0, 0)   #上下边距为10
         
         self.stats_table = TableWidget()   # 使用Fluent风格的TableWidget
         # 将合计列放在间接费右侧
@@ -449,7 +449,7 @@ class ExpenseManagementWindow(QWidget):
             header.setSectionResizeMode(QHeaderView.Interactive)
             header.resizeSection(0, 102)  # 类别列
             for i in range(1, len(self.headers)):
-                header.resizeSection(i, 84)  # 数据列
+                header.resizeSection(i, 88)  # 数据列
                 
             # 确保headers在load_statistics方法中可用
             if not hasattr(self, 'headers'):

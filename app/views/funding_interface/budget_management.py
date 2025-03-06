@@ -1,5 +1,5 @@
 import os
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTreeWidget, 
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTreeWidget, QSplitter, 
                                  QLabel, QPushButton, QMessageBox, QSpinBox, QTableWidget, QTableWidgetItem,
                                  QStackedWidget, QTreeWidgetItem)
 from qfluentwidgets import PrimaryPushButton, TitleLabel, FluentIcon, ToolButton, InfoBar, Dialog
@@ -44,8 +44,8 @@ class BudgetManagementWindow(QWidget):
     def setup_budget_page(self):
         """设置预算管理页面"""
         layout = QVBoxLayout(self.budget_page)
-        layout.setContentsMargins(6, 6, 6, 6)  # 统一设置边距为15像素
-        layout.setSpacing(10)  # 设置组件之间的垂直间距为10像素
+        layout.setContentsMargins(6, 6, 6, 6)  # 统一设置边距
+        layout.setSpacing(10)  # 设置组件之间的垂直间距
         
         # 标题
         title_layout = UIUtils.create_title_layout(f"预算管理-{self.project.financial_code}", True, self.back_to_project)
@@ -63,26 +63,62 @@ class BudgetManagementWindow(QWidget):
         button_layout = UIUtils.create_button_layout(add_btn, edit_btn, delete_btn)
         layout.addLayout(button_layout)
         
+        # 创建分割器
+        splitter = QSplitter(Qt.Horizontal)
+        splitter.setHandleWidth(1)  # 设置分割条宽度
+        splitter.setStyleSheet("""
+            QSplitter::handle {
+                background-color: rgba(0, 0, 0, 0.1);
+                margin: 1px;
+                border-radius: 2px;
+            }
+            QSplitter::handle:hover {
+                background-color: #0078D4;
+                margin: 1px;
+            }
+            QSplitter::handle:pressed {
+                background-color: #005A9E;
+                margin: 1px;
+            }
+        """)
+        
+        # 左侧 - 预算树形表格
+        left_widget = QWidget()
+        left_layout = QVBoxLayout(left_widget)
+        left_layout.setContentsMargins(0, 0, 10, 0)
+        
         # 预算树形表格
         self.budget_tree = QTreeWidget()
-        self.budget_tree.setColumnCount(6)  # 减少为6列，删除统计列
+        self.budget_tree.setColumnCount(6)
         
         # 获取表头并设置居中对齐
         header = self.budget_tree.header()
-        header.setDefaultAlignment(Qt.AlignCenter)  # 设置表头默认对齐方式为居中对齐
+        header.setDefaultAlignment(Qt.AlignCenter)
         
         # 设置列宽
         self.budget_tree.setColumnWidth(0, 140)  # 预算年度
-        self.budget_tree.setColumnWidth(1, 100)  # 预算额
-        self.budget_tree.setColumnWidth(2, 100)  # 支出额
-        self.budget_tree.setColumnWidth(3, 100)  # 结余额
-        self.budget_tree.setColumnWidth(4, 100)  # 执行率
-        self.budget_tree.setColumnWidth(5, 300)  # 操作/统计图表
+        self.budget_tree.setColumnWidth(1, 80)  # 预算额
+        self.budget_tree.setColumnWidth(2, 80)  # 支出额
+        self.budget_tree.setColumnWidth(3, 80)  # 结余额
+        self.budget_tree.setColumnWidth(4, 90)  # 执行率
+        self.budget_tree.setColumnWidth(5, 60)  # 操作
         
-        # 设置行高
+        # 设置表头
+        self.budget_tree.setHeaderLabels([
+            "预算年度", "预算额\n(万元)", 
+            "支出额\n(万元)", "结余额\n(万元)", "执行率", "操作"
+        ])
+        
+        self.budget_tree.setAlternatingRowColors(True)  # 启用交替行颜色
+        
+        # 为执行率列设置进度条代理
+        self.progress_delegate = ProgressBarDelegate(self.budget_tree)
+        self.budget_tree.setItemDelegateForColumn(4, self.progress_delegate)
+        
+        # 设置树形表格样式
         self.budget_tree.setStyleSheet("""
             QTreeWidget::item {
-                height: 36px;  /* 增加行高 */
+                height: 36px;
                 padding: 2px;
             }
             QTreeWidget {
@@ -106,22 +142,32 @@ class BudgetManagementWindow(QWidget):
             QHeaderView::section:hover {
                 background-color: #e5e5e5;
             }
-        """)        
+        """)
         
-        # 设置表头
-        self.budget_tree.setHeaderLabels([
-            "预算年度", "预算额(万元)", 
-            "支出额(万元)", "结余额(万元)", "执行率", "操作 / 统计"
-        ])
-       
-
-        self.budget_tree.setAlternatingRowColors(True)  # 启用交替行颜色
+        # 连接选择信号
+        self.budget_tree.itemSelectionChanged.connect(self.on_budget_selection_changed)
         
-        # 为执行率列设置进度条代理
-        self.progress_delegate = ProgressBarDelegate(self.budget_tree)
-        self.budget_tree.setItemDelegateForColumn(4, self.progress_delegate)  # 调整执行率列的索引
+        left_layout.addWidget(self.budget_tree)
+        splitter.addWidget(left_widget)
+        
+        # 右侧 - 统计图表
+        right_widget = QWidget()
+        right_layout = QVBoxLayout(right_widget)
+        right_layout.setContentsMargins(10, 0, 0, 0)  # 右侧布局的边距
 
-        layout.addWidget(self.budget_tree)
+        # 创建统计图表组件
+        
+        # 创建统计图表组件
+        self.chart_widget = BudgetChartWidget()
+        right_layout.addWidget(self.chart_widget)
+        splitter.addWidget(right_widget)
+        
+        # 设置分割器比例
+        splitter.setStretchFactor(0, 4)  # 左侧占60%
+        splitter.setStretchFactor(1, 16)  # 右侧占40%
+        splitter.setChildrenCollapsible(False)  # 防止完全折叠
+        
+        layout.addWidget(splitter)
         
     def back_to_project(self):
         """返回到项目管理页面"""
@@ -270,30 +316,7 @@ class BudgetManagementWindow(QWidget):
                     child.setText(2, "0.00")
                     child.setText(3, "0.00")
             
-            # 创建总预算的统计图表
-            chart_widget = BudgetChartWidget()
-            # 获取总预算的支出记录
-            expenses = session.query(Expense).filter(
-                Expense.budget_id.in_(
-                    session.query(Budget.id).filter(
-                        Budget.project_id == self.project.id
-                    )
-                )
-            ).all()
-            # 获取总预算项
-            total_budget_items = session.query(BudgetItem).filter_by(
-                budget_id=total_budget.id
-            ).all()
-            chart_widget.update_charts(budget_items=total_budget_items, expenses=expenses)
-            
-            # 将图表添加到设备费类别的单元格中
-            if first_child:
-                self.budget_tree.setItemWidget(first_child, 5, chart_widget)
-                # 连接折叠信号
-                self.budget_tree.itemExpanded.connect(lambda item: chart_widget.setVisible(True) if item == total_item else None)
-                self.budget_tree.itemCollapsed.connect(lambda item: chart_widget.setVisible(False) if item == total_item else None)
-                # 初始状态根据父项是否展开
-                chart_widget.setVisible(total_item.isExpanded())
+            # 移除统计图表相关代码
             
             # 加载年度预算
             annual_budgets = session.query(Budget).filter(
@@ -335,32 +358,7 @@ class BudgetManagementWindow(QWidget):
                 
                 self.budget_tree.setItemWidget(year_item, 5, btn_widget)
                 
-                # 添加年度预算的统计图表
-                chart_widget = BudgetChartWidget()
-                # 获取该年度的支出记录
-                expenses = session.query(Expense).filter(
-                    Expense.budget_id == budget.id
-                ).all()
-                # 获取当前年度的预算项
-                current_budget_items = session.query(BudgetItem).filter_by(
-                    budget_id=budget.id
-                ).all()
-                chart_widget.update_charts(budget_items=current_budget_items, expenses=expenses)
-                
-                # 将图表添加到设备费类别的单元格中
-                first_child = None
-                for child in range(year_item.childCount()):
-                    if year_item.child(child).text(0) == BudgetCategory.EQUIPMENT.value:
-                        first_child = year_item.child(child)
-                        break
-                
-                if first_child:
-                    self.budget_tree.setItemWidget(first_child, 5, chart_widget)
-                    # 连接折叠信号
-                    self.budget_tree.itemExpanded.connect(lambda item: chart_widget.setVisible(True) if item == year_item else None)
-                    self.budget_tree.itemCollapsed.connect(lambda item: chart_widget.setVisible(False) if item == year_item else None)
-                    # 初始状态根据父项是否展开
-                    chart_widget.setVisible(year_item.isExpanded())
+                # 移除统计图表相关代码
                 
                 # 加载年度预算子项
                 budget_items = session.query(BudgetItem).filter_by(budget_id=budget.id).all()
@@ -393,26 +391,7 @@ class BudgetManagementWindow(QWidget):
                     if category == BudgetCategory.EQUIPMENT:
                         first_child = child
 
-                # 创建年度预算的统计图表
-                chart_widget = BudgetChartWidget()
-                # 获取该年度的支出记录
-                expenses = session.query(Expense).filter(
-                    Expense.budget_id == budget.id
-                ).all()
-                # 获取当前年度的预算项
-                current_budget_items = session.query(BudgetItem).filter_by(
-                    budget_id=budget.id
-                ).all()
-                chart_widget.update_charts(budget_items=current_budget_items, expenses=expenses)
-                
-                # 将图表添加到设备费类别的单元格中
-                if first_child:
-                    self.budget_tree.setItemWidget(first_child, 5, chart_widget)
-                    # 连接折叠信号
-                    self.budget_tree.itemExpanded.connect(lambda item: chart_widget.setVisible(True) if item == year_item else None)
-                    self.budget_tree.itemCollapsed.connect(lambda item: chart_widget.setVisible(False) if item == year_item else None)
-                    # 初始状态根据父项是否展开
-                    chart_widget.setVisible(year_item.isExpanded())
+                # 移除统计图表相关代码
             
             # 默认折叠所有项
             self.budget_tree.collapseAll()
@@ -420,6 +399,410 @@ class BudgetManagementWindow(QWidget):
             # for i in range(self.budget_tree.columnCount()):
             #     self.budget_tree.resizeColumnToContents(i)
                 
+        finally:
+            session.close()
+            
+    def calculate_annual_budgets_total(self, session, exclude_year=None):
+        """计算年度预算总和"""
+        query = session.query(func.sum(Budget.total_amount)).filter(
+            Budget.project_id == self.project.id
+        )
+        if exclude_year:
+            query = query.filter(Budget.year != exclude_year)
+        return query.scalar() or 0.0
+
+    def add_budget(self):
+        """添加预算"""
+        Session = sessionmaker(bind=self.engine)
+        session = Session()
+        
+        try:
+            # 检查总预算是否已设置
+            total_budget = session.query(Budget).filter(
+                Budget.project_id == self.project.id,
+                Budget.year.is_(None)
+            ).with_for_update().first()
+            
+            if not total_budget or total_budget.total_amount <= 0:
+                UIUtils.show_warning(
+                    title="警告", 
+                    content="请先设置总预算！",
+                    parent=self
+                    )
+                return
+                
+            # 计算已有年度预算总和
+            annual_total = session.query(func.sum(Budget.total_amount)).filter(
+                Budget.project_id == self.project.id,
+                Budget.year.isnot(None)
+            ).scalar() or 0.0
+            
+            remaining_budget = total_budget.total_amount - annual_total
+            if remaining_budget <= 0:
+                UIUtils.show_warning(
+                    title="警告", 
+                    content="已达到总预算限额，无法添加新的年度预算！",
+                    parent=self
+                    )
+                return
+            
+            # 关闭当前会话，让dialog使用自己的会话进行验证
+            session.close()
+            
+            dialog = BudgetDialog(self)
+            if dialog.exec():
+                # 重新打开会话进行后续操作
+                session = Session()
+                try:
+                    data = dialog.get_data()
+                    
+                    # 再次检查年度预算是否已存在（可能在对话框打开期间被其他用户添加）
+                    existing_budget = session.query(Budget).filter_by(
+                        project_id=self.project.id,
+                        year=data['year']
+                    ).with_for_update().first()
+                    
+                    if existing_budget:
+                        UIUtils.show_warning(                            
+                            title="警告",
+                            content=f"{data['year']}年度的预算已存在！\n请选择其他年度或编辑现有预算。",
+                            parent=self
+                        )
+                        return
+                    
+                    # 重新检查预算限额（因为可能在对话框打开期间发生变化）
+                    annual_total = session.query(func.sum(Budget.total_amount)).filter(
+                        Budget.project_id == self.project.id,
+                        Budget.year.isnot(None)
+                    ).scalar() or 0.0
+                    
+                    remaining_budget = total_budget.total_amount - annual_total
+                    if data['total_amount'] > remaining_budget:
+                        UIUtils.show_warning(
+                            title="警告", 
+                            content=f"年度预算({data['total_amount']}万元)超出剩余总预算({remaining_budget:.2f}万元)！",
+                            parent=self
+                            )
+                        return
+                    
+                    # 创建年度预算
+                    budget = Budget(
+                        project_id=self.project.id,
+                        year=data['year'],
+                        total_amount=data['total_amount'],
+                        spent_amount=0.0
+                    )
+                    session.add(budget)
+                    session.flush()  # 获取预算ID
+                    
+                    # 创建预算子项
+                    for category in BudgetCategory:  # 遍历所有预算类别
+                        amount = data['items'].get(category, 0.0)  # 如果没有设置金额，默认为0
+                        budget_item = BudgetItem(
+                            budget_id=budget.id,
+                            category=category,
+                            amount=amount,
+                            spent_amount=0.0
+                        )
+                        session.add(budget_item)
+                    
+                    session.commit()
+                    self.load_budgets()
+                    
+                except Exception as e:
+                    session.rollback()
+                    error_msg = f"添加预算失败：\n错误类型：{type(e).__name__}\n错误信息：{str(e)}"
+                    print(error_msg)  # 打印错误信息到控制台
+                    UIUtils.show_error(
+                        title= "错误", 
+                        content=error_msg,
+                        parent=self
+                        )
+                finally:
+                    session.close()
+                    
+        except Exception as e:
+            session.rollback()
+            error_msg = f"添加预算失败：\n错误类型：{type(e).__name__}\n错误信息：{str(e)}"
+            print(error_msg)  # 打印错误信息到控制台
+            UIUtils.show_error(
+                title= "错误", 
+                content=error_msg,
+                parent=self
+                )
+        finally:
+            if session:
+                session.close()
+            
+    def delete_budget(self):
+        """删除预算"""
+        current_item = self.budget_tree.currentItem()
+        if not current_item:
+            UIUtils.show_warning(
+                title= "警告", 
+                content="请选择要删除的预算！",
+                parent=self
+                )
+            return
+            
+        budget_type = current_item.text(0)
+        if budget_type == " 总预算":
+            UIUtils.show_warning(
+                title= "警告", 
+                content="不能删除总预算！",
+                parent=self
+                )
+            return
+            
+        # 确认删除
+        confirm_dialog = Dialog(
+            '确认删除',
+            f'确定要删除{budget_type}预算吗？此操作不可恢复！',
+            self
+        )
+        
+        if not confirm_dialog.exec():
+            return
+            
+        Session = sessionmaker(bind=self.engine)
+        session = Session()
+        
+        try:
+            if budget_type.endswith("年度"):
+                year = int(budget_type[:-2])  # 去掉"年度"后缀
+                budget = session.query(Budget).filter_by(
+                    project_id=self.project.id,
+                    year=year
+                ).first()
+                
+                if budget:
+                    # 删除预算及其子项
+                    session.query(BudgetItem).filter_by(budget_id=budget.id).delete()
+                    session.delete(budget)
+                    session.commit()
+                    self.load_budgets()
+                    UIUtils.show_success(
+                        title= "成功", 
+                        content= f"{budget_type}预算已删除",
+                        parent=self
+                        )
+                    
+                else:
+                    UIUtils.show_error(
+                        title= "错误", 
+                        content="未找到要删除的预算！",
+                        parent=self
+                        )
+                    
+        except Exception as e:
+            session.rollback()
+            error_msg = f"删除预算时发生错误：\n错误类型：{type(e).__name__}\n错误信息：{str(e)}"
+            print(error_msg)  # 打印错误信息到控制台
+            UIUtils.show_error(
+                title= "错误", 
+                content=error_msg,
+                parent=self
+                )
+        finally:
+            session.close()
+
+    def edit_budget(self):
+        """编辑预算"""
+        current_item = self.budget_tree.currentItem()
+        if not current_item:
+            UIUtils.show_warning(
+                title='警告',
+                content='请选择要编辑的预算！',
+                parent=self
+            )
+            return
+            
+        # 验证选中项是否为有效的预算项
+        budget_type = current_item.text(0)
+        if not (" 总预算" in budget_type or budget_type.endswith("年度")):
+            UIUtils.show_warning(
+                title='警告',
+                content='请选择有效的预算项进行编辑！',
+                parent=self
+            )
+            return
+            
+        Session = sessionmaker(bind=self.engine)
+        session = Session()
+        
+        try:
+            budget_type = current_item.text(0)
+            
+            if budget_type == " 总预算":
+                # 编辑总预算
+                budget = session.query(Budget).filter(
+                    Budget.project_id == self.project.id,
+                    Budget.year.is_(None)
+                ).with_for_update().first()  # 添加行级锁
+                
+                if budget:
+                    print(f"开始编辑总预算，当前总额：{budget.total_amount}")  # 调试信息
+                    try:
+                        dialog = TotalBudgetDialog(self, budget)  # 传入当前预算数据
+                        if dialog.exec():
+                            try:
+                                data = dialog.get_data()
+                                print(f"获取到新的总预算数据：{data}")  # 调试信息
+                                
+                                # 更新总预算
+                                budget.total_amount = data['total_amount']
+                                # 更新子项金额
+                                for item in budget.budget_items:
+                                    if item.category in data['items']:
+                                        item.amount = data['items'][item.category]
+                                    else:
+                                        item.amount = 0.0  # 处理缺失的类别
+                                
+                                session.commit()
+                                print("总预算更新成功")  # 调试信息
+                                self.load_budgets()
+                            except Exception as e:
+                                session.rollback()
+                                print(f"更新总预算时发生错误：{str(e)}")  # 调试信息
+                                UIUtils.show_error(
+                            title='错误',
+                            content=f'更新总预算失败：{str(e)}',
+                            parent=self
+                        )
+                    except Exception as e:
+                        print(f"打开总预算编辑对话框时发生错误：{str(e)}")
+                        UIUtils.show_error(
+                            title='错误',
+                            content=f'无法打开总预算编辑对话框：{str(e)}',
+                            parent=self
+                        )
+                        return
+                else:
+                    UIUtils.show_error(
+                        title='错误',
+                        content='未找到总预算数据！',
+                        parent=self
+                    )
+                    
+            elif budget_type.endswith("年度"):
+                # 编辑年度预算
+                try:
+                    year = int(budget_type[:-2])  # 去掉"年度"后缀
+                    budget = session.query(Budget).filter_by(
+                        project_id=self.project.id,
+                        year=year
+                    ).with_for_update().first()  # 添加行级锁
+                    
+                    if budget:
+                        dialog = BudgetDialog(self, budget)
+                        dialog.budget_updated.connect(self.load_budgets)
+                        if dialog.exec():
+                            try:
+                                data = dialog.get_data()
+                                
+                                # 更新年度预算
+                                budget.total_amount = data['total_amount']
+                                # 更新子项金额
+                                # 更新子项金额，处理可能缺失的类别
+                                for item in budget.budget_items:
+                                    if item.category in data['items']:
+                                        item.amount = data['items'][item.category]
+                                    else:
+                                        # 如果类别不存在于新数据中，则设置为0
+                                        item.amount = 0.0
+                                
+                                session.commit()
+                                self.load_budgets()
+                            except Exception as e:
+                                print(f"处理预算数据时发生错误: {str(e)}")
+                                raise
+                    else:
+                        UIUtils.show_error(
+                            title='错误',
+                            content='未找到预算数据！',
+                            parent=self
+                        )
+                        
+                except ValueError:
+                    UIUtils.show_error(
+                        title='错误',
+                        content='无效的预算年度格式',
+                        parent=self
+                    )
+                    
+            else:
+                UIUtils.show_warning(
+                    title='警告',
+                    content='请选择总预算或年度预算进行编辑',
+                    parent=self
+                )
+                
+        except Exception as e:
+            session.rollback()
+            error_msg = f"编辑预算时发生错误：\n错误类型：{type(e).__name__}\n错误信息：{str(e)}"
+            print(error_msg)  # 打印错误信息到控制台
+            UIUtils.show_error(
+                title='错误',
+                content=error_msg,
+                parent=self
+            )
+        finally:
+            session.close()
+
+    def on_budget_selection_changed(self):
+        """处理预算树形表格的选择变化事件"""
+        selected_items = self.budget_tree.selectedItems()
+        if not selected_items:
+            return
+            
+        selected_item = selected_items[0]
+        
+        # 获取数据库会话
+        Session = sessionmaker(bind=self.engine)
+        session = Session()
+        
+        try:
+            # 判断是否为年度预算项
+            if selected_item.parent() is None:  # 顶级项
+                text = selected_item.text(0).strip()
+                if text == "总预算":
+                    # 获取总预算的支出记录
+                    expenses = session.query(Expense).filter(
+                        Expense.budget_id.in_(
+                            session.query(Budget.id).filter(
+                                Budget.project_id == self.project.id
+                            )
+                        )
+                    ).all()
+                    # 获取总预算项
+                    total_budget = session.query(Budget).filter(
+                        Budget.project_id == self.project.id,
+                        Budget.year.is_(None)
+                    ).first()
+                    if total_budget:
+                        budget_items = session.query(BudgetItem).filter_by(
+                            budget_id=total_budget.id
+                        ).all()
+                        # 更新图表
+                        self.chart_widget.update_charts(budget_items=budget_items, expenses=expenses)
+                else:
+                    # 获取年度预算
+                    year = int(text.replace("年度", "").strip())
+                    budget = session.query(Budget).filter(
+                        Budget.project_id == self.project.id,
+                        Budget.year == year
+                    ).first()
+                    if budget:
+                        # 获取该年度的支出记录
+                        expenses = session.query(Expense).filter(
+                            Expense.budget_id == budget.id
+                        ).all()
+                        # 获取预算项
+                        budget_items = session.query(BudgetItem).filter_by(
+                            budget_id=budget.id
+                        ).all()
+                        # 更新图表
+                        self.chart_widget.update_charts(budget_items=budget_items, expenses=expenses)
         finally:
             session.close()
             
