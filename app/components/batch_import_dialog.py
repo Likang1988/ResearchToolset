@@ -4,6 +4,7 @@ import pandas as pd
 from datetime import datetime
 from qfluentwidgets import (InfoBar, PushButton, BodyLabel, FluentIcon)
 from ..models.funding_db import BudgetCategory
+from ..utils.ui_utils import UIUtils
 
 class BatchImportDialog(QDialog):
     def __init__(self, project_id, parent=None):
@@ -81,7 +82,7 @@ class BatchImportDialog(QDialog):
                     '开支内容': ['设备A采购', '材料B采购'],
                     '规格型号': ['型号X', '型号Y'],
                     '供应商': ['供应商A', '供应商B'],
-                    '报账金额': [10000, 5000],
+                    '报账金额(元)': [10000, 5000],
                     '报账日期': ['2025-02-12', ''],
                     '备注': ['示例数据1', '示例数据2']
                 }

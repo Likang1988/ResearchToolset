@@ -58,7 +58,7 @@ class BudgetChartBase(ABC):
                 slice.setLabelVisible(True)
                 slice.setLabel(label_text)  # 设置HTML格式的标签
                 slice.setLabelPosition(QPieSlice.LabelOutside)  # 将标签放在饼图外部
-                slice.setLabelArmLengthFactor(0.40)  # 调整标签引线长度
+                slice.setLabelArmLengthFactor(0.50)  # 调整标签引线长度
                 slice.setBrush(self.colors[i % len(self.colors)])
                 series.append(slice)
                 

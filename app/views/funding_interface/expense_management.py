@@ -211,8 +211,8 @@ class ExpenseManagementWindow(QWidget):
         self.stats_table.setBorderRadius(8)
         self.stats_table.setWordWrap(False)
         self.stats_table.setItemDelegate(TableItemDelegate(self.stats_table))
-        self.stats_table.setSelectionBehavior(TableWidget.SelectRows)
-        self.stats_table.setSelectionMode(TableWidget.SingleSelection)
+        self.stats_table.setSelectionBehavior(TableWidget.SelectRows)  
+        self.stats_table.setSelectionMode(TableWidget.SingleSelection)  
         
         # 设置表格样式
         self.stats_table.setStyleSheet("""
@@ -234,10 +234,10 @@ class ExpenseManagementWindow(QWidget):
             QHeaderView::section {
                 background-color: #f3f3f3;
                 color: #333333;
-                font-weight: 500;
                 padding: 8px;
                 border: none;
                 border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+                font-size: 12px;
             }
             QHeaderView::section:hover {
                 background-color: #e5e5e5;
@@ -476,7 +476,6 @@ class ExpenseManagementWindow(QWidget):
                 QHeaderView::section {
                     background-color: #f3f3f3;
                     color: #333333;
-                    font-weight: 500;
                     padding: 8px;
                     border: none;
                     border-bottom: 1px solid rgba(0, 0, 0, 0.1);
@@ -1235,8 +1234,9 @@ class ExpenseManagementWindow(QWidget):
             excel_filename = f"支出记录_{timestamp}.xlsx"
             excel_path = os.path.join(export_dir, excel_filename)
             
-            # 保存Excel文件
-            df.to_excel(excel_path, index=False, engine='openpyxl')
+            # 保存Excel文件，设置工作表名称为'支出信息'
+            with pd.ExcelWriter(excel_path, engine='openpyxl') as writer:
+                df.to_excel(writer, sheet_name='支出信息', index=False)
             
             UIUtils.show_success(
                 title='成功',
