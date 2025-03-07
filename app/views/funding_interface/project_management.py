@@ -230,7 +230,7 @@ class ProjectManagementWindow(QWidget):
                 self.refresh_project_table()
                 
                 # 显示成功消息
-                UIUtils.show_success(self,
+                UIUtils.show_success(
                     title='成功',
                     content='项目添加成功',
                     parent=self

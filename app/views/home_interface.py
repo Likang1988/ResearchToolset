@@ -22,7 +22,7 @@ class HomeInterface(QWidget):
         card_layout.addWidget(title)
         
         # 添加副标题
-        subtitle = SubtitleLabel("本系统帮助您高效管理科研项目经费", self)
+        subtitle = SubtitleLabel("本软件帮助您高效管理科研项目经费", self)
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(subtitle)
         
