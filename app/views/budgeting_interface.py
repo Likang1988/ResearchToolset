@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTreeWidget, QTreeWidgetItem,
                              QLabel, QPushButton, QMessageBox, QSpinBox, QLineEdit, QHeaderView)
-from qfluentwidgets import PrimaryPushButton, TitleLabel, FluentIcon, ToolButton, InfoBar, TableItemDelegate
+from qfluentwidgets import PrimaryPushButton, TitleLabel, FluentIcon, ToolButton, InfoBar, TableItemDelegate, Dialog
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon
 from ..models.database import sessionmaker, BudgetCategory, BudgetPlan, BudgetPlanItem
@@ -33,12 +33,16 @@ class BudgetingInterface(QWidget):
                 project_item.setText(4, f"{plan.total_amount:.2f}")
                 project_item.setText(5, plan.remarks or "")
                 project_item.setFlags(project_item.flags() | Qt.ItemIsEditable)
+                # 设置第一级经费数额右对齐
+                project_item.setTextAlignment(4, Qt.AlignCenter | Qt.AlignVCenter)
                 
                 # 添加预算类别
                 for category in BudgetCategory:
                     category_item = QTreeWidgetItem(project_item)
                     category_item.setText(0, category.value)
                     category_item.setFlags(category_item.flags() & ~Qt.ItemIsEditable)  # 禁止编辑
+                    # 设置第二级经费数额右对齐
+                    category_item.setTextAlignment(4, Qt.AlignRight | Qt.AlignVCenter)
                     
                     # 查询该类别的预算项
                     budget_items = session.query(BudgetPlanItem).filter(
@@ -65,7 +69,7 @@ class BudgetingInterface(QWidget):
                             item.setText(0, sub_item.name)
                             item.setText(1, sub_item.specification or "")
                             item.setText(2, f"{sub_item.unit_price:.2f}" if sub_item.unit_price else "")
-                            item.setText(3, f"{sub_item.quantity:.2f}" if sub_item.quantity else "")
+                            item.setText(3, f"{sub_item.quantity:.0f}" if sub_item.quantity else "")
                             item.setText(4, f"{sub_item.amount:.2f}" if sub_item.amount else "")
                             item.setText(5, sub_item.remarks or "")
                             item.setFlags(item.flags() | Qt.ItemIsEditable)
@@ -169,20 +173,15 @@ class BudgetingInterface(QWidget):
         header = self.budget_tree.header()
         header.setDefaultAlignment(Qt.AlignCenter)  # 设置表头居中对齐
         header.setSectionResizeMode(QHeaderView.Interactive)
-        header.resizeSection(0, 200)  # 课题名称/预算内容
-        header.resizeSection(1, 150)  # 型号规格/简要内容
+        header.resizeSection(0, 400)  # 课题名称/预算内容
+        header.resizeSection(1, 250)  # 型号规格/简要内容
         header.resizeSection(2, 100)  # 单价
-        header.resizeSection(3, 100)  # 数量
-        header.resizeSection(4, 120)  # 经费数额
+        header.resizeSection(3, 80)  # 数量
+        header.resizeSection(4, 100)  # 经费数额
         header.resizeSection(5, 120)  # 备注
         
         # 设置单元格对齐方式
-        self.budget_tree.setItemDelegateForColumn(0, TableItemDelegate(self.budget_tree))  # 第0列
-        self.budget_tree.setItemDelegateForColumn(1, TableItemDelegate(self.budget_tree))  # 第1列
-        self.budget_tree.setItemDelegateForColumn(2, TableItemDelegate(self.budget_tree))  # 第2列
-        self.budget_tree.setItemDelegateForColumn(3, TableItemDelegate(self.budget_tree))  # 第3列
-        self.budget_tree.setItemDelegateForColumn(4, TableItemDelegate(self.budget_tree))  # 第4列
-        self.budget_tree.setItemDelegateForColumn(5, TableItemDelegate(self.budget_tree))  # 第5列
+
         
         layout.addWidget(self.budget_tree)
         
@@ -258,6 +257,21 @@ class BudgetingInterface(QWidget):
         """删除预算项"""
         current_item = self.budget_tree.currentItem()
         if not current_item:
+            UIUtils.show_warning(
+                title='警告',
+                content='请选择要删除的预算项！',
+                parent=self
+            )
+            return
+            
+        # 使用Dialog显示确认对话框
+        confirm_dialog = Dialog(
+            '确认删除',
+            '确定要删除该预算项吗？此操作不可恢复！',
+            self
+        )
+        
+        if not confirm_dialog.exec():  # 如果用户取消删除，直接返回
             return
             
         # 如果是预算类别项（第二级），不允许删除
