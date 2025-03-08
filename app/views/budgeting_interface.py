@@ -13,9 +13,78 @@ class BudgetingInterface(QWidget):
         super().__init__()
         self.engine = engine
         self.setup_ui()
-        
+        self.load_budget_plans()  # 添加加载预算数据的调用
         # 连接单元格编辑完成信号
         self.budget_tree.itemChanged.connect(self.on_item_changed)
+
+    def load_budget_plans(self):
+        """加载已保存的预算计划数据"""
+        try:
+            Session = sessionmaker(bind=self.engine)
+            session = Session()
+            
+            # 查询所有预算计划
+            budget_plans = session.query(BudgetPlan).all()
+            
+            for plan in budget_plans:
+                # 创建顶级项目
+                project_item = QTreeWidgetItem(self.budget_tree)
+                project_item.setText(0, plan.name)
+                project_item.setText(4, f"{plan.total_amount:.2f}")
+                project_item.setText(5, plan.remarks or "")
+                project_item.setFlags(project_item.flags() | Qt.ItemIsEditable)
+                
+                # 添加预算类别
+                for category in BudgetCategory:
+                    category_item = QTreeWidgetItem(project_item)
+                    category_item.setText(0, category.value)
+                    category_item.setFlags(category_item.flags() & ~Qt.ItemIsEditable)  # 禁止编辑
+                    
+                    # 查询该类别的预算项
+                    budget_items = session.query(BudgetPlanItem).filter(
+                        BudgetPlanItem.plan_id == plan.id,
+                        BudgetPlanItem.category == category,
+                        BudgetPlanItem.parent_id.is_(None)
+                    ).all()
+                    
+                    # 设置类别总金额
+                    if budget_items:
+                        category_item.setText(4, f"{budget_items[0].amount:.2f}")
+                        category_item.setText(5, budget_items[0].remarks or "")
+                    
+                    # 查询并添加子项（包括第二级和第三级）
+                    def add_sub_items(parent_item, parent_id):
+                        sub_items = session.query(BudgetPlanItem).filter(
+                            BudgetPlanItem.plan_id == plan.id,
+                            BudgetPlanItem.category == category,
+                            BudgetPlanItem.parent_id == parent_id
+                        ).all()
+                        
+                        for sub_item in sub_items:
+                            item = QTreeWidgetItem(parent_item)
+                            item.setText(0, sub_item.name)
+                            item.setText(1, sub_item.specification or "")
+                            item.setText(2, f"{sub_item.unit_price:.2f}" if sub_item.unit_price else "")
+                            item.setText(3, f"{sub_item.quantity:.2f}" if sub_item.quantity else "")
+                            item.setText(4, f"{sub_item.amount:.2f}" if sub_item.amount else "")
+                            item.setText(5, sub_item.remarks or "")
+                            item.setFlags(item.flags() | Qt.ItemIsEditable)
+                            
+                            # 递归加载子项的子项
+                            add_sub_items(item, sub_item.id)
+                    
+                    # 从第二级开始加载
+                    if budget_items:
+                        add_sub_items(category_item, budget_items[0].id)
+            
+            session.close()
+            
+        except Exception as e:
+            UIUtils.show_error(
+                title='错误',
+                content=f'加载预算数据失败：{str(e)}',
+                parent=self
+            )
     def setup_ui(self):
         """设置UI界面"""
         layout = QVBoxLayout(self)
@@ -202,18 +271,163 @@ class BudgetingInterface(QWidget):
             )
             return
             
-        # 删除项目
-        if parent:
-            parent.removeChild(current_item)
-        else:
-            self.budget_tree.takeTopLevelItem(
-                self.budget_tree.indexOfTopLevelItem(current_item)
+        try:
+            Session = sessionmaker(bind=self.engine)
+            session = Session()
+            
+            # 如果是顶级项目，删除整个预算计划及其所有子项
+            if not parent:
+                budget_plan = session.query(BudgetPlan).filter_by(
+                    name=current_item.text(0)
+                ).first()
+                if budget_plan:
+                    session.delete(budget_plan)
+            else:
+                # 获取预算计划
+                top_item = current_item
+                while top_item.parent():
+                    top_item = top_item.parent()
+                budget_plan = session.query(BudgetPlan).filter_by(
+                    name=top_item.text(0)
+                ).first()
+                
+                if budget_plan:
+                    # 获取当前项目的类别
+                    category_item = current_item
+                    while category_item.parent() and category_item.parent().parent():
+                        category_item = category_item.parent()
+                    category = next((c for c in BudgetCategory if c.value == category_item.text(0)), None)
+                    
+                    if category:
+                        # 删除当前项及其子项
+                        budget_item = session.query(BudgetPlanItem).filter_by(
+                            plan_id=budget_plan.id,
+                            category=category,
+                            name=current_item.text(0)
+                        ).first()
+                        if budget_item:
+                            session.delete(budget_item)
+            
+            session.commit()
+            
+            # 删除界面项目
+            if parent:
+                parent.removeChild(current_item)
+            else:
+                self.budget_tree.takeTopLevelItem(
+                    self.budget_tree.indexOfTopLevelItem(current_item)
+                )
+                
+        except Exception as e:
+            session.rollback()
+            UIUtils.show_error(
+                title='错误',
+                content=f'删除预算项失败：{str(e)}',
+                parent=self
             )
+        finally:
+            session.close()
             
     def save_data(self):
         """保存预算数据到数据库"""
-        # TODO: 实现数据保存逻辑
-        pass
+        try:
+            Session = sessionmaker(bind=self.engine)
+            session = Session()
+            
+            # 遍历所有顶级项目
+            for i in range(self.budget_tree.topLevelItemCount()):
+                project_item = self.budget_tree.topLevelItem(i)
+                
+                # 查找或创建预算计划
+                budget_plan = session.query(BudgetPlan).filter_by(
+                    name=project_item.text(0)
+                ).first()
+                
+                if budget_plan:
+                    # 更新现有预算计划
+                    budget_plan.total_amount = float(project_item.text(4)) if project_item.text(4) else 0.0
+                    budget_plan.remarks = project_item.text(5) or None
+                else:
+                    # 创建新的预算计划
+                    budget_plan = BudgetPlan(
+                        name=project_item.text(0),
+                        total_amount=float(project_item.text(4)) if project_item.text(4) else 0.0,
+                        remarks=project_item.text(5) or None
+                    )
+                    session.add(budget_plan)
+                    session.flush()  # 获取预算计划ID
+                
+                # 保存预算类别项
+                for j in range(project_item.childCount()):
+                    category_item = project_item.child(j)
+                    category_name = category_item.text(0)
+                    category = next((c for c in BudgetCategory if c.value == category_name), None)
+                    
+                    if category:
+                        # 查找或创建预算类别项
+                        budget_item = session.query(BudgetPlanItem).filter_by(
+                            plan_id=budget_plan.id,
+                            category=category,
+                            parent_id=None
+                        ).first()
+                        
+                        if budget_item:
+                            # 更新现有预算类别项
+                            budget_item.amount = float(category_item.text(4)) if category_item.text(4) else 0.0
+                            budget_item.remarks = category_item.text(5) or None
+                        else:
+                            # 创建新的预算类别项
+                            budget_item = BudgetPlanItem(
+                                plan_id=budget_plan.id,
+                                category=category,
+                                amount=float(category_item.text(4)) if category_item.text(4) else 0.0,
+                                remarks=category_item.text(5) or None
+                            )
+                            session.add(budget_item)
+                            session.flush()
+                        
+                        # 删除旧的子项
+                        session.query(BudgetPlanItem).filter_by(
+                            plan_id=budget_plan.id,
+                            category=category,
+                            parent_id=budget_item.id
+                        ).delete()
+                        
+                        # 保存新的子项
+                        for k in range(category_item.childCount()):
+                            sub_item = category_item.child(k)
+                            budget_sub_item = BudgetPlanItem(
+                                plan_id=budget_plan.id,
+                                parent_id=budget_item.id,
+                                category=category,
+                                name=sub_item.text(0),
+                                specification=sub_item.text(1),
+                                unit_price=float(sub_item.text(2)) if sub_item.text(2) else 0.0,
+                                quantity=float(sub_item.text(3)) if sub_item.text(3) else 0.0,
+                                amount=float(sub_item.text(4)) if sub_item.text(4) else 0.0,
+                                remarks=sub_item.text(5) or None
+                            )
+                            session.add(budget_sub_item)
+                
+            # 提交事务
+            session.commit()
+            
+            # 显示成功消息
+            UIUtils.show_success(
+                title='成功',
+                content='预算数据保存成功！',
+                parent=self
+            )
+            
+        except Exception as e:
+            session.rollback()
+            UIUtils.show_error(
+                title='错误',
+                content=f'保存预算数据失败：{str(e)}',
+                parent=self
+            )
+        finally:
+            session.close()
         
     def export_data(self):
         """导出预算数据"""
