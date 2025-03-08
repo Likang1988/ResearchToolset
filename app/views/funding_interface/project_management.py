@@ -1,9 +1,9 @@
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-                                 QLabel, QTableWidgetItem, QStackedWidget)
+                                 QLabel, QTableWidgetItem, QStackedWidget, QApplication)
 from qfluentwidgets import PrimaryPushButton, ToolButton, InfoBar, Dialog
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon
-from qfluentwidgets import FluentIcon, TableWidget, TableItemDelegate, TitleLabel
+from qfluentwidgets import FluentIcon, TableWidget, TableItemDelegate, TitleLabel, RoundMenu, Action
 from ...components.project_dialog import ProjectDialog
 from .budget_management import BudgetManagementWindow
 from ...models.database import init_db, add_project_to_db, sessionmaker, Project, Budget
@@ -179,6 +179,10 @@ class ProjectManagementWindow(QWidget):
             
             # 设置表格样式
             UIUtils.set_table_style(self.project_table)
+            
+            # 添加右键菜单
+            self.project_table.setContextMenuPolicy(Qt.CustomContextMenu)
+            self.project_table.customContextMenuRequested.connect(self.show_context_menu)
 
         except Exception as e:
             session.rollback()
@@ -189,6 +193,29 @@ class ProjectManagementWindow(QWidget):
             )
         finally:
             session.close()
+            
+    def show_context_menu(self, pos):
+        """显示右键菜单"""
+        menu = RoundMenu(parent=self)
+        
+        # 获取右键点击的单元格
+        item = self.project_table.itemAt(pos)
+        if item:
+            # 添加复制操作
+            copy_action = Action(FluentIcon.COPY, "复制", self)
+            copy_action.triggered.connect(lambda: self.copy_cell_content(item))
+            menu.addAction(copy_action)
+            
+        # 显示菜单
+        menu.exec_(self.project_table.viewport().mapToGlobal(pos))
+        
+    def copy_cell_content(self, item):
+        """复制单元格内容"""
+        if item:
+            # 获取单元格内容
+            content = item.text()
+            clipboard = QApplication.clipboard()
+            clipboard.setText(content)
     def add_project(self):
         """添加项目"""
         dialog = ProjectDialog(self)

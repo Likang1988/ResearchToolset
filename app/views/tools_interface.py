@@ -46,7 +46,7 @@ class ToolsInterface(QWidget):
         tool_layout.addStretch()
         
         # 打开按钮
-        open_btn = PushButton("打开", self, FluentIcon.GAME)
+        open_btn = PushButton("打开", self, FluentIcon.QUICK_NOTE)
         open_btn.clicked.connect(self.open_calculator)
         tool_layout.addWidget(open_btn)
         

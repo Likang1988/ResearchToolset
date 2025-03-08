@@ -1,0 +1,15 @@
+Table structure of budget_edit_items:
+(0, 'id', 'INTEGER', 1, None, 1)
+(1, 'project_id', 'INTEGER', 1, None, 0)
+(2, 'parent_id', 'INTEGER', 0, None, 0)
+(3, 'name', 'VARCHAR(200)', 1, None, 0)
+(4, 'custom_name', 'VARCHAR(200)', 0, None, 0)
+(5, 'specification', 'VARCHAR(200)', 0, None, 0)
+(6, 'unit_price', 'FLOAT', 0, None, 0)
+(7, 'quantity', 'INTEGER', 0, None, 0)
+(8, 'amount', 'FLOAT', 0, None, 0)
+(9, 'remarks', 'VARCHAR(500)', 0, None, 0)
+(10, 'category', 'VARCHAR(13)', 0, None, 0)
+(11, 'level_type', 'VARCHAR(50)', 0, None, 0)
+
+Has custom_name column: True

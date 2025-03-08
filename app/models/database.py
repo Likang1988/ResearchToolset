@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey, Date, Enum as SQLEnum, UniqueConstraint, func, text
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.orm import relationship, sessionmaker, backref
 from enum import Enum
 from datetime import datetime
 import os
@@ -73,6 +73,39 @@ class BudgetItem(Base):
     
     budget = relationship("Budget", back_populates="budget_items")
 
+class BudgetPlan(Base):
+    """预算编制主表"""
+    __tablename__ = 'budget_plans'
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False)  # 预算名称
+    create_date = Column(Date, default=datetime.now)  # 创建日期
+    total_amount = Column(Float, default=0.0)  # 预算总额
+    remarks = Column(String(200))  # 备注
+    
+    # 建立与预算项目的一对多关系
+    items = relationship("BudgetPlanItem", back_populates="plan", cascade="all, delete-orphan")
+
+class BudgetPlanItem(Base):
+    """预算编制明细表"""
+    __tablename__ = 'budget_plan_items'
+    
+    id = Column(Integer, primary_key=True)
+    plan_id = Column(Integer, ForeignKey('budget_plans.id'), nullable=False)
+    parent_id = Column(Integer, ForeignKey('budget_plan_items.id'))  # 父级ID，用于构建树形结构
+    category = Column(SQLEnum(BudgetCategory), nullable=True)  # 预算类别，可为空
+    name = Column(String(100))  # 课题名称/预算内容
+    specification = Column(String(100))  # 型号规格/简要内容
+    unit_price = Column(Float, default=0.0)  # 单价
+    quantity = Column(Integer, default=0)  # 数量
+    amount = Column(Float, default=0.0)  # 经费数额
+    remarks = Column(String(200))  # 备注
+    
+    # 建立与预算编制主表的多对一关系
+    plan = relationship("BudgetPlan", back_populates="items")
+    # 建立自引用关系，用于树形结构
+    children = relationship("BudgetPlanItem", backref=backref('parent', remote_side=[id]))
+
 class Expense(Base):
     """支出"""
     __tablename__ = 'expenses'
@@ -92,31 +125,14 @@ class Expense(Base):
     project = relationship("Project", backref="expenses")
     budget = relationship("Budget", back_populates="expenses")
 
-class BudgetPlan(Base):
-    """预算编制"""
-    __tablename__ = 'budget_plans'
     
-    id = Column(Integer, primary_key=True)
-    name = Column(String(100), nullable=False)
-    total_amount = Column(Float, default=0.0)
-    created_at = Column(Date, default=datetime.now)
-    budget_plan_items = relationship("BudgetPlanItem", back_populates="budget_plan", cascade="all, delete-orphan")
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # 验证custom_name在first_level和third_level时不为空
+        if self.level_type in ['first_level', 'third_level'] and not self.custom_name:
+            raise ValueError(f"custom_name is required for {self.level_type}")
+    
 
-class BudgetPlanItem(Base):
-    """预算编制子项"""
-    __tablename__ = 'budget_plan_items'
-    
-    id = Column(Integer, primary_key=True)
-    budget_plan_id = Column(Integer, ForeignKey('budget_plans.id'), nullable=False)
-    category = Column(SQLEnum(BudgetCategory), nullable=False)
-    content = Column(String(200))  # 预算内容
-    specification = Column(String(100))  # 型号规格
-    unit_price = Column(Float, default=0.0)  # 单价
-    quantity = Column(Integer, default=0)  # 数量
-    amount = Column(Float, default=0.0)  # 经费数额
-    remarks = Column(String(200))  # 备注
-    
-    budget_plan = relationship("BudgetPlan", back_populates="budget_plan_items")
 
 def get_budget_usage(session, project_id, budget_id=None):
     """获取预算使用情况
@@ -223,6 +239,8 @@ def migrate_db(engine):
                 # 提交事务
                 transaction.commit()
                 print("成功添加voucher_path列")
+        
+
         
     except Exception as e:
         print(f"数据库迁移失败: {str(e)}")
