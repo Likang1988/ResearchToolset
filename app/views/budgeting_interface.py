@@ -33,7 +33,12 @@ class BudgetingInterface(QWidget):
                 project_item.setText(4, f"{plan.total_amount:.2f}")
                 project_item.setText(5, plan.remarks or "")
                 project_item.setFlags(project_item.flags() | Qt.ItemIsEditable)
-
+                
+                # 设置第一级项目的经费数额字体加粗
+                font = project_item.font(4)
+                font.setBold(True)
+                project_item.setFont(4, font)
+                
                 
                 # 添加预算类别
                 for category in BudgetCategory:

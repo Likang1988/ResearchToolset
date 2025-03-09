@@ -120,7 +120,7 @@ class ExpenseManagementWindow(QWidget):
         # 添加筛选工具栏
         filter_toolbar = QWidget()
         filter_layout = QHBoxLayout(filter_toolbar)
-        filter_layout.setContentsMargins(0, 5, 0, 12)  # 设置边距，增加上下间距
+        filter_layout.setContentsMargins(0, 5, 0, 11)  # 设置边距，增加上下间距
         
         # 类别筛选
         filter_layout.addWidget(QLabel("费用类别:"))
@@ -196,7 +196,7 @@ class ExpenseManagementWindow(QWidget):
         # 下部 - 统计表格
         bottom_widget = TableWidget()   # 创建下部widget
         bottom_layout = QVBoxLayout(bottom_widget)  # 垂直布局
-        bottom_layout.setContentsMargins(0, 12, 0, 0)   #上下边距为10
+        bottom_layout.setContentsMargins(0, 11, 0, 0)   #上下边距为10
         
         self.stats_table = TableWidget()   # 使用Fluent风格的TableWidget
         # 将合计列放在间接费右侧
@@ -215,34 +215,7 @@ class ExpenseManagementWindow(QWidget):
         self.stats_table.setSelectionMode(TableWidget.SingleSelection)  
         
         # 设置表格样式
-        self.stats_table.setStyleSheet("""
-            TableWidget {
-                background-color: transparent;
-                border: 1px solid rgba(0, 0, 0, 0.1);
-                border-radius: 8px;
-                selection-background-color: rgba(0, 120, 212, 0.1);
-                selection-color: black;
-            }
-            TableWidget::item {
-                padding: 4px 8px;
-                border: none;
-                height: 32px;
-            }
-            TableWidget::item:hover {
-                background-color: rgba(0, 0, 0, 0.05);
-            }
-            QHeaderView::section {
-                background-color: #f3f3f3;
-                color: #333333;
-                padding: 8px;
-                border: none;
-                border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-                font-size: 12px;
-            }
-            QHeaderView::section:hover {
-                background-color: #e5e5e5;
-            }
-        """)
+        UIUtils.set_table_style(self.stats_table)
         
         bottom_layout.addWidget(self.stats_table)
         splitter.addWidget(bottom_widget)
@@ -447,7 +420,7 @@ class ExpenseManagementWindow(QWidget):
             # 设置列宽
             header = self.stats_table.horizontalHeader()
             header.setSectionResizeMode(QHeaderView.Interactive)
-            header.resizeSection(0, 102)  # 类别列
+            header.resizeSection(0, 100)  # 类别列
             for i in range(1, len(self.headers)):
                 header.resizeSection(i, 88)  # 数据列
                 

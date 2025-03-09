@@ -128,9 +128,6 @@ class Expense(Base):
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        # 验证custom_name在first_level和third_level时不为空
-        if self.level_type in ['first_level', 'third_level'] and not self.custom_name:
-            raise ValueError(f"custom_name is required for {self.level_type}")
     
 
 

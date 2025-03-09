@@ -150,13 +150,13 @@ class ProjectManagementWindow(QWidget):
             # 调整列宽
             self.project_table.resizeColumnsToContents() # 调整列宽
             self.project_table.setColumnWidth(0, 80)  # 财务编号列宽
-            self.project_table.setColumnWidth(1, 330)  # 项目名称列宽
+            self.project_table.setColumnWidth(1, 320)  # 项目名称列宽
             self.project_table.setColumnWidth(2, 130)  # 项目编号列宽
             self.project_table.setColumnWidth(3, 130)  # 项目类别列宽
             self.project_table.setColumnWidth(4, 90)  # 开始日期列宽
             self.project_table.setColumnWidth(5, 90)  # 结束日期列宽
             self.project_table.setColumnWidth(6, 70)  # 总经费列宽
-            self.project_table.setColumnWidth(7, 70)  # 执行率列宽
+            self.project_table.setColumnWidth(7, 80)  # 执行率列宽
             self.project_table.setColumnWidth(8, 80)  # 操作列宽
 
             # 禁止直接编辑

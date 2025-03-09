@@ -90,7 +90,9 @@ class TotalBudgetChart(BudgetChartBase):
         for expense in self.expenses:
             category_amounts[expense.category.value] += expense.amount / 10000
         
-        return self.create_pie_chart("总预算类别分布", category_amounts)
+        total_amount = sum(category_amounts.values())
+        title = f"总预算支出 - 类别分布 \n(预算金额：{total_amount:.2f}万元)"
+        return self.create_pie_chart(title, category_amounts)
     
     def show_time_distribution(self):
         """显示总预算的年度分布"""
@@ -99,7 +101,9 @@ class TotalBudgetChart(BudgetChartBase):
             year = expense.date.year
             year_amounts[f"{year}年"] += expense.amount / 10000
         
-        return self.create_pie_chart("总预算年度支出分布", year_amounts)
+        total_amount = sum(year_amounts.values())
+        title = f"总预算支出 - 年度分布 \n(预算金额：{total_amount:.2f}万元)"
+        return self.create_pie_chart(title, year_amounts)
 
 class AnnualBudgetChart(BudgetChartBase):
     """年度预算图表类，处理年度预算的图表展示"""
@@ -116,7 +120,10 @@ class AnnualBudgetChart(BudgetChartBase):
         for expense in self.expenses:
             category_amounts[expense.category.value] += expense.amount / 10000
         
-        return self.create_pie_chart("类别支出分布", category_amounts)
+        year = self.budget_items[0].budget.year if self.budget_items else "未知"
+        total_amount = sum(category_amounts.values())
+        title = f"{year}年度预算支出 - 类别分布 \n(预算金额：{total_amount:.2f}万元)"
+        return self.create_pie_chart(title, category_amounts)
     
     def show_time_distribution(self):
         """显示年度预算的月度分布"""
@@ -125,7 +132,9 @@ class AnnualBudgetChart(BudgetChartBase):
             month = expense.date.month
             month_amounts[f"{month}月"] += expense.amount / 10000
         
-        title = f"月度支出分布 (总预算: {self.total_budget:.2f}万元)" if self.total_budget > 0 else "月度支出分布"
+        year = self.budget_items[0].budget.year if self.budget_items else "未知"
+        total_amount = sum(month_amounts.values())
+        title = f"{year}年度预算支出 - 月度分布 \n(预算金额：{total_amount:.2f}万元)"
         return self.create_pie_chart(title, month_amounts)
 
 class BudgetChartWidget(QWidget):
@@ -172,35 +181,59 @@ class BudgetChartWidget(QWidget):
         self.button_group = QButtonGroup(self)
         
         # 类别分布按钮
-        self.category_btn = QPushButton("类别分布")
+        self.category_btn = ToolButton()
+        self.category_btn.setIcon(FluentIcon.APPLICATION)
+        self.category_btn.setToolTip("类别分布")
         self.category_btn.setCheckable(True)
         self.category_btn.setChecked(True)
-        self.category_btn.setFixedHeight(28)
+        self.category_btn.setFixedSize(28, 28)
+        self.category_btn.setIconSize(QSize(20, 20))
         self.category_btn.setStyleSheet("""
-            QPushButton {
-                background-color: rgba(240, 240, 240, 0.8);
-                border: 1px solid rgba(220, 220, 220, 0.8);
+            ToolButton {
+                background-color: transparent;
+                border: 1px solid transparent;
                 border-radius: 4px;
-                padding: 4px 8px;
-                color: #333333;
+                padding: 2px;
             }
-            QPushButton:checked {
-                background-color: rgba(0, 120, 212, 0.8);
-                color: white;
+            ToolButton:hover {
+                background-color: rgba(0, 0, 0, 0.05);
+                border: 1px solid rgba(0, 0, 0, 0.1);
             }
-            QPushButton:hover {
-                background-color: rgba(229, 229, 229, 0.8);
+            ToolButton:pressed {
+                background-color: rgba(0, 0, 0, 0.1);
             }
-            QPushButton:checked:hover {
-                background-color: rgba(0, 108, 193, 0.8);
+            ToolButton:checked {
+                background-color: rgba(0, 120, 212, 0.1);
+                border: 1px solid rgba(0, 120, 212, 0.3);
             }
         """)
         
         # 时间分布按钮
-        self.time_btn = QPushButton("时间分布")
+        self.time_btn = ToolButton()
+        self.time_btn.setIcon(FluentIcon.CALENDAR)
+        self.time_btn.setToolTip("时间分布")
         self.time_btn.setCheckable(True)
-        self.time_btn.setFixedHeight(28)
-        self.time_btn.setStyleSheet(self.category_btn.styleSheet())
+        self.time_btn.setFixedSize(28, 28)
+        self.time_btn.setIconSize(QSize(20, 20))
+        self.time_btn.setStyleSheet("""
+            ToolButton {
+                background-color: transparent;
+                border: 1px solid transparent;
+                border-radius: 4px;
+                padding: 2px;
+            }
+            ToolButton:hover {
+                background-color: rgba(0, 0, 0, 0.05);
+                border: 1px solid rgba(0, 0, 0, 0.1);
+            }
+            ToolButton:pressed {
+                background-color: rgba(0, 0, 0, 0.1);
+            }
+            ToolButton:checked {
+                background-color: rgba(0, 120, 212, 0.1);
+                border: 1px solid rgba(0, 120, 212, 0.3);
+            }
+        """)
         
         # 添加按钮到按钮组
         self.button_group.addButton(self.category_btn, 1)
