@@ -28,7 +28,7 @@ class UIUtils:
                 background-color: rgba(0, 0, 0, 0.05);
             }
             QHeaderView::section {
-                background-color: #f3f3f3;
+                background-color: #f3f3f3;  
                 color: #333333;
                 font-weight: 500;
                 padding: 8px;

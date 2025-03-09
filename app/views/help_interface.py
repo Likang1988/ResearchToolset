@@ -14,6 +14,8 @@ class HelpInterface(ScrollArea):
         self.setObjectName("helpInterface")
         self.scrollWidget = QWidget()
         self.expandLayout = QVBoxLayout(self.scrollWidget)
+        self.expandLayout.setContentsMargins(16, 16, 16, 16)  # 设置边距
+        self.expandLayout.setSpacing(16)  # 设置内容组之间的间距
         
         # 创建软件简介内容组
         self.readmeGroup = ExpandGroupSettingCard(FluentIcon.DOCUMENT, "软件简介", "", self.scrollWidget)
@@ -52,11 +54,10 @@ class HelpInterface(ScrollArea):
 
         # 添加项目简介
         intro_text = BodyLabel(
-            "本人纯编程小白，自学过几天Python，科研工作太忙也没坚持下来，基本零基础，只会偶尔编点单文件的小工具。\n\n"
-            "科研经费管理是我日常工作中遇到的一个痛点，平时都是拿Excel记账，不方便的同时好多自己想要的功能也不好实现，一直想开发一款软件来方便自己管理经费，只是苦于能力不足。\n\n"
-            "好在如今AI编程工具十分强大，依靠AI，可以实现我的很多设想。这个项目就是利用AI帮助开发，我向AI提需求，它来替我完成代码编写，我再运行代码验证功能是否实现，简单的错误我可以自己应付，大的bug还是交给AI解决。过程也不是一帆风顺，时常是添加一个功能影响了另外一个功能，解决这个bug又冒出来另一个。目前整个项目代码还比较混乱，可能有很多重复的代码，也没有经过充分测试，还需要不断优化。\n\n"
             "目前软件的功能主要为科研经费管理，旨在帮助科研人员高效管理和追踪项目资金使用情况。\n\n"
-            "后续将不断丰富完善和优化软件功能，慢慢形成一个真正能有效服务科研工作者的工具集。",
+            "后续将不断丰富完善和优化软件功能，慢慢形成一个真正能有效服务科研工作者的工具集。\n\n"
+            "项目源于本人日常科研工作需要，利用VSCode+Cline+DeepSeek进行开发，项目代码还比较混乱，可能有很多重复代码和未知bug，未必适用于所有科研工作者，请谨慎使用。",
+            
             readme_card
         )
         intro_text.setWordWrap(True)

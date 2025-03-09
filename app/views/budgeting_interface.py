@@ -136,7 +136,7 @@ class BudgetingInterface(QWidget):
         self.budget_tree = QTreeWidget()
         self.budget_tree.setColumnCount(6)
         self.budget_tree.setHeaderLabels([
-            "课题名称/预算内容", "型号规格/简要内容",
+            "课题名称/预算名称", "型号规格/简要内容",
             "单价（元）", "数量", "经费数额（元）", "备注"
         ])
         
@@ -227,7 +227,7 @@ class BudgetingInterface(QWidget):
         """添加新预算项目"""
         # 创建项目总行（第一级）
         project_item = QTreeWidgetItem(self.budget_tree)
-        project_item.setText(0, "请输入项目名称")
+        project_item.setText(0, "请输入课题名称")
         project_item.setFlags(project_item.flags() | Qt.ItemIsEditable)
         
         # 添加预算类别（第二级）

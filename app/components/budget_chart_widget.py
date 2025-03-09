@@ -177,12 +177,9 @@ class BudgetChartWidget(QWidget):
         button_layout.setSpacing(5)
         button_layout.setAlignment(Qt.AlignTop | Qt.AlignRight)
         
-        # 创建按钮组
-        self.button_group = QButtonGroup(self)
-        
         # 类别分布按钮
         self.category_btn = ToolButton()
-        self.category_btn.setIcon(FluentIcon.APPLICATION)
+        self.category_btn.setIcon(FluentIcon.REMOVE)
         self.category_btn.setToolTip("类别分布")
         self.category_btn.setCheckable(True)
         self.category_btn.setChecked(True)
@@ -203,8 +200,8 @@ class BudgetChartWidget(QWidget):
                 background-color: rgba(0, 0, 0, 0.1);
             }
             ToolButton:checked {
-                background-color: rgba(0, 120, 212, 0.1);
-                border: 1px solid rgba(0, 120, 212, 0.3);
+                background-color: rgba(0, 0, 0, 0.1);
+                border: 1px solid rgba(0, 0, 0, 0.2);
             }
         """)
         
@@ -230,14 +227,10 @@ class BudgetChartWidget(QWidget):
                 background-color: rgba(0, 0, 0, 0.1);
             }
             ToolButton:checked {
-                background-color: rgba(0, 120, 212, 0.1);
-                border: 1px solid rgba(0, 120, 212, 0.3);
+                background-color: rgba(0, 0, 0, 0.1);
+                border: 1px solid rgba(0, 0, 0, 0.2);
             }
         """)
-        
-        # 添加按钮到按钮组
-        self.button_group.addButton(self.category_btn, 1)
-        self.button_group.addButton(self.time_btn, 2)
         
         # 添加按钮到布局
         button_layout.addWidget(self.category_btn)
