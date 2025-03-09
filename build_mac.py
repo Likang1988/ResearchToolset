@@ -28,8 +28,7 @@ def build_app():
         build_command = [
             'python', '-m', 'nuitka',
             '--standalone',  # 独立可执行文件
-            '--windows-disable-console',  # 禁用控制台
-            '--mingw64',  # 使用mingw64编译器
+            '--macos-create-app-bundle',  # 创建macOS应用程序包
             '--show-progress',  # 显示编译进度
             '--show-memory',  # 显示内存使用情况
             '--plugin-enable=pyside6',  # 启用PySide6插件

@@ -179,7 +179,7 @@ class BudgetChartWidget(QWidget):
         
         # 类别分布按钮
         self.category_btn = ToolButton()
-        self.category_btn.setIcon(FluentIcon.REMOVE)
+        self.category_btn.setIcon(FluentIcon.APPLICATION)
         self.category_btn.setToolTip("类别分布")
         self.category_btn.setCheckable(True)
         self.category_btn.setChecked(True)

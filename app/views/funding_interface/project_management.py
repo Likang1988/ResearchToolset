@@ -46,7 +46,7 @@ class ProjectManagementWindow(QWidget):
 
     def setup_project_page(self):
         layout = QVBoxLayout(self.project_page)
-        layout.setContentsMargins(15, 15, 15, 15)  # 统一设置边距为15像素
+        layout.setContentsMargins(12, 12, 12, 12)  # 统一设置边距为12像素
         layout.setSpacing(10)  # 设置组件之间的垂直间距为10像素
         
         # 标题

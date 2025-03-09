@@ -44,7 +44,7 @@ class BudgetManagementWindow(QWidget):
     def setup_budget_page(self):
         """设置预算管理页面"""
         layout = QVBoxLayout(self.budget_page)
-        layout.setContentsMargins(6, 6, 6, 6)  # 统一设置边距
+        layout.setContentsMargins(0, 0, 0, 0)  # 统一设置边距
         layout.setSpacing(10)  # 设置组件之间的垂直间距
         
         # 标题

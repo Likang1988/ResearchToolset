@@ -31,7 +31,7 @@ class ExpenseManagementWindow(QWidget):
         """设置UI界面"""
         self.setWindowTitle("支出管理")
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(6, 6, 6, 6)  # 统一设置边距为15像素
+        main_layout.setContentsMargins(0, 0, 0, 0)  # 统一设置边距为15像素
         main_layout.setSpacing(10)  # 设置组件之间的垂直间距为10像素
         
         # 标题
@@ -1218,7 +1218,14 @@ class ExpenseManagementWindow(QWidget):
             )
 
             # 在文件资源管理器中打开导出目录
-            os.startfile(export_dir)
+            import subprocess
+            import platform
+            if platform.system() == 'Windows':
+                subprocess.run(['explorer', export_dir])
+            elif platform.system() == 'Darwin':  # macOS
+                subprocess.run(['open', export_dir])
+            elif platform.system() == 'Linux':
+                subprocess.run(['xdg-open', export_dir])
             
         except Exception as e:
             UIUtils.show_error(

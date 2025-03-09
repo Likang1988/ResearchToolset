@@ -8,7 +8,7 @@ import os
 root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(root_dir)
 
-from app.models.funding_db import BudgetCategory
+from app.models.database import BudgetCategory
 import os
 
 def generate_random_expense_data(num_records=10):

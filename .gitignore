@@ -34,7 +34,3 @@ env/
 .Trashes
 ehthumbs.db
 Thumbs.db
-
-# Vouchers directory
-vouchers/
-Compilation/
