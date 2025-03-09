@@ -33,16 +33,14 @@ class BudgetingInterface(QWidget):
                 project_item.setText(4, f"{plan.total_amount:.2f}")
                 project_item.setText(5, plan.remarks or "")
                 project_item.setFlags(project_item.flags() | Qt.ItemIsEditable)
-                # 设置第一级经费数额右对齐
-                project_item.setTextAlignment(4, Qt.AlignCenter | Qt.AlignVCenter)
+
                 
                 # 添加预算类别
                 for category in BudgetCategory:
                     category_item = QTreeWidgetItem(project_item)
                     category_item.setText(0, category.value)
                     category_item.setFlags(category_item.flags() & ~Qt.ItemIsEditable)  # 禁止编辑
-                    # 设置第二级经费数额右对齐
-                    category_item.setTextAlignment(4, Qt.AlignRight | Qt.AlignVCenter)
+
                     
                     # 查询该类别的预算项
                     budget_items = session.query(BudgetPlanItem).filter(
@@ -134,7 +132,7 @@ class BudgetingInterface(QWidget):
         self.budget_tree.setColumnCount(6)
         self.budget_tree.setHeaderLabels([
             "课题名称/预算内容", "型号规格/简要内容",
-            "单价（元）", "数量", "经费数额", "备注"
+            "单价（元）", "数量", "经费数额（元）", "备注"
         ])
         
         # 设置树形列表样式
@@ -177,11 +175,38 @@ class BudgetingInterface(QWidget):
         header.resizeSection(1, 250)  # 型号规格/简要内容
         header.resizeSection(2, 100)  # 单价
         header.resizeSection(3, 80)  # 数量
-        header.resizeSection(4, 100)  # 经费数额
+        header.resizeSection(4, 110)  # 经费数额
         header.resizeSection(5, 120)  # 备注
         
         # 设置单元格对齐方式
-
+        def set_item_alignment(item):
+            # 型号规格列居中对齐
+            item.setTextAlignment(1, Qt.AlignCenter)
+            # 单价列右对齐
+            item.setTextAlignment(2, Qt.AlignRight | Qt.AlignVCenter)
+            # 数量列居中对齐
+            item.setTextAlignment(3, Qt.AlignCenter)
+            
+            # 根据层级设置经费数额列的对齐方式
+            level = 1
+            parent = item.parent()
+            while parent:
+                level += 1
+                parent = parent.parent()
+            
+            # 第一、二级经费数额居中对齐，第三级右对齐
+            if level <= 2:
+                item.setTextAlignment(4, Qt.AlignCenter)
+            else:
+                item.setTextAlignment(4, Qt.AlignRight | Qt.AlignVCenter)
+            
+            # 递归设置子项的对齐方式
+            for i in range(item.childCount()):
+                set_item_alignment(item.child(i))
+        
+        # 连接信号以在添加新项时设置对齐方式
+        self.budget_tree.itemChanged.connect(lambda item, column: set_item_alignment(item))
+        
         
         layout.addWidget(self.budget_tree)
         
