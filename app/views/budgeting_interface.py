@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTreeWidget, QTreeWidgetItem,
                              QLabel, QPushButton, QMessageBox, QSpinBox, QLineEdit, QHeaderView)
-from qfluentwidgets import PrimaryPushButton, TitleLabel, FluentIcon, ToolButton, InfoBar, TableItemDelegate, Dialog
+from qfluentwidgets import PrimaryPushButton, TitleLabel, BodyLabel, FluentIcon, ToolButton, InfoBar, TableItemDelegate, Dialog
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon
 from ..models.database import sessionmaker, BudgetCategory, BudgetPlan, BudgetPlanItem
@@ -95,12 +95,18 @@ class BudgetingInterface(QWidget):
     def setup_ui(self):
         """设置UI界面"""
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setContentsMargins(18, 18, 18, 18)
         layout.setSpacing(10)
         
         # 标题栏
         title_label = TitleLabel("预算编制")
         layout.addWidget(title_label)
+        
+        # 添加副标题
+        subtitle_label = BodyLabel("用于课题申请或年度预算上报时的预算计划编制")
+        subtitle_label.setObjectName("budgetingSubtitle")
+        subtitle_label.setStyleSheet("#budgetingSubtitle { color: rgba(0, 0, 0, 0.6); font-size: 12px; }")
+        layout.addWidget(subtitle_label)
         
         # 按钮栏
         button_layout = QHBoxLayout()
@@ -108,7 +114,7 @@ class BudgetingInterface(QWidget):
         # 左侧按钮组
         left_buttons = QHBoxLayout()
         add_budget_btn = UIUtils.create_action_button("添加预算", FluentIcon.ADD_TO)
-        add_same_level_btn = UIUtils.create_action_button("增加同级", FluentIcon.ADD)
+        add_same_level_btn = UIUtils.create_action_button("增加同级", FluentIcon.ALIGNMENT)
         add_sub_level_btn = UIUtils.create_action_button("增加子级", FluentIcon.DOWN)
         delete_btn = UIUtils.create_action_button("删除该级", FluentIcon.DELETE)
         
@@ -123,6 +129,10 @@ class BudgetingInterface(QWidget):
         save_btn = UIUtils.create_action_button("保存数据", FluentIcon.SAVE)
         export_btn = UIUtils.create_action_button("导出数据", FluentIcon.DOWNLOAD)
         
+        # 添加鼠标悬停提示
+        save_btn.setToolTip("将预算数据保存到数据库")
+        export_btn.setToolTip("将预算数据导出为Excel文件")      
+
         right_buttons.addStretch()
         right_buttons.addWidget(save_btn)
         right_buttons.addWidget(export_btn)
@@ -156,6 +166,14 @@ class BudgetingInterface(QWidget):
             QTreeWidget::item:hover {
                 background-color: rgba(0, 0, 0, 0.05);
             }
+            QTreeWidget::item:selected {
+                background-color: rgba(0, 120, 212, 0.1);
+                color: black;
+            }
+            QTreeWidget::item:selected:active {
+                background-color: rgba(0, 120, 212, 0.15);
+                color: black;
+            }
             QTreeWidget QHeaderView::section {
                 background-color: #f3f3f3;
                 color: #333333;
@@ -169,15 +187,16 @@ class BudgetingInterface(QWidget):
             }
         """)
         
-        # 设置编辑触发器为单击
-        self.budget_tree.setEditTriggers(QTreeWidget.SelectedClicked | QTreeWidget.EditKeyPressed)
+        # 设置编辑触发器为单击和双击
+        self.budget_tree.setEditTriggers(QTreeWidget.SelectedClicked | QTreeWidget.DoubleClicked | QTreeWidget.EditKeyPressed)
+  
         
         # 设置列宽
         header = self.budget_tree.header()
         header.setDefaultAlignment(Qt.AlignCenter)  # 设置表头居中对齐
         header.setSectionResizeMode(QHeaderView.Interactive)
         header.resizeSection(0, 400)  # 课题名称/预算内容
-        header.resizeSection(1, 250)  # 型号规格/简要内容
+        header.resizeSection(1, 260)  # 型号规格/简要内容
         header.resizeSection(2, 100)  # 单价
         header.resizeSection(3, 80)  # 数量
         header.resizeSection(4, 110)  # 经费数额

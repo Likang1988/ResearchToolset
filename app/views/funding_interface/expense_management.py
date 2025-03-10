@@ -97,9 +97,9 @@ class ExpenseManagementWindow(QWidget):
         
         # 设置初始列宽
         header.resizeSection(0, 100)  # 费用类别
-        header.resizeSection(1, 260)  # 开支内容
-        header.resizeSection(2, 140)  # 规格型号
-        header.resizeSection(3, 140)  # 供应商
+        header.resizeSection(1, 230)  # 开支内容
+        header.resizeSection(2, 160)  # 规格型号
+        header.resizeSection(3, 160)  # 供应商
         header.resizeSection(4, 100)  # 报账金额
         header.resizeSection(5, 100)  # 报账日期
         header.resizeSection(6, 140)  # 备注
@@ -108,6 +108,7 @@ class ExpenseManagementWindow(QWidget):
         
         # 允许用户调整列宽
         header.setSectionsMovable(True) # 可移动列
+        header.setStretchLastSection(True) # 最后一列自动填充剩余空间
         
         self.expense_table.setSelectionBehavior(TableWidget.SelectRows) # 选中整行
         self.expense_table.setSelectionMode(TableWidget.ExtendedSelection) # 允许多选
@@ -420,43 +421,19 @@ class ExpenseManagementWindow(QWidget):
             # 设置列宽
             header = self.stats_table.horizontalHeader()
             header.setSectionResizeMode(QHeaderView.Interactive)
-            header.resizeSection(0, 100)  # 类别列
+            header.resizeSection(0, 102)  # 类别列
             for i in range(1, len(self.headers)):
-                header.resizeSection(i, 88)  # 数据列
-                
+                header.resizeSection(i, 89)  # 数据列
+            
+            header.setStretchLastSection(True)  # 最后一列自动填充剩余空间
+
             # 确保headers在load_statistics方法中可用
             if not hasattr(self, 'headers'):
                 categories = list(BudgetCategory)
                 indirect_index = categories.index(BudgetCategory.INDIRECT)
                 self.headers = ["分类统计"] + [c.value for c in categories[:indirect_index+1]] + ["合计"] + [c.value for c in categories[indirect_index+1:]]
                 
-            # 设置表格样式
-            self.stats_table.setStyleSheet("""
-                QTableWidget {
-                    background-color: transparent;
-                    border: 1px solid rgba(0, 0, 0, 0.1);
-                    border-radius: 8px;
-                    selection-background-color: rgba(0, 120, 212, 0.1);
-                    selection-color: black;
-                }
-                QTableWidget::item {
-                    padding: 4px 8px;
-                    border: none;
-                }
-                QTableWidget::item:hover {
-                    background-color: rgba(0, 0, 0, 0.05);
-                }
-                QHeaderView::section {
-                    background-color: #f3f3f3;
-                    color: #333333;
-                    padding: 8px;
-                    border: none;
-                    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-                }
-                QHeaderView::section:hover {
-                    background-color: #e5e5e5;
-                }
-            """)
+
             
             # 初始化合计金额
             total_amount = 0.0

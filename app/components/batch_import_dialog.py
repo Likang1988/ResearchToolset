@@ -46,7 +46,7 @@ class BatchImportDialog(QDialog):
         template_btn = PushButton("下载模板", self, FluentIcon.DOWNLOAD)
         template_btn.clicked.connect(self.download_template)
         
-        import_btn = PushButton("导入", self, FluentIcon.SAVE)
+        import_btn = PushButton("导入", self, FluentIcon.EMBED)
         cancel_btn = PushButton("取消", self, FluentIcon.CLOSE)
         
         button_layout.addWidget(template_btn)

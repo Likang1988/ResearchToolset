@@ -1,0 +1,345 @@
+{
+  "project": {
+    "id": 1,
+    "name": "1",
+    "financial_code": "1",
+    "project_code": "1",
+    "project_type": "国家自然科学基金",
+    "start_date": "2024-03-08",
+    "end_date": "2025-03-08",
+    "total_budget": 11.0,
+    "leader": null
+  },
+  "budgets": [
+    {
+      "id": 1,
+      "year": null,
+      "total_amount": 11.0,
+      "spent_amount": 0.0,
+      "items": [
+        {
+          "id": 1,
+          "category": "设备费",
+          "amount": 0.0,
+          "spent_amount": 0.0
+        },
+        {
+          "id": 2,
+          "category": "材料费",
+          "amount": 6.0,
+          "spent_amount": 0.0
+        },
+        {
+          "id": 3,
+          "category": "外协费",
+          "amount": 0.0,
+          "spent_amount": 0.0
+        },
+        {
+          "id": 4,
+          "category": "燃动费",
+          "amount": 0.0,
+          "spent_amount": 0.0
+        },
+        {
+          "id": 5,
+          "category": "会议差旅",
+          "amount": 1.0,
+          "spent_amount": 0.0
+        },
+        {
+          "id": 6,
+          "category": "出版文献",
+          "amount": 1.0,
+          "spent_amount": 0.0
+        },
+        {
+          "id": 7,
+          "category": "劳务费",
+          "amount": 1.0,
+          "spent_amount": 0.0
+        },
+        {
+          "id": 8,
+          "category": "专家咨询费",
+          "amount": 1.0,
+          "spent_amount": 0.0
+        },
+        {
+          "id": 9,
+          "category": "其他支出",
+          "amount": 0.0,
+          "spent_amount": 0.0
+        },
+        {
+          "id": 10,
+          "category": "间接费",
+          "amount": 1.0,
+          "spent_amount": 0.0
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "year": 2025,
+      "total_amount": 5.5,
+      "spent_amount": 36.953912,
+      "items": [
+        {
+          "id": 11,
+          "category": "设备费",
+          "amount": 0.0,
+          "spent_amount": 0.855575
+        },
+        {
+          "id": 12,
+          "category": "材料费",
+          "amount": 3.0,
+          "spent_amount": 8.043871000000001
+        },
+        {
+          "id": 13,
+          "category": "外协费",
+          "amount": 0.0,
+          "spent_amount": 11.921032
+        },
+        {
+          "id": 14,
+          "category": "燃动费",
+          "amount": 0.0,
+          "spent_amount": 0.0
+        },
+        {
+          "id": 15,
+          "category": "会议差旅",
+          "amount": 0.5,
+          "spent_amount": 0.0
+        },
+        {
+          "id": 16,
+          "category": "出版文献",
+          "amount": 0.5,
+          "spent_amount": 6.374823999999999
+        },
+        {
+          "id": 17,
+          "category": "劳务费",
+          "amount": 0.5,
+          "spent_amount": 0.758939
+        },
+        {
+          "id": 18,
+          "category": "专家咨询费",
+          "amount": 0.5,
+          "spent_amount": 4.804356
+        },
+        {
+          "id": 19,
+          "category": "其他支出",
+          "amount": 0.0,
+          "spent_amount": 1.5848440000000001
+        },
+        {
+          "id": 20,
+          "category": "间接费",
+          "amount": 0.5,
+          "spent_amount": 2.6104710000000004
+        }
+      ]
+    }
+  ],
+  "expenses": [
+    {
+      "id": 1,
+      "budget_id": 2,
+      "category": "材料费",
+      "content": "试剂",
+      "specification": "",
+      "supplier": "",
+      "amount": 4000.0,
+      "date": "2025-03-09",
+      "remarks": "",
+      "voucher_path": null
+    },
+    {
+      "id": 2,
+      "budget_id": 2,
+      "category": "外协费",
+      "content": "数据处理服务",
+      "specification": null,
+      "supplier": null,
+      "amount": 26761.13,
+      "date": "2024-08-09",
+      "remarks": null,
+      "voucher_path": null
+    },
+    {
+      "id": 3,
+      "budget_id": 2,
+      "category": "设备费",
+      "content": "测试仪器",
+      "specification": null,
+      "supplier": "科研耗材供应商",
+      "amount": 8555.75,
+      "date": "2024-08-10",
+      "remarks": null,
+      "voucher_path": null
+    },
+    {
+      "id": 4,
+      "budget_id": 2,
+      "category": "出版文献",
+      "content": "专著出版费",
+      "specification": "G型特殊版",
+      "supplier": "科研材料有限公司",
+      "amount": 10723.07,
+      "date": "2024-11-01",
+      "remarks": "测试数据-6505",
+      "voucher_path": null
+    },
+    {
+      "id": 5,
+      "budget_id": 2,
+      "category": "外协费",
+      "content": "数据处理服务",
+      "specification": null,
+      "supplier": "专业设备制造商",
+      "amount": 46510.69,
+      "date": "2024-06-15",
+      "remarks": "测试数据-3229",
+      "voucher_path": null
+    },
+    {
+      "id": 6,
+      "budget_id": 2,
+      "category": "专家咨询费",
+      "content": "技术交流会",
+      "specification": "B型专业版",
+      "supplier": "技术服务公司",
+      "amount": 8786.26,
+      "date": "2024-04-08",
+      "remarks": "测试数据-3021",
+      "voucher_path": null
+    },
+    {
+      "id": 7,
+      "budget_id": 2,
+      "category": "间接费",
+      "content": "绩效",
+      "specification": null,
+      "supplier": "专业设备制造商",
+      "amount": 26104.71,
+      "date": "2024-05-01",
+      "remarks": null,
+      "voucher_path": null
+    },
+    {
+      "id": 8,
+      "budget_id": 2,
+      "category": "材料费",
+      "content": "专业技术测试",
+      "specification": null,
+      "supplier": "实验室用品商",
+      "amount": 28838.01,
+      "date": "2024-01-04",
+      "remarks": null,
+      "voucher_path": null
+    },
+    {
+      "id": 10,
+      "budget_id": 2,
+      "category": "专家咨询费",
+      "content": "国际认证费用",
+      "specification": "A型标准版",
+      "supplier": null,
+      "amount": 39257.3,
+      "date": "2024-03-06",
+      "remarks": "测试数据-1857",
+      "voucher_path": null
+    },
+    {
+      "id": 11,
+      "budget_id": 2,
+      "category": "材料费",
+      "content": "测试样品",
+      "specification": "E型普通版",
+      "supplier": null,
+      "amount": 42952.75,
+      "date": "2024-09-09",
+      "remarks": "测试数据-8703",
+      "voucher_path": null
+    },
+    {
+      "id": 12,
+      "budget_id": 2,
+      "category": "出版文献",
+      "content": "成果鉴定费",
+      "specification": "B型专业版",
+      "supplier": "技术服务公司",
+      "amount": 33702.71,
+      "date": "2024-12-25",
+      "remarks": null,
+      "voucher_path": null
+    },
+    {
+      "id": 13,
+      "budget_id": 2,
+      "category": "外协费",
+      "content": "样品加工服务",
+      "specification": "B型专业版",
+      "supplier": "科研耗材供应商",
+      "amount": 45938.5,
+      "date": "2024-04-24",
+      "remarks": null,
+      "voucher_path": null
+    },
+    {
+      "id": 14,
+      "budget_id": 2,
+      "category": "材料费",
+      "content": "测试样品",
+      "specification": null,
+      "supplier": "专业设备制造商",
+      "amount": 4647.95,
+      "date": "2024-03-09",
+      "remarks": "测试数据-2109",
+      "voucher_path": null
+    },
+    {
+      "id": 15,
+      "budget_id": 2,
+      "category": "出版文献",
+      "content": "学术论文版面费",
+      "specification": "F型豪华版",
+      "supplier": "科研耗材供应商",
+      "amount": 19322.46,
+      "date": "2024-03-07",
+      "remarks": "测试数据-5798",
+      "voucher_path": null
+    },
+    {
+      "id": 16,
+      "budget_id": 2,
+      "category": "其他支出",
+      "content": "实验耗材",
+      "specification": "C型高配版",
+      "supplier": null,
+      "amount": 15848.44,
+      "date": "2024-04-09",
+      "remarks": null,
+      "voucher_path": null
+    },
+    {
+      "id": 17,
+      "budget_id": 2,
+      "category": "劳务费",
+      "content": "研究生劳务费",
+      "specification": "B型专业版",
+      "supplier": null,
+      "amount": 7589.39,
+      "date": "2024-04-19",
+      "remarks": null,
+      "voucher_path": null
+    }
+  ]
+}

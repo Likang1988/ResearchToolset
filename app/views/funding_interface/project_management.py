@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+from PySide6.QtWidgets import (QMainWindow, QWidget, QHeaderView, QVBoxLayout, QHBoxLayout,
                                  QLabel, QTableWidgetItem, QStackedWidget, QApplication)
 from qfluentwidgets import PrimaryPushButton, ToolButton, InfoBar, Dialog
 from PySide6.QtCore import Qt, QSize
@@ -6,11 +6,12 @@ from PySide6.QtGui import QIcon
 from qfluentwidgets import FluentIcon, TableWidget, TableItemDelegate, TitleLabel, RoundMenu, Action
 from ...components.project_dialog import ProjectDialog
 from .budget_management import BudgetManagementWindow
-from ...models.database import init_db, add_project_to_db, sessionmaker, Project, Budget
+from ...models.database import init_db, add_project_to_db, sessionmaker, Project, Budget, Expense
 from ...utils.ui_utils import UIUtils
 from ...utils.db_utils import DBUtils
 from sqlalchemy import func
 import os
+from datetime import datetime
 
 class ProjectManagementWindow(QWidget):
     def __init__(self, engine=None):
@@ -46,7 +47,7 @@ class ProjectManagementWindow(QWidget):
 
     def setup_project_page(self):
         layout = QVBoxLayout(self.project_page)
-        layout.setContentsMargins(12, 12, 12, 12)  # 统一设置边距为12像素
+        layout.setContentsMargins(9, 9, 9, 9)  # 统一设置边距为12像素
         layout.setSpacing(10)  # 设置组件之间的垂直间距为10像素
         
         # 标题
@@ -54,16 +55,45 @@ class ProjectManagementWindow(QWidget):
         layout.addLayout(title_layout)
         
         # 按钮栏
+        button_layout = QHBoxLayout()
+
+        # 左侧按钮组
+        left_buttons = QHBoxLayout()
         add_btn = UIUtils.create_action_button("添加项目", FluentIcon.ADD_TO)
         edit_btn = UIUtils.create_action_button("编辑项目", FluentIcon.EDIT)
         delete_btn = UIUtils.create_action_button("删除项目", FluentIcon.DELETE)
         
+        left_buttons.addWidget(add_btn)
+        left_buttons.addWidget(edit_btn)
+        left_buttons.addWidget(delete_btn)
+        left_buttons.addStretch()
+
+
+        # 右侧按钮组
+        right_buttons = QHBoxLayout()
+        import_btn = UIUtils.create_action_button("导入数据", FluentIcon.EMBED)
+        export_btn = UIUtils.create_action_button("导出数据", FluentIcon.DOWNLOAD)
+        
+        # 添加鼠标悬停提示
+        import_btn.setToolTip("从JSON文件导入项目基本信息、预算配置、支出记录数据")
+        export_btn.setToolTip("将项目基本信息、预算配置、支出记录数据导出为JSON文件")
+        
+        right_buttons.addStretch()
+        right_buttons.addWidget(import_btn)
+        right_buttons.addWidget(export_btn)
+        
+        # 连接信号
         add_btn.clicked.connect(self.add_project)
         edit_btn.clicked.connect(self.edit_project)
         delete_btn.clicked.connect(self.delete_selected_project)
+        import_btn.clicked.connect(self.import_project_data)
+        export_btn.clicked.connect(self.export_project_data)
         
-        button_layout = UIUtils.create_button_layout(add_btn, edit_btn, delete_btn)
+       
+        button_layout.addLayout(left_buttons)
+        button_layout.addLayout(right_buttons)
         layout.addLayout(button_layout)
+        
         
         # 项目表格
         self.project_table = TableWidget()
@@ -78,6 +108,26 @@ class ProjectManagementWindow(QWidget):
         self.project_table.setBorderRadius(8)
         self.project_table.setWordWrap(False)
         self.project_table.setItemDelegate(TableItemDelegate(self.project_table))
+        
+        # 设置列宽模式
+        header = self.project_table.horizontalHeader()  # 获取水平表头
+        header.setSectionResizeMode(QHeaderView.Interactive)  # 可调整列宽  
+        
+        # 设置初始列宽
+        header.resizeSection(0, 90)  # 财务编号
+        header.resizeSection(1, 320)  # 项目名称
+        header.resizeSection(2, 125)  # 项目编号
+        header.resizeSection(3, 130)  # 项目类别
+        header.resizeSection(4, 90)  # 开始日期
+        header.resizeSection(5, 90)  # 结束日期
+        header.resizeSection(6, 80)  # 总经费
+        header.resizeSection(7, 80)  # 执行率
+        header.resizeSection(8, 80)  # 操作
+        
+        # 允许用户调整列宽
+        header.setSectionsMovable(True)  # 可移动列
+        header.setStretchLastSection(True)  # 最后一列自动填充剩余空间
+        
         layout.addWidget(self.project_table)
         self.refresh_project_table()
     def refresh_project_table(self):
@@ -147,17 +197,6 @@ class ProjectManagementWindow(QWidget):
             
             session.close()
             
-            # 调整列宽
-            self.project_table.resizeColumnsToContents() # 调整列宽
-            self.project_table.setColumnWidth(0, 80)  # 财务编号列宽
-            self.project_table.setColumnWidth(1, 320)  # 项目名称列宽
-            self.project_table.setColumnWidth(2, 130)  # 项目编号列宽
-            self.project_table.setColumnWidth(3, 130)  # 项目类别列宽
-            self.project_table.setColumnWidth(4, 90)  # 开始日期列宽
-            self.project_table.setColumnWidth(5, 90)  # 结束日期列宽
-            self.project_table.setColumnWidth(6, 70)  # 总经费列宽
-            self.project_table.setColumnWidth(7, 80)  # 执行率列宽
-            self.project_table.setColumnWidth(8, 80)  # 操作列宽
 
             # 禁止直接编辑
             self.project_table.setEditTriggers(TableWidget.NoEditTriggers)
@@ -357,7 +396,7 @@ class ProjectManagementWindow(QWidget):
                 session.query(Project).filter(Project.id == project_id).delete()
                 session.commit()
                 self.refresh_project_table()
-                UIUtils.show_success(self,
+                UIUtils.show_success(
                     title='成功',
                     content='项目已成功删除',
                     parent=self
@@ -414,3 +453,286 @@ class ProjectManagementWindow(QWidget):
             raise e
         finally:
             session.c
+
+    def export_project_data(self):
+        """导出项目数据"""
+        # 获取选中的项目
+        selected_items = self.project_table.selectedItems()
+        if not selected_items:
+            UIUtils.show_warning(
+                title='警告',
+                content='请先选择要导出的项目',
+                parent=self
+            )
+            return
+        
+        # 获取选中行的项目ID
+        row = selected_items[0].row()
+        project_id = self.project_table.item(row, 0).data(Qt.UserRole)
+        
+        # 选择保存文件的位置
+        from PySide6.QtWidgets import QFileDialog
+        import json
+        from datetime import datetime
+        
+        file_name = QFileDialog.getSaveFileName(
+            self,
+            "导出项目数据",
+            f"项目数据_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+            "JSON文件 (*.json)"
+        )[0]
+        
+        if not file_name:
+            return
+            
+        try:
+            # 创建数据库会话
+            Session = sessionmaker(bind=self.engine)
+            session = Session()
+            
+            # 获取项目信息
+            project = session.query(Project).get(project_id)
+            if not project:
+                raise Exception("项目不存在")
+            
+            # 准备导出数据
+            export_data = {
+                'project': {
+                    'id': project.id,
+                    'name': project.name,
+                    'financial_code': project.financial_code,
+                    'project_code': project.project_code,
+                    'project_type': project.project_type,
+                    'start_date': project.start_date.isoformat(),
+                    'end_date': project.end_date.isoformat(),
+                    'total_budget': float(project.total_budget)
+                },
+                'budgets': [],
+                'expenses': []
+            }
+            
+            # 获取预算信息
+            budgets = session.query(Budget).filter(Budget.project_id == project_id).all()
+            for budget in budgets:
+                budget_data = {
+                    'id': budget.id,
+                    'year': budget.year,
+                    'total_amount': float(budget.total_amount),
+                    'spent_amount': float(budget.spent_amount),
+                    'items': []
+                }
+                
+                # 获取预算项信息
+                for item in budget.budget_items:
+                    item_data = {
+                        'id': item.id,
+                        'category': item.category.value,
+                        'amount': float(item.amount),
+                        'spent_amount': float(item.spent_amount)
+                    }
+                    budget_data['items'].append(item_data)
+                
+                export_data['budgets'].append(budget_data)
+            
+            # 获取支出信息
+            expenses = session.query(Expense).join(Budget).filter(Budget.project_id == project_id).all()
+            for expense in expenses:
+                expense_data = {
+                    'id': expense.id,
+                    'budget_id': expense.budget_id,
+                    'category': expense.category.value,
+                    'content': expense.content,
+                    'specification': expense.specification,
+                    'supplier': expense.supplier,
+                    'amount': float(expense.amount),
+                    'date': expense.date.isoformat(),
+                    'remarks': expense.remarks,
+                    'voucher_path': expense.voucher_path
+                }
+                export_data['expenses'].append(expense_data)
+            
+            # 保存数据到文件
+            with open(file_name, 'w', encoding='utf-8') as f:
+                json.dump(export_data, f, ensure_ascii=False, indent=2)
+            
+            session.close()
+            
+            UIUtils.show_success(
+                title='成功',
+                content=f'项目数据已导出到：\n{file_name}',
+                parent=self
+            )
+            
+            # 在文件资源管理器中打开导出目录
+            import os
+            os.startfile(os.path.dirname(file_name))
+            
+        except Exception as e:
+            UIUtils.show_error(
+                title='错误',
+                content=f'导出项目数据失败：{str(e)}',
+                parent=self
+            )
+    
+    def import_project_data(self):
+        """导入项目数据"""
+        # 选择要导入的文件
+        from PySide6.QtWidgets import QFileDialog
+        import json
+        from ...models.database import BudgetCategory, BudgetItem
+        
+        file_name = QFileDialog.getOpenFileName(
+            self,
+            "导入项目数据",
+            "",
+            "JSON文件 (*.json)"
+        )[0]
+        
+        if not file_name:
+            return
+            
+        try:
+            # 读取数据文件
+            with open(file_name, 'r', encoding='utf-8') as f:
+                import_data = json.load(f)
+            
+            # 验证数据格式
+            if not all(key in import_data for key in ['project', 'budgets', 'expenses']):
+                raise Exception("数据格式不正确")
+            
+            # 创建数据库会话
+            Session = sessionmaker(bind=self.engine)
+            session = Session()
+            
+            try:
+                # 检查项目是否已存在
+                existing_project = session.query(Project).filter(
+                    Project.financial_code == import_data['project']['financial_code']
+                ).first()
+                
+                if existing_project:
+                    # 如果项目已存在，询问用户是否覆盖
+                    from qfluentwidgets import MessageBox
+                    box = MessageBox(
+                        '项目已存在',
+                        '检测到相同财务编号的项目已存在，是否覆盖？\n注意：覆盖将删除原有的所有预算和支出数据！',
+                        parent=self
+                    )
+                    box.yesButton.setText('覆盖')
+                    box.cancelButton.setText('取消')
+                    
+                    if not box.exec():
+                        session.close()
+                        return
+                    
+                    # 删除原有的项目数据
+                    session.delete(existing_project)
+                    session.commit()
+                
+                # 创建新项目
+                project_data = import_data['project']
+                try:
+                    project = Project(
+                        name=project_data['name'],
+                        financial_code=project_data['financial_code'],
+                        project_code=project_data['project_code'],
+                        project_type=project_data['project_type'],
+                        start_date=datetime.fromisoformat(project_data['start_date']),
+                        end_date=datetime.fromisoformat(project_data['end_date']),
+                        total_budget=project_data['total_budget']
+                    )
+                except KeyError as e:
+                    raise Exception(f"项目数据缺少必要字段：{str(e)}")
+                
+                session.add(project)
+                session.flush()  # 获取新项目的ID
+                
+                # 导入预算数据
+                for budget_data in import_data['budgets']:
+                    try:
+                        # 检查是否存在相同的项目ID和年度组合
+                        existing_budget = session.query(Budget).filter(
+                            Budget.project_id == project.id,
+                            Budget.year == budget_data['year']
+                        ).first()
+                        
+                        if existing_budget:
+                            # 如果存在，更新现有记录
+                            existing_budget.total_amount = budget_data['total_amount']
+                            existing_budget.spent_amount = budget_data['spent_amount']
+                            budget = existing_budget
+                        else:
+                            # 如果不存在，创建新记录
+                            budget = Budget(
+                                project_id=project.id,
+                                year=budget_data['year'],
+                                total_amount=budget_data['total_amount'],
+                                spent_amount=budget_data['spent_amount']
+                            )
+                            session.add(budget)
+                    except KeyError as e:
+                        raise Exception(f"预算数据缺少必要字段：{str(e)}")
+                        
+                    session.flush()
+                    
+                    # 删除现有的预算项
+                    if existing_budget:
+                        session.query(BudgetItem).filter(BudgetItem.budget_id == budget.id).delete()
+                    
+                    # 导入预算项
+                    for item_data in budget_data['items']:
+                        try:
+                            budget_item = BudgetItem(
+                                budget_id=budget.id,
+                                category=BudgetCategory(item_data['category']),
+                                amount=item_data['amount'],
+                                spent_amount=item_data['spent_amount']
+                            )
+                        except KeyError as e:
+                            raise Exception(f"预算项数据缺少必要字段：{str(e)}")
+                            
+                        session.add(budget_item)
+                
+                # 导入支出数据
+                for expense_data in import_data['expenses']:
+                    try:
+                        expense = Expense(
+                            project_id=project.id,
+                            budget_id=expense_data['budget_id'],
+                            category=BudgetCategory(expense_data['category']),
+                            content=expense_data['content'],
+                            specification=expense_data['specification'],
+                            supplier=expense_data['supplier'],
+                            amount=expense_data['amount'],
+                            date=datetime.fromisoformat(expense_data['date']),
+                            remarks=expense_data['remarks'],
+                            voucher_path=expense_data.get('voucher_path', '')
+                        )
+                    except KeyError as e:
+                        raise Exception(f"支出数据缺少必要字段：{str(e)}")
+                        
+                    session.add(expense)
+                
+                session.commit()
+                
+                UIUtils.show_success(
+                    title='成功',
+                    content='项目数据导入成功',
+                    parent=self
+                )
+                
+                # 刷新项目表格
+                self.refresh_project_table()
+                
+            except Exception as e:
+                session.rollback()
+                raise e
+            finally:
+                session.close()
+                
+        except Exception as e:
+            UIUtils.show_error(
+                title='错误',
+                content=f'导入项目数据失败：{str(e)}',
+                parent=self
+            )

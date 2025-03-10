@@ -1,0 +1,129 @@
+{
+  "project": {
+    "id": 2,
+    "name": "1",
+    "financial_code": "1",
+    "project_code": "1",
+    "project_type": "国家自然科学基金",
+    "start_date": "2024-03-08",
+    "end_date": "2025-03-08",
+    "total_budget": 11.0
+  },
+  "budgets": [
+    {
+      "id": 4,
+      "year": null,
+      "total_amount": 11.0,
+      "items": [
+        {
+          "id": 61,
+          "category": "设备费",
+          "amount": 0.0
+        },
+        {
+          "id": 62,
+          "category": "材料费",
+          "amount": 6.0
+        },
+        {
+          "id": 63,
+          "category": "外协费",
+          "amount": 0.0
+        },
+        {
+          "id": 64,
+          "category": "燃动费",
+          "amount": 0.0
+        },
+        {
+          "id": 65,
+          "category": "会议差旅",
+          "amount": 1.0
+        },
+        {
+          "id": 66,
+          "category": "出版文献",
+          "amount": 1.0
+        },
+        {
+          "id": 67,
+          "category": "劳务费",
+          "amount": 1.0
+        },
+        {
+          "id": 68,
+          "category": "专家咨询费",
+          "amount": 1.0
+        },
+        {
+          "id": 69,
+          "category": "其他支出",
+          "amount": 0.0
+        },
+        {
+          "id": 70,
+          "category": "间接费",
+          "amount": 1.0
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "year": 2025,
+      "total_amount": 5.5,
+      "items": [
+        {
+          "id": 71,
+          "category": "设备费",
+          "amount": 0.0
+        },
+        {
+          "id": 72,
+          "category": "材料费",
+          "amount": 3.0
+        },
+        {
+          "id": 73,
+          "category": "外协费",
+          "amount": 0.0
+        },
+        {
+          "id": 74,
+          "category": "燃动费",
+          "amount": 0.0
+        },
+        {
+          "id": 75,
+          "category": "会议差旅",
+          "amount": 0.5
+        },
+        {
+          "id": 76,
+          "category": "出版文献",
+          "amount": 0.5
+        },
+        {
+          "id": 77,
+          "category": "劳务费",
+          "amount": 0.5
+        },
+        {
+          "id": 78,
+          "category": "专家咨询费",
+          "amount": 0.5
+        },
+        {
+          "id": 79,
+          "category": "其他支出",
+          "amount": 0.0
+        },
+        {
+          "id": 80,
+          "category": "间接费",
+          "amount": 0.5
+        }
+      ]
+    }
+  ],
+  "expenses": []
+}
