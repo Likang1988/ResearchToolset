@@ -68,7 +68,7 @@ class ExpenseDialog(QDialog):
         # 开支内容
         content_layout = QHBoxLayout()
         content_layout.addWidget(BodyLabel("开支内容:"))
-        self.content = EditableComboBox()
+        self.content = LineEdit()
         # 默认为空
         self.content.setCurrentText('')
         content_layout.addWidget(self.content)
@@ -77,7 +77,7 @@ class ExpenseDialog(QDialog):
         # 规格型号
         specification_layout = QHBoxLayout()
         specification_layout.addWidget(BodyLabel("规格型号:"))
-        self.specification = EditableComboBox()
+        self.specification = LineEdit()
         self.content.setCurrentText('')
         specification_layout.addWidget(self.specification)
         layout.addLayout(specification_layout)
@@ -85,7 +85,7 @@ class ExpenseDialog(QDialog):
         # 供应商
         supplier_layout = QHBoxLayout()
         supplier_layout.addWidget(BodyLabel("供应商:"))
-        self.supplier = EditableComboBox()
+        self.supplier = LineEdit()
         self.content.setCurrentText('')
         supplier_layout.addWidget(self.supplier)
         layout.addLayout(supplier_layout)

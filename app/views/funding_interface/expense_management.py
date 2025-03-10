@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                                  QFileDialog, QFrame, QTableWidgetItem,
                                  QHeaderView)
 from PySide6.QtCore import Qt, Signal, QDate, QSize
-from qfluentwidgets import (FluentIcon, TableWidget, PushButton, ComboBox, CalendarPicker, 
+from qfluentwidgets import (FluentIcon, TableWidget, PushButton, ComboBox, CompactDateEdit, 
                            LineEdit, SpinBox, TableItemDelegate, TitleLabel, InfoBar, Dialog, RoundMenu, PrimaryPushButton, ToolButton, Action)
 from ...models.database import sessionmaker, Budget, BudgetCategory, Expense, BudgetItem
 from datetime import datetime
@@ -156,8 +156,8 @@ class ExpenseManagementWindow(QWidget):
         
         # 日期范围
         filter_layout.addWidget(QLabel("日期范围:"))
-        self.start_date = CalendarPicker()
-        self.end_date = CalendarPicker()
+        self.start_date = CompactDateEdit()
+        self.end_date = CompactDateEdit()
         # 将datetime.date对象转换为QDate对象
         start_date = QDate(self.project.start_date.year, self.project.start_date.month, self.project.start_date.day)
         self.start_date.setDate(start_date)
@@ -1019,8 +1019,8 @@ class ExpenseManagementWindow(QWidget):
         """应用筛选条件"""
         filters = {
             'category': None if self.category_combo.currentText() == "全部" else self.category_combo.currentText(),
-            'start_date': self.start_date.getDate().toPython(),
-            'end_date': self.end_date.getDate().toPython(),
+            'start_date': self.start_date.date().toPython(),
+            'end_date': self.end_date.date().toPython(),
             'min_amount': float(self.min_amount.text()) if self.min_amount.text() and float(self.min_amount.text()) > 0 else None,
             'max_amount': float(self.max_amount.text()) if self.max_amount.text() and float(self.max_amount.text()) > 0 else None,
             'supplier': None

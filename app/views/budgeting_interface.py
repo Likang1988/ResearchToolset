@@ -498,109 +498,190 @@ class BudgetingInterface(QWidget):
         import pandas as pd
         from datetime import datetime
         from ..models.database import BudgetCategory
+        from ..components.budget_export_dialog import BudgetExportDialog
         
-        # 选择保存文件的位置
-        file_name = QFileDialog.getSaveFileName(
-            self,
-            "导出预算数据",
-            f"预算数据_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-            "Excel文件 (*.xlsx)"
-        )[0]
-        
-        if not file_name:
-            return
-            
-        try:
-            # 准备数据列表
-            data = []
-            
-            # 遍历项目节点
-            for i in range(self.budget_tree.topLevelItemCount()):
-                project_item = self.budget_tree.topLevelItem(i)
-                project_name = project_item.text(0)
-                
-                # 创建一个字典来存储每个类别的数据
-                category_data = {category.value: {'amount': '0', 'remarks': '', 'items': []} for category in BudgetCategory}
-                
-                # 遍历预算类别节点
-                for j in range(project_item.childCount()):
-                    category_item = project_item.child(j)
-                    category_name = category_item.text(0)
-                    category_amount = category_item.text(4)
-                    category_remarks = category_item.text(5)
-                    
-                    # 更新类别数据
-                    category_data[category_name]['amount'] = category_amount
-                    category_data[category_name]['remarks'] = category_remarks
-                    
-                    # 遍历具体预算项
-                    for k in range(category_item.childCount()):
-                        sub_item = category_item.child(k)
-                        category_data[category_name]['items'].append({
-                            '预算项': sub_item.text(0),
-                            '规格型号': sub_item.text(1),
-                            '单价(元)': sub_item.text(2),
-                            '数量': sub_item.text(3),
-                            '金额(元)': sub_item.text(4),
-                            '备注': sub_item.text(5)
-                        })
-                
-                # 将所有类别的数据添加到导出列表中
-                for category_name, category_info in category_data.items():
-                    if category_info['items']:
-                        # 如果类别有预算项，添加所有预算项
-                        for item in category_info['items']:
-                            data.append({
-                                '项目名称': project_name,
-                                '预算类别': category_name,
-                                '预算项': item['预算项'],
-                                '规格型号': item['规格型号'],
-                                '单价(元)': item['单价(元)'],
-                                '数量': item['数量'],
-                                '金额(元)': item['金额(元)'],
-                                '备注': item['备注'],
-                                '类别合计(元)': category_info['amount'],
-                                '类别备注': category_info['remarks']
-                            })
-                    else:
-                        # 如果类别没有预算项，添加一个空行
-                        data.append({
-                            '项目名称': project_name,
-                            '预算类别': category_name,
-                            '预算项': '',
-                            '规格型号': '',
-                            '单价(元)': '',
-                            '数量': '',
-                            '金额(元)': '0',
-                            '备注': '',
-                            '类别合计(元)': '0',
-                            '类别备注': ''
-                        })
-            
-            # 创建DataFrame并导出到Excel
-            df = pd.DataFrame(data)
-            
-            # 使用ExcelWriter以便设置格式
-            with pd.ExcelWriter(file_name, engine='openpyxl') as writer:
-                df.to_excel(writer, sheet_name='预算数据', index=False)
-            
-            # 显示成功消息
-            UIUtils.show_success(
-                title='成功',
-                content=f'预算数据已导出到：\n{file_name}',
-                parent=self
-            )
-            
-            # 在文件资源管理器中打开导出目录
-            import os
-            os.startfile(os.path.dirname(file_name))
-            
-        except Exception as e:
+        # 获取当前选中的项目
+        current_item = self.budget_tree.currentItem()
+        if not current_item:
             UIUtils.show_error(
                 title='错误',
-                content=f'导出预算数据失败：{str(e)}',
+                content='请先选择要导出的预算项目',
                 parent=self
             )
+            return
+            
+        # 获取顶级项目节点
+        while current_item.parent():
+            current_item = current_item.parent()
+        
+        # 显示导出配置对话框
+        dialog = BudgetExportDialog(self)
+        if dialog.exec():
+            config = dialog.get_export_config()
+            
+            # 选择保存文件的位置
+            file_name = QFileDialog.getSaveFileName(
+                self,
+                "导出预算数据",
+                f"预算数据_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                "Excel文件 (*.xlsx)"
+            )[0]
+            
+            if not file_name:
+                return
+                
+            try:
+                with pd.ExcelWriter(file_name, engine='openpyxl') as writer:
+                    # 导出预算明细
+                    if config['export_detail']:
+                        detail_data = []
+                        project_name = current_item.text(0)
+                        
+                        # 创建一个字典来存储每个类别的数据
+                        category_data = {category.value: {'amount': '0', 'remarks': '', 'items': []} for category in BudgetCategory}
+                        
+                        # 遍历预算类别节点
+                        for j in range(current_item.childCount()):
+                            category_item = current_item.child(j)
+                            category_name = category_item.text(0)
+                            category_amount = category_item.text(4)
+                            category_remarks = category_item.text(5)
+                            
+                            # 更新类别数据
+                            category_data[category_name]['amount'] = category_amount
+                            category_data[category_name]['remarks'] = category_remarks
+                            
+                            # 遍历具体预算项
+                            for k in range(category_item.childCount()):
+                                sub_item = category_item.child(k)
+                                amount = float(sub_item.text(4)) if sub_item.text(4) else 0
+                                if config['unit'] == '万元':
+                                    amount = amount / 10000
+                                    
+                                category_data[category_name]['items'].append({
+                                    '预算项': sub_item.text(0),
+                                    '规格型号': sub_item.text(1),
+                                    f'单价({config["unit"]})': float(sub_item.text(2))/10000 if config['unit'] == '万元' and sub_item.text(2) else sub_item.text(2),
+                                    '数量': sub_item.text(3),
+                                    f'金额({config["unit"]})': amount,
+                                    '备注': sub_item.text(5)
+                                })
+                        
+                        # 将所有类别的数据添加到导出列表中
+                        for category_name, category_info in category_data.items():
+                            if category_info['items']:
+                                # 如果类别有预算项，添加所有预算项
+                                for item in category_info['items']:
+                                    detail_data.append({
+                                        '项目名称': project_name,
+                                        '预算类别': category_name,
+                                        '预算项': item['预算项'],
+                                        '规格型号': item['规格型号'],
+                                        f'单价({config["unit"]})': item[f'单价({config["unit"]})'],
+                                        '数量': item['数量'],
+                                        f'金额({config["unit"]})': item[f'金额({config["unit"]})'],
+                                        '备注': item['备注'],
+                                        f'类别合计({config["unit"]})': float(category_info['amount'])/10000 if config['unit'] == '万元' else category_info['amount'],
+                                        '类别备注': category_info['remarks']
+                                    })
+                            else:
+                                # 如果类别没有预算项，添加一个空行
+                                detail_data.append({
+                                    '项目名称': project_name,
+                                    '预算类别': category_name,
+                                    '预算项': '',
+                                    '规格型号': '',
+                                    f'单价({config["unit"]})': '',
+                                    '数量': '',
+                                    f'金额({config["unit"]})': '0',
+                                    '备注': '',
+                                    f'类别合计({config["unit"]})': '0',
+                                    '类别备注': ''
+                                })
+                        
+                        # 导出预算明细表
+                        df_detail = pd.DataFrame(detail_data)
+                        df_detail.to_excel(writer, sheet_name='预算明细', index=False)
+                    
+                    # 导出预算汇总
+                    if config['export_summary']:
+                        summary_data = []
+                        project_name = current_item.text(0)
+                        total_amount = float(current_item.text(4))
+                        if config['unit'] == '万元':
+                            total_amount = total_amount / 10000
+                        
+                        # 遍历预算类别节点
+                        for j in range(current_item.childCount()):
+                            category_item = current_item.child(j)
+                            category_name = category_item.text(0)
+                            amount = float(category_item.text(4)) if category_item.text(4) else 0
+                            if config['unit'] == '万元':
+                                amount = amount / 10000
+                            
+                            row_data = {
+                                '序号': j + 1,
+                                '费用类别': category_name,
+                                f'经费数额({config["unit"]})': amount
+                            }
+                            
+                            # 如果需要细分年度
+                            if config['year_detail']:
+                                year_amounts = []
+                                total_proportion = 0
+                                
+                                # 根据比例计算每年金额
+                                if config['set_proportion'] and config['proportions']:
+                                    for i, proportion in enumerate(config['proportions'][:config['year_count']]):
+                                        year_amount = amount * proportion / 100
+                                        year_amounts.append(year_amount)
+                                        row_data[f'第{i+1}年'] = year_amount
+                                        total_proportion += proportion
+                                else:
+                                    # 如果不设置比例，平均分配
+                                    year_amount = amount / config['year_count']
+                                    for i in range(config['year_count']):
+                                        year_amounts.append(year_amount)
+                                        row_data[f'第{i+1}年'] = year_amount
+                            
+                            summary_data.append(row_data)
+                        
+                        # 添加合计行
+                        total_row = {'序号': '', '费用类别': '合计'}
+                        total_row[f'经费数额({config["unit"]})'] = total_amount
+                        
+                        if config['year_detail']:
+                            if config['set_proportion'] and config['proportions']:
+                                for i, proportion in enumerate(config['proportions'][:config['year_count']]):
+                                    total_row[f'第{i+1}年'] = total_amount * proportion / 100
+                            else:
+                                year_amount = total_amount / config['year_count']
+                                for i in range(config['year_count']):
+                                    total_row[f'第{i+1}年'] = year_amount
+                        
+                        summary_data.append(total_row)
+                        
+                        # 导出预算汇总表
+                        df_summary = pd.DataFrame(summary_data)
+                        df_summary.to_excel(writer, sheet_name='预算汇总', index=False)
+                
+                # 显示成功消息
+                UIUtils.show_success(
+                    title='成功',
+                    content=f'预算数据已导出到：\n{file_name}',
+                    parent=self
+                )
+                
+                # 在文件资源管理器中打开导出目录
+                import os
+                os.startfile(os.path.dirname(file_name))
+                
+            except Exception as e:
+                UIUtils.show_error(
+                    title='错误',
+                    content=f'导出预算数据失败：{str(e)}',
+                    parent=self
+                )
     def on_item_changed(self, item, column):
         """处理单元格编辑完成事件"""
         if column in [2, 3]:  # 单价或数量列被修改
