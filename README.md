@@ -5,7 +5,7 @@
   科研工具集 - ResearchToolset
 </h1>
 <p align="center">
-  基于 PySide6 和 QFluentWidgets 的跨平台科研经费管理工具软件
+  基于 PySide6 和 QFluentWidgets 的跨平台科研工具软件
 </p>
 
 ![界面](app/assets/screenshots/经费追踪-预算管理.png)

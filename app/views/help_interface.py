@@ -40,7 +40,7 @@ class HelpInterface(ScrollArea):
         readme_layout.addWidget(title)
         
         # 添加副标题
-        subtitle = BodyLabel("基于 PySide6 和 QFluentWidgets 的跨平台科研经费管理软件", readme_card)
+        subtitle = BodyLabel("基于 PySide6 和 QFluentWidgets 的跨平台科研工具软件", readme_card)
         subtitle.setAlignment(Qt.AlignCenter)
         readme_layout.addWidget(subtitle)
         
@@ -55,7 +55,7 @@ class HelpInterface(ScrollArea):
         # 添加项目简介
         intro_text = BodyLabel(
             "目前软件的功能主要为科研经费管理，旨在帮助科研人员高效管理和追踪项目资金使用情况。\n\n"
-            "后续将不断丰富完善和优化软件功能，慢慢形成一个真正能有效服务科研工作者的工具集。\n\n"
+            "后续将不断丰富功能模块，目标是形成一个功能多样的工具集。\n\n"
             "项目源于本人日常科研工作需要，利用VSCode+Cline+DeepSeek进行开发，项目代码还比较混乱，可能有很多重复代码和未知bug，未必适用于所有科研工作者，请谨慎使用。",
             
             readme_card
