@@ -53,7 +53,7 @@ class UIUtils:
         
         # 设置选择模式
         table.setSelectionBehavior(QTableWidget.SelectRows)
-        table.setSelectionMode(QTableWidget.SingleSelection)
+        table.setSelectionMode(QTableWidget.ExtendedSelection)
         
     @staticmethod
     def create_title_layout(title_text: str, with_back_button: bool = False, back_button_callback = None):

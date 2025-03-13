@@ -117,10 +117,10 @@ class ProjectManagementWindow(QWidget):
         self.project_table.verticalHeader().setVisible(False)
         
         # 设置初始列宽
-        header.resizeSection(0, 90)  # 财务编号
+        header.resizeSection(0, 95)  # 财务编号
         header.resizeSection(1, 320)  # 项目名称
-        header.resizeSection(2, 125)  # 项目编号
-        header.resizeSection(3, 130)  # 项目类别
+        header.resizeSection(2, 130)  # 项目编号
+        header.resizeSection(3, 150)  # 项目类别
         header.resizeSection(4, 90)  # 开始日期
         header.resizeSection(5, 90)  # 结束日期
         header.resizeSection(6, 80)  # 总经费

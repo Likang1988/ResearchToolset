@@ -11,6 +11,7 @@ from datetime import datetime
 from ...components.expense_dialog import ExpenseDialog
 from ...utils.ui_utils import UIUtils
 from ...utils.db_utils import DBUtils
+from collections import defaultdict
 
 class ExpenseManagementWindow(QWidget):
     # 添加信号，用于通知预算管理窗口更新数据
@@ -75,10 +76,10 @@ class ExpenseManagementWindow(QWidget):
         top_layout.setContentsMargins(0, 0, 0, 0)  # 设置边距
         
         self.expense_table = TableWidget()
-        self.expense_table.setColumnCount(9)  # 增加支出ID列
+        self.expense_table.setColumnCount(9)  
         self.expense_table.setHorizontalHeaderLabels([
-            "费用类别", "开支内容", "规格型号", "供应商", 
-            "报账金额(元)", "报账日期", "备注", "支出凭证", "支出ID"
+             "支出ID", "费用类别", "开支内容", "规格型号", "供应商", 
+            "报账金额(元)", "报账日期", "备注", "支出凭证"
         ])
         # 禁止直接编辑表格
         self.expense_table.setEditTriggers(TableWidget.NoEditTriggers)
@@ -99,22 +100,24 @@ class ExpenseManagementWindow(QWidget):
         self.expense_table.verticalHeader().setVisible(False)     
 
         # 设置初始列宽
-        header.resizeSection(0, 100)  # 费用类别
-        header.resizeSection(1, 200)  # 开支内容
-        header.resizeSection(2, 160)  # 规格型号
-        header.resizeSection(3, 160)  # 供应商
-        header.resizeSection(4, 100)  # 报账金额
-        header.resizeSection(5, 100)  # 报账日期
-        header.resizeSection(6, 140)  # 备注
-        header.resizeSection(7, 80)  # 支出凭证
-        header.resizeSection(8, 70)  # 支出ID
+        header.resizeSection(0, 72)  # 支出ID
+        header.resizeSection(1, 100)  # 费用类别
+        header.resizeSection(2, 200)  # 开支内容
+        header.resizeSection(3, 160)  # 规格型号
+        header.resizeSection(4, 160)  # 供应商
+        header.resizeSection(5, 100)  # 报账金额
+        header.resizeSection(6, 100)  # 报账日期
+        header.resizeSection(7, 140)  # 备注
+        header.resizeSection(8, 80)  # 支出凭证
+        
         
         # 允许用户调整列宽
         header.setSectionsMovable(True) # 可移动列
         header.setStretchLastSection(True) # 最后一列自动填充剩余空间
         
-        self.expense_table.setSelectionBehavior(TableWidget.SelectRows) # 选中整行
-        self.expense_table.setSelectionMode(TableWidget.ExtendedSelection) # 允许多选
+        self.expense_table.setSelectionMode(TableWidget.ExtendedSelection)
+        self.expense_table.setSelectionBehavior(TableWidget.SelectRows) # 允许扩展选择整行
+    
         
         # 设置表格样式
         UIUtils.set_table_style(self.expense_table)
@@ -274,53 +277,60 @@ class ExpenseManagementWindow(QWidget):
                 row = self.expense_table.rowCount()
                 self.expense_table.insertRow(row)
                 
-                # 设置单元格内容和对齐方式
+                # 设置单元格内容和对齐方式               
+                
+                 # 支出ID列
+                id_item = QTableWidgetItem(str(expense.id))
+                id_item.setTextAlignment(Qt.AlignCenter)
+                self.expense_table.setItem(row, 0, id_item)
+                
                 # 费用类别 - 居中对齐
                 item = QTableWidgetItem(expense.category.value)
                 item.setTextAlignment(Qt.AlignCenter)
                 item.setData(Qt.UserRole, expense.id)  # 存储支出ID
-                self.expense_table.setItem(row, 0, item)
+                self.expense_table.setItem(row, 1, item)  
+               
+                # 开支内容 - 左对齐
+                item = QTableWidgetItem(expense.content)
+                item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+                self.expense_table.setItem(row, 2, item)
+                
+                # 规格型号 - 居中对齐
+                item = QTableWidgetItem(expense.specification or "")
+                item.setTextAlignment(Qt.AlignCenter)
+                self.expense_table.setItem(row, 3, item)
+                
+                # 供应商 - 居中对齐
+                item = QTableWidgetItem(expense.supplier or "")
+                item.setTextAlignment(Qt.AlignCenter)
+                self.expense_table.setItem(row, 4, item)
+                
+                # 报账金额 - 右对齐
+                item = QTableWidgetItem(f"{expense.amount:.2f}")
+                item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                self.expense_table.setItem(row, 5, item)
+                
+                # 报账日期 - 居中对齐
+                item = QTableWidgetItem(expense.date.strftime("%Y-%m-%d"))
+                item.setTextAlignment(Qt.AlignCenter)
+                self.expense_table.setItem(row, 6, item)
+                
+                # 备注 - 居中对齐
+                item = QTableWidgetItem(expense.remarks or "")
+                item.setTextAlignment(Qt.AlignCenter)
+                self.expense_table.setItem(row, 7, item)
                 
                 # 在其他单元格也存储支出ID，确保选中任意单元格都能获取ID
                 for col in range(1, self.expense_table.columnCount()):
                     cell_item = self.expense_table.item(row, col)
                     if cell_item:
                         cell_item.setData(Qt.UserRole, expense.id)
-                    elif col == 7:  # 处理凭证按钮
+                    elif col == 8:  # 处理凭证按钮
                         btn = self.expense_table.cellWidget(row, col)
                         if btn:
                             btn.setProperty("expense_id", expense.id)
                 
-                # 开支内容 - 左对齐
-                item = QTableWidgetItem(expense.content)
-                item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-                self.expense_table.setItem(row, 1, item)
-                
-                # 规格型号 - 居中对齐
-                item = QTableWidgetItem(expense.specification or "")
-                item.setTextAlignment(Qt.AlignCenter)
-                self.expense_table.setItem(row, 2, item)
-                
-                # 供应商 - 居中对齐
-                item = QTableWidgetItem(expense.supplier or "")
-                item.setTextAlignment(Qt.AlignCenter)
-                self.expense_table.setItem(row, 3, item)
-                
-                # 报账金额 - 右对齐
-                item = QTableWidgetItem(f"{expense.amount:.2f}")
-                item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-                self.expense_table.setItem(row, 4, item)
-                
-                # 报账日期 - 居中对齐
-                item = QTableWidgetItem(expense.date.strftime("%Y-%m-%d"))
-                item.setTextAlignment(Qt.AlignCenter)
-                self.expense_table.setItem(row, 5, item)
-                
-                # 备注 - 居中对齐
-                item = QTableWidgetItem(expense.remarks or "")
-                item.setTextAlignment(Qt.AlignCenter)
-                self.expense_table.setItem(row, 6, item)
-                
+
                 # 添加上传凭证按钮
                 upload_btn = ToolButton()
                 upload_btn.setFixedSize(30, 30)  # 设置按钮大小
@@ -361,12 +371,9 @@ class ExpenseManagementWindow(QWidget):
                 layout.setSpacing(0)
                 layout.setAlignment(Qt.AlignCenter)
                 layout.addWidget(upload_btn, 0, Qt.AlignCenter)
-                self.expense_table.setCellWidget(row, 7, container)
+                self.expense_table.setCellWidget(row, 8, container)
                 
-                # 添加支出ID列
-                id_item = QTableWidgetItem(str(expense.id))
-                id_item.setTextAlignment(Qt.AlignCenter)
-                self.expense_table.setItem(row, 8, id_item)
+               
                 
             session.close()
             
@@ -617,7 +624,7 @@ class ExpenseManagementWindow(QWidget):
             
         # 获取选中行的支出ID（从ID列获取）
         selected_row = selected_items[0].row()
-        id_item = self.expense_table.item(selected_row, 8)  # 第8列是支出ID
+        id_item = self.expense_table.item(selected_row, 0)  # 第0列是支出ID
         if not id_item:
             UIUtils.show_warning(
                 title='警告',
@@ -714,11 +721,10 @@ class ExpenseManagementWindow(QWidget):
             session.close()
             
     def delete_expense(self):
-        """删除支出"""
-        """删除支出"""
-        # 获取当前选中的行
-        selected_items = self.expense_table.selectedItems()
-        if not selected_items:
+        """批量删除支出"""
+        # 获取所有选中的行
+        selected_ranges = self.expense_table.selectedRanges()
+        if not selected_ranges:
             UIUtils.show_warning(
                 title='警告',
                 content='请选择要删除的支出记录！',
@@ -726,10 +732,19 @@ class ExpenseManagementWindow(QWidget):
             )
             return
             
-        # 获取选中行的支出ID（从ID列获取）
-        selected_row = selected_items[0].row()
-        id_item = self.expense_table.item(selected_row, 8)  # 第8列是支出ID
-        if not id_item:
+        # 收集所有选中的唯一行号
+        selected_rows = set()
+        for item in self.expense_table.selectedItems():
+            selected_rows.add(item.row())
+
+        # 获取所有支出ID
+        expense_ids = []
+        for row in selected_rows:
+            id_item = self.expense_table.item(row, 0)
+            if id_item:
+                expense_ids.append(id_item.text())
+                
+        if not expense_ids:
             UIUtils.show_warning(
                 title='警告',
                 content='无法获取支出记录ID！',
@@ -737,39 +752,44 @@ class ExpenseManagementWindow(QWidget):
             )
             return
             
-        expense_id = id_item.text()
-        
         # 使用Dialog显示确认对话框
         confirm_dialog = Dialog(
-            '确认删除',
-            '确定要删除该支出记录吗？此操作不可恢复！',
+            '确认批量删除',
+            f'确定要删除选中的{len(expense_ids)}条支出记录吗？此操作不可恢复！',
             self
         )
         
         if confirm_dialog.exec():
+            total_amount = 0
+            category_amounts = defaultdict(float)
             Session = sessionmaker(bind=self.engine)
             session = Session()
             
             try:
                 # 查询支出记录
-                expense = session.query(Expense).filter_by(id=expense_id).first()
+                expenses = session.query(Expense).filter(Expense.id.in_(expense_ids)).all()
                 
-                if expense:
-                    # 更新预算子项的已支出金额
-                    budget_item = session.query(BudgetItem).filter_by(
-                        budget_id=self.budget.id,
-                        category=expense.category
-                    ).first()
-                    
-                    if budget_item:
-                        budget_item.spent_amount -= expense.amount / 10000
-                        
-                    # 更新预算总额的已支出金额
+                if expenses:
+                    # 计算总金额和分类金额
+                    for expense in expenses:
+                        total_amount += expense.amount
+                        category_amounts[expense.category] += expense.amount
+
+                    # 更新预算子项
+                    for category, amount in category_amounts.items():
+                        budget_item = session.query(BudgetItem).filter_by(
+                            budget_id=self.budget.id,
+                            category=category
+                        ).first()
+                        if budget_item:
+                            budget_item.spent_amount -= amount / 10000
+
+                    # 更新总预算
                     self.budget = session.merge(self.budget)
-                    self.budget.spent_amount -= expense.amount / 10000
-                    
-                    # 删除支出记录
-                    session.delete(expense)
+                    self.budget.spent_amount -= total_amount / 10000
+
+                    # 批量删除记录
+                    session.query(Expense).filter(Expense.id.in_(expense_ids)).delete(synchronize_session=False)
                     session.commit()
                     
                     # 刷新表格
@@ -1060,34 +1080,39 @@ class ExpenseManagementWindow(QWidget):
                 row = self.expense_table.rowCount()
                 self.expense_table.insertRow(row)
                 
+                
                 # 设置单元格内容
+                id_item = QTableWidgetItem(str(expense.id))
+                id_item.setTextAlignment(Qt.AlignCenter)
+                self.expense_table.setItem(row, 0, id_item)
+
                 item = QTableWidgetItem(expense.category.value)
                 item.setTextAlignment(Qt.AlignCenter)
-                self.expense_table.setItem(row, 0, item)
+                self.expense_table.setItem(row, 1, item)
                 
                 item = QTableWidgetItem(expense.content)
                 item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-                self.expense_table.setItem(row, 1, item)
+                self.expense_table.setItem(row, 2, item)
                 
                 item = QTableWidgetItem(expense.specification or "")
                 item.setTextAlignment(Qt.AlignCenter)
-                self.expense_table.setItem(row, 2, item)
+                self.expense_table.setItem(row, 3, item)
                 
                 item = QTableWidgetItem(expense.supplier or "")
                 item.setTextAlignment(Qt.AlignCenter)
-                self.expense_table.setItem(row, 3, item)
+                self.expense_table.setItem(row, 4, item)
                 
                 item = QTableWidgetItem(f"{expense.amount:.2f}")
                 item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-                self.expense_table.setItem(row, 4, item)
+                self.expense_table.setItem(row, 5, item)
                 
                 item = QTableWidgetItem(expense.date.strftime("%Y-%m-%d"))
                 item.setTextAlignment(Qt.AlignCenter)
-                self.expense_table.setItem(row, 5, item)
+                self.expense_table.setItem(row, 6, item)
                 
                 item = QTableWidgetItem(expense.remarks or "")
                 item.setTextAlignment(Qt.AlignCenter)
-                self.expense_table.setItem(row, 6, item)
+                self.expense_table.setItem(row, 7, item)
                 
                 # 添加凭证按钮
                 upload_btn = ToolButton()
@@ -1129,12 +1154,9 @@ class ExpenseManagementWindow(QWidget):
                 layout.setSpacing(0)
                 layout.setAlignment(Qt.AlignCenter)
                 layout.addWidget(upload_btn, 0, Qt.AlignCenter)
-                self.expense_table.setCellWidget(row, 7, container)
+                self.expense_table.setCellWidget(row, 8, container)
                 
-                # 添加支出ID列
-                id_item = QTableWidgetItem(str(expense.id))
-                id_item.setTextAlignment(Qt.AlignCenter)
-                self.expense_table.setItem(row, 8, id_item)
+                
                 
             session.close()
             
@@ -1165,13 +1187,13 @@ class ExpenseManagementWindow(QWidget):
             expenses = []
             for row in range(self.expense_table.rowCount()):
                 expense_data = {
-                    'category': self.expense_table.item(row, 0).text(),
-                    'content': self.expense_table.item(row, 1).text(),
-                    'specification': self.expense_table.item(row, 2).text(),
-                    'supplier': self.expense_table.item(row, 3).text(),
-                    'amount': float(self.expense_table.item(row, 4).text()),
-                    'date': self.expense_table.item(row, 5).text(),
-                    'remarks': self.expense_table.item(row, 6).text()
+                    'category': self.expense_table.item(row, 1).text(),
+                    'content': self.expense_table.item(row, 2).text(),
+                    'specification': self.expense_table.item(row, 3).text(),
+                    'supplier': self.expense_table.item(row, 4).text(),
+                    'amount': float(self.expense_table.item(row, 5).text()),
+                    'date': self.expense_table.item(row, 6).text(),
+                    'remarks': self.expense_table.item(row, 7).text()
                 }
                 expenses.append(expense_data)
             
@@ -1250,7 +1272,7 @@ class ExpenseManagementWindow(QWidget):
             
             try:
                 for row in range(self.expense_table.rowCount()):
-                    voucher_btn = self.expense_table.cellWidget(row, 7)
+                    voucher_btn = self.expense_table.cellWidget(row, 8)
                     voucher_path = voucher_btn.property("voucher_path")
                     expense_id = voucher_btn.property("expense_id")
                     
@@ -1334,7 +1356,7 @@ class ExpenseManagementWindow(QWidget):
         for row in range(self.expense_table.rowCount()):
             row_data = []
             for col in range(self.expense_table.columnCount()):
-                if col == 7:  # 支出凭证列
+                if col == 8:  # 支出凭证列
                     container = self.expense_table.cellWidget(row, col)
                     if container:
                         # 从容器中获取按钮
@@ -1354,14 +1376,14 @@ class ExpenseManagementWindow(QWidget):
             rows_data.append(row_data)
         
         # 根据选定列排序
-        if column != 7:  # 不对支出凭证列进行排序
+        if column != 8:  # 不对支出凭证列进行排序
             rows_data.sort(key=lambda x: float(x[column]) if x[column].replace('.', '').isdigit() else x[column],
                           reverse=(order == Qt.DescendingOrder))
         
         # 更新表格数据
         for row, row_data in enumerate(rows_data):
             for col, cell_data in enumerate(row_data):
-                if col == 7:  # 支出凭证列
+                if col == 8:  # 支出凭证列
                     if cell_data:
                         # 创建新的按钮和容器
                         upload_btn = ToolButton()
@@ -1403,11 +1425,11 @@ class ExpenseManagementWindow(QWidget):
                         self.expense_table.setCellWidget(row, col, container)
                 else:
                     item = QTableWidgetItem(str(cell_data))
-                    if col == 0:  # 费用类别列
+                    if col == 1:  # 费用类别列
                         item.setTextAlignment(Qt.AlignCenter)
-                    elif col == 1:  # 开支内容列
+                    elif col == 2:  # 开支内容列
                         item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-                    elif col == 4:  # 报账金额列
+                    elif col == 5:  # 报账金额列
                         item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
                     else:  # 其他列
                         item.setTextAlignment(Qt.AlignCenter)
