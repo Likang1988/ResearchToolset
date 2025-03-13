@@ -96,7 +96,7 @@ class BudgetManagementWindow(QWidget):
         header.setDefaultAlignment(Qt.AlignCenter)
         
         # 设置列宽
-        self.budget_tree.setColumnWidth(0, 140)  # 预算年度
+        self.budget_tree.setColumnWidth(0, 130)  # 预算年度
         self.budget_tree.setColumnWidth(1, 80)  # 预算额
         self.budget_tree.setColumnWidth(2, 80)  # 支出额
         self.budget_tree.setColumnWidth(3, 80)  # 结余额

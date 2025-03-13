@@ -94,10 +94,13 @@ class ExpenseManagementWindow(QWidget):
         header.setSectionResizeMode(QHeaderView.Interactive)  # 可调整列宽  
         header.setSortIndicatorShown(True)  # 显示排序指示器
         header.sectionClicked.connect(self.sort_table)  # 连接点击事件到排序函数
-        
+
+                # 隐藏行号
+        self.expense_table.verticalHeader().setVisible(False)     
+
         # 设置初始列宽
         header.resizeSection(0, 100)  # 费用类别
-        header.resizeSection(1, 230)  # 开支内容
+        header.resizeSection(1, 200)  # 开支内容
         header.resizeSection(2, 160)  # 规格型号
         header.resizeSection(3, 160)  # 供应商
         header.resizeSection(4, 100)  # 报账金额
@@ -206,6 +209,9 @@ class ExpenseManagementWindow(QWidget):
         self.headers = ["分类统计"] + [c.value for c in categories[:indirect_index+1]] + ["合计"] + [c.value for c in categories[indirect_index+1:]]
         self.stats_table.setColumnCount(len(self.headers))
         self.stats_table.setHorizontalHeaderLabels(self.headers)
+
+                # 隐藏行号
+        self.stats_table.verticalHeader().setVisible(False)
         
         # 设置表格样式
         self.stats_table.setBorderVisible(True)
@@ -421,9 +427,9 @@ class ExpenseManagementWindow(QWidget):
             # 设置列宽
             header = self.stats_table.horizontalHeader()
             header.setSectionResizeMode(QHeaderView.Interactive)
-            header.resizeSection(0, 102)  # 类别列
+            header.resizeSection(0, 98)  # 类别列
             for i in range(1, len(self.headers)):
-                header.resizeSection(i, 89)  # 数据列
+                header.resizeSection(i, 92)  # 数据列
             
             header.setStretchLastSection(True)  # 最后一列自动填充剩余空间
 

@@ -113,6 +113,9 @@ class ProjectManagementWindow(QWidget):
         header = self.project_table.horizontalHeader()  # 获取水平表头
         header.setSectionResizeMode(QHeaderView.Interactive)  # 可调整列宽  
         
+        # 隐藏行号
+        self.project_table.verticalHeader().setVisible(False)
+        
         # 设置初始列宽
         header.resizeSection(0, 90)  # 财务编号
         header.resizeSection(1, 320)  # 项目名称
