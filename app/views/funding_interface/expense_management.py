@@ -11,6 +11,7 @@ from datetime import datetime
 from ...components.expense_dialog import ExpenseDialog
 from ...utils.ui_utils import UIUtils
 from ...utils.db_utils import DBUtils
+from ...utils.voucher_utils import create_voucher_button
 from collections import defaultdict
 
 class ExpenseManagementWindow(QWidget):
@@ -332,45 +333,7 @@ class ExpenseManagementWindow(QWidget):
                 
 
                 # 添加上传凭证按钮
-                upload_btn = ToolButton()
-                upload_btn.setFixedSize(30, 30)  # 设置按钮大小
-                if not expense.voucher_path:
-                    # 显示添加图标
-                    upload_btn.setIcon(FluentIcon.ADD_TO)
-                    upload_btn.setIconSize(QSize(16, 16))
-                    upload_btn.setStyleSheet("""
-                        QPushButton {
-                            background: transparent;
-                        }
-                        QPushButton:hover {
-                            background: rgba(24, 144, 255, 0.1);
-                            border-radius: 4px;
-                        }
-                    """)
-                else:
-                    # 显示凭证图标
-                    upload_btn.setIcon(FluentIcon.CERTIFICATE)
-                    upload_btn.setIconSize(QSize(16, 16))
-                    upload_btn.setStyleSheet("""
-                        QPushButton {
-                            background: transparent;
-                        }
-                        QPushButton:hover {
-                            background: rgba(24, 144, 255, 0.1);
-                            border-radius: 4px;  
-                        }
-                    """)
-                upload_btn.setProperty("expense_id", expense.id)
-                upload_btn.setProperty("voucher_path", expense.voucher_path)
-                upload_btn.mousePressEvent = lambda event, btn=upload_btn: self.handle_voucher(event, btn)
-                
-                # 创建容器widget用于居中显示按钮
-                container = QWidget()
-                layout = QHBoxLayout(container)
-                layout.setContentsMargins(0, 0, 0, 0)
-                layout.setSpacing(0)
-                layout.setAlignment(Qt.AlignCenter)
-                layout.addWidget(upload_btn, 0, Qt.AlignCenter)
+                container = create_voucher_button(expense.id, expense.voucher_path, self.handle_voucher)
                 self.expense_table.setCellWidget(row, 8, container)
                 
                
@@ -943,15 +906,6 @@ class ExpenseManagementWindow(QWidget):
                 # 更新按钮状态
                 sender.setIcon(FluentIcon.CERTIFICATE)
                 sender.setIconSize(QSize(16, 16)) # 设置图标大小
-                sender.setStyleSheet("""
-                    QPushButton {
-                        background: transparent;
-                    }
-                    QPushButton:hover {
-                        background: rgba(24, 144, 255, 0.1);
-                        border-radius: 4px;
-                    }
-                """)
                 sender.setProperty("voucher_path", target_path)
                 
             except Exception as e:
@@ -1005,15 +959,6 @@ class ExpenseManagementWindow(QWidget):
                 # 更新按钮状态
                 btn.setIcon(FluentIcon.ADD_TO)
                 btn.setIconSize(QSize(16, 16))
-                btn.setStyleSheet("""
-                    QPushButton {
-                        background: transparent;
-                    }
-                    QPushButton:hover {
-                        background: rgba(24, 144, 255, 0.1);
-                        border-radius: 4px;
-                    }
-                """)
                 btn.setProperty("voucher_path", None)
                 
                 UIUtils.show_success(
@@ -1115,45 +1060,7 @@ class ExpenseManagementWindow(QWidget):
                 self.expense_table.setItem(row, 7, item)
                 
                 # 添加凭证按钮
-                upload_btn = ToolButton()
-                upload_btn.setFixedSize(30, 30)  # 设置按钮大小
-                if not expense.voucher_path:
-                    # 显示添加图标
-                    upload_btn.setIcon(FluentIcon.ADD_TO)
-                    upload_btn.setIconSize(QSize(16, 16))
-                    upload_btn.setStyleSheet("""
-                        QPushButton {
-                            background: transparent;
-                        }
-                        QPushButton:hover {
-                            background: rgba(24, 144, 255, 0.1);
-                            border-radius: 4px;
-                        }
-                    """)
-                else:
-                    # 显示凭证图标
-                    upload_btn.setIcon(FluentIcon.CERTIFICATE)
-                    upload_btn.setIconSize(QSize(16, 16))
-                    upload_btn.setStyleSheet("""
-                        QPushButton {
-                            background: transparent;
-                        }
-                        QPushButton:hover {
-                            background: rgba(24, 144, 255, 0.1);
-                            border-radius: 4px;  
-                        }
-                    """)
-                upload_btn.setProperty("expense_id", expense.id)
-                upload_btn.setProperty("voucher_path", expense.voucher_path)
-                upload_btn.mousePressEvent = lambda event, btn=upload_btn: self.handle_voucher(event, btn)
-                
-                # 创建容器widget用于居中显示按钮
-                container = QWidget()
-                layout = QHBoxLayout(container)
-                layout.setContentsMargins(0, 0, 0, 0)
-                layout.setSpacing(0)
-                layout.setAlignment(Qt.AlignCenter)
-                layout.addWidget(upload_btn, 0, Qt.AlignCenter)
+                container = create_voucher_button(expense.id, expense.voucher_path, self.handle_voucher)
                 self.expense_table.setCellWidget(row, 8, container)
                 
                 
@@ -1415,42 +1322,7 @@ class ExpenseManagementWindow(QWidget):
                 if col == 8:  # 支出凭证列
                     if cell_data:
                         # 创建新的按钮和容器
-                        upload_btn = ToolButton()
-                        upload_btn.setFixedSize(30, 30)
-                        if not cell_data['voucher_path']:
-                            upload_btn.setIcon(FluentIcon.ADD_TO)
-                            upload_btn.setIconSize(QSize(16, 16))
-                            upload_btn.setStyleSheet("""
-                                QToolButton {
-                                    background: transparent;
-                                }
-                                QToolButton:hover {
-                                    background: rgba(24, 144, 255, 0.1);
-                                    border-radius: 4px;
-                                }
-                            """)
-                        else:
-                            upload_btn.setIcon(FluentIcon.CERTIFICATE)
-                            upload_btn.setIconSize(QSize(16, 16))
-                            upload_btn.setStyleSheet("""
-                                QToolButton {
-                                    background: transparent;
-                                }
-                                QToolButton:hover {
-                                    background: rgba(24, 144, 255, 0.1);
-                                    border-radius: 4px;
-                                }
-                            """)
-                        upload_btn.setProperty("expense_id", cell_data['expense_id'])
-                        upload_btn.setProperty("voucher_path", cell_data['voucher_path'])
-                        upload_btn.mousePressEvent = lambda event, btn=upload_btn: self.handle_voucher(event, btn)
-                        
-                        container = QWidget()
-                        layout = QHBoxLayout(container)
-                        layout.setContentsMargins(0, 0, 0, 0)
-                        layout.setSpacing(0)
-                        layout.setAlignment(Qt.AlignCenter)
-                        layout.addWidget(upload_btn, 0, Qt.AlignCenter)
+                        container = create_voucher_button(cell_data['expense_id'], cell_data['voucher_path'], self.handle_voucher)
                         self.expense_table.setCellWidget(row, col, container)
                 else:
                     item = QTableWidgetItem(str(cell_data))

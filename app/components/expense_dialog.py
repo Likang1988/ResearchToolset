@@ -13,45 +13,7 @@ class ExpenseDialog(QDialog):
         self.project_id = project_id
         self.setWindowTitle("支出信息")
         self.setup_ui()
-        self.load_history_data()
         
-    def load_history_data(self):
-        """从数据库加载历史数据"""
-        from ..models.database import sessionmaker, Expense
-        try:
-            # 遍历父窗口链，找到包含engine属性的窗口
-            parent = self.parent()
-            while parent:
-                if hasattr(parent, 'engine'):
-                    engine = parent.engine
-                    break
-                parent = parent.parent()
-            else:
-                raise AttributeError("无法找到包含engine属性的父窗口")
-            Session = sessionmaker(bind=engine)
-            session = Session()
-            
-            # 获取开支内容历史记录
-            contents = session.query(Expense.content).distinct().all()
-            self.content.addItems([c[0] for c in contents if c[0]])
-            
-            # 获取规格型号历史记录
-            specifications = session.query(Expense.specification).distinct().all()
-            self.specification.addItems([s[0] for s in specifications if s[0]])
-            
-            # 获取供应商历史记录
-            suppliers = session.query(Expense.supplier).distinct().all()
-            self.supplier.addItems([s[0] for s in suppliers if s[0]])
-            
-        except Exception as e:
-            UIUtils.show_error(
-                title='错误',
-                content=f'加载历史数据失败: {str(e)}',
-                parent=self
-            )
-        finally:
-            if session:
-                session.close()
         
     def setup_ui(self):
         layout = QVBoxLayout(self)
@@ -68,23 +30,23 @@ class ExpenseDialog(QDialog):
         # 开支内容
         content_layout = QHBoxLayout()
         content_layout.addWidget(BodyLabel("开支内容:"))
-        self.content = EditableComboBox()
-        self.content.setPlaceholderText("请输入开支内容")
+        self.content = LineEdit()
+        self.content.setPlaceholderText("请输入开支内容，必填")
         content_layout.addWidget(self.content)
         layout.addLayout(content_layout)
         
         # 规格型号
         specification_layout = QHBoxLayout()
         specification_layout.addWidget(BodyLabel("规格型号:"))
-        self.specification = EditableComboBox()
+        self.specification = LineEdit()
         self.specification.setPlaceholderText("请输入规格型号")
         specification_layout.addWidget(self.specification)
         layout.addLayout(specification_layout)
         
         # 供应商
         supplier_layout = QHBoxLayout()
-        supplier_layout.addWidget(BodyLabel("供应商:"))
-        self.supplier = EditableComboBox()
+        supplier_layout.addWidget(BodyLabel("供 应 商 :"))
+        self.supplier = LineEdit()
         self.supplier.setPlaceholderText("请输入供应商")
         supplier_layout.addWidget(self.supplier)
         layout.addLayout(supplier_layout)
@@ -93,7 +55,7 @@ class ExpenseDialog(QDialog):
         amount_layout = QHBoxLayout()
         amount_layout.addWidget(BodyLabel("报账金额:"))
         self.amount = LineEdit()
-        self.amount.setPlaceholderText("单位：元")
+        self.amount.setPlaceholderText("单位：元，必填")
         amount_layout.addWidget(self.amount)
         layout.addLayout(amount_layout)
         
@@ -154,7 +116,7 @@ class ExpenseDialog(QDialog):
                 return
             
             # 验证必填字段
-            if not self.content.currentText().strip():
+            if not self.content.text().strip():
                 UIUtils.show_warning(
                     title='警告',
                     content='开支内容不能为空',
@@ -192,9 +154,9 @@ class ExpenseDialog(QDialog):
         """获取表单数据"""
         return {
             'category': BudgetCategory(self.category.currentText()),
-            'content': self.content.currentText(),
-            'specification': self.specification.currentText(),
-            'supplier': self.supplier.currentText(),
+            'content': self.content.text(),
+            'specification': self.specification.text(),
+            'supplier': self.supplier.text(),
             'amount': float(self.amount.text()),
             'date': self.date.date().toPython(),
             'remarks': self.remarks.text(),
@@ -204,9 +166,9 @@ class ExpenseDialog(QDialog):
     def set_data(self, data):
         """设置表单数据"""
         self.category.setCurrentText(data['category'].value)
-        self.content.setCurrentText(data['content'])
-        self.specification.setCurrentText(data['specification'] or '')
-        self.supplier.setCurrentText(data['supplier'] or '')
+        self.content.setText(data['content'])
+        self.specification.setText(data['specification'] or '')
+        self.supplier.setText(data['supplier'] or '')
         self.amount.setText(str(data['amount']))
         self.date.setDate(data['date'])
         self.remarks.setText(data['remarks'] or '')

@@ -192,9 +192,9 @@ class ProjectManagementWindow(QWidget):
                 budget_btn.clicked.connect(lambda checked=False, p=project: self.open_budget_management(p))  # 传递项目对象
                 btn_layout.addWidget(budget_btn)  # 将按钮添加到布局中
                 # 按钮大小
-                budget_btn.setFixedSize(28, 28)
+                budget_btn.setFixedSize(26, 26)
                 # 图标大小
-                budget_btn.setIconSize(QSize(20, 20))
+                budget_btn.setIconSize(QSize(18, 18))
 
                 self.project_table.setCellWidget(row_position, 8, btn_widget)  # 将按钮放置在第9列（操作列）
             
