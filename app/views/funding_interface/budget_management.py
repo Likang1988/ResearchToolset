@@ -3,7 +3,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTreeWidget, Q
                                  QLabel, QPushButton, QMessageBox, QSpinBox, QTableWidget, QTableWidgetItem,
                                  QStackedWidget, QTreeWidgetItem)
 from qfluentwidgets import PrimaryPushButton, TitleLabel, FluentIcon, ToolButton, InfoBar, Dialog
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import Qt, QSize, Signal
 from PySide6.QtGui import QIcon
 from ...components.budget_dialog import BudgetDialog, TotalBudgetDialog
 from .expense_management import ExpenseManagementWindow
@@ -16,6 +16,9 @@ from ...utils.db_utils import DBUtils
 from ...components.budget_chart_widget import BudgetChartWidget
 
 class BudgetManagementWindow(QWidget):
+    # 添加信号用于通知项目管理窗口更新数据
+    budget_updated = Signal()
+    
     def __init__(self, engine, project):   
         super().__init__()
         self.engine = engine
@@ -196,6 +199,8 @@ class BudgetManagementWindow(QWidget):
     def load_budgets(self):
         """加载预算数据"""
         self.budget_tree.clear()
+        # 发送预算更新信号
+        self.budget_updated.emit()
         
         Session = sessionmaker(bind=self.engine)
         session = Session()

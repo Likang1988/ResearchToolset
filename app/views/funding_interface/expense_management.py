@@ -1205,17 +1205,46 @@ class ExpenseManagementWindow(QWidget):
             df = pd.DataFrame(expenses)
             
             # 重命名列
-            df.columns = ['费用类别', '开支内容', '规格型号', '供应商', '报账金额(元)', '报账日期', '备注']
+            df.columns = ['费用类别', '开支内容', '规格型号', '供应商', '报账金额', '报账日期', '备注']
+            
+            # 确保日期格式为YYYY-MM-DD
+            df['报账日期'] = pd.to_datetime(df['报账日期'], format='%Y-%m-%d').dt.strftime('%Y-%m-%d')
             
             # 生成Excel文件名
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             excel_filename = f"支出记录_{timestamp}.xlsx"
             excel_path = os.path.join(export_dir, excel_filename)
             
-            # 保存Excel文件，设置工作表名称为'支出信息'
-            with pd.ExcelWriter(excel_path, engine='openpyxl') as writer:
+            # 保存Excel文件，设置工作表名称为'支出信息'，并设置日期格式
+            with pd.ExcelWriter(excel_path, engine='openpyxl', datetime_format='YYYY-MM-DD') as writer:
                 df.to_excel(writer, sheet_name='支出信息', index=False)
-            
+                
+                # 创建数据有效性验证表
+                validation_data = pd.DataFrame({
+                    '费用类别': [category.value for category in BudgetCategory],
+                    '说明': [''] * len(BudgetCategory)
+                })
+                validation_data.to_excel(writer, sheet_name='费用类别', index=False)
+                
+                # 创建使用说明表
+                instructions = [
+                    "使用说明：",
+                    "1. 费用类别、开支内容、报账金额为必填项",
+                    "2. 费用类别必须是以下之一：",
+                    "   " + "、".join([category.value for category in BudgetCategory]),
+                    "3. 报账金额必须大于0",
+                    "4. 报账日期格式为YYYY-MM-DD，可为空，默认为当前日期",
+                    "5. 规格型号、供应商、备注为选填项",
+                    "6. 请勿修改表头名称",
+                    "7. 请勿删除或修改本说明"
+                ]
+                pd.DataFrame(instructions).to_excel(
+                    writer, 
+                    sheet_name='使用说明',
+                    index=False,
+                    header=False
+                )
+
             UIUtils.show_success(
                 title='成功',
                 content=f"支出记录已导出到：\n{excel_path}",

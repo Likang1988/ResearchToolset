@@ -82,14 +82,14 @@ class BatchImportDialog(QDialog):
                     '开支内容': ['设备A采购', '材料B采购'],
                     '规格型号': ['型号X', '型号Y'],
                     '供应商': ['供应商A', '供应商B'],
-                    '报账金额(元)': [10000, 5000],
-                    '报账日期': ['2025-02-12', ''],
+                    '报账金额': [10000, 5000],
+                    '报账日期': [datetime.now().strftime('%Y-%m-%d'), ''],
                     '备注': ['示例数据1', '示例数据2']
                 }
                 df = pd.DataFrame(example_data)
                 
-                # 创建ExcelWriter对象
-                with pd.ExcelWriter(save_path, engine='openpyxl') as writer:
+                # 创建ExcelWriter对象，并设置日期格式
+                with pd.ExcelWriter(save_path, engine='openpyxl', datetime_format='YYYY-MM-DD') as writer:
                     # 写入数据表
                     df.to_excel(writer, sheet_name='支出信息', index=False)
                     
@@ -107,7 +107,7 @@ class BatchImportDialog(QDialog):
                         "2. 费用类别必须是以下之一：",
                         "   " + "、".join([category.value for category in BudgetCategory]),
                         "3. 报账金额必须大于0",
-                        "4. 报账日期格式为YYYY-MM-DD，可为空，默认为当前日期",
+                        "4. 报账日期支持常见格式（如：YYYY-MM-DD、YYYY/MM/DD、DD/MM/YYYY等），可为空，默认为当前日期",
                         "5. 规格型号、供应商、备注为选填项",
                         "6. 请勿修改表头名称",
                         "7. 请勿删除或修改本说明"
@@ -212,11 +212,15 @@ class BatchImportDialog(QDialog):
             # 检查日期格式
             if '报账日期' in df.columns and not df['报账日期'].isna().all():
                 try:
+                    # 使用pandas的灵活日期解析功能，支持多种常见格式
+                    df['报账日期'] = pd.to_datetime(df['报账日期'], format=None)
+                    # 统一转换为YYYY-MM-DD格式
+                    df['报账日期'] = df['报账日期'].dt.strftime('%Y-%m-%d')
                     df['报账日期'] = pd.to_datetime(df['报账日期'])
-                except Exception:
+                except Exception as e:
                     UIUtils.show_warning(
                         title='警告',
-                        content='报账日期格式无效，请使用YYYY-MM-DD格式',
+                        content='无法识别报账日期格式，请使用常见的日期格式，如：YYYY-MM-DD、YYYY/MM/DD、DD/MM/YYYY等',
                         parent=self
                     )
                     return

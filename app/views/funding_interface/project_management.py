@@ -419,6 +419,9 @@ class ProjectManagementWindow(QWidget):
         self.project = project
         budget_window = BudgetManagementWindow(self.engine, project)
         
+        # 连接预算更新信号
+        budget_window.budget_updated.connect(self.refresh_project_table)
+        
         # 如果已存在预算管理窗口，先移除它
         if hasattr(self, 'budget_window'):
             self.stacked_widget.removeWidget(self.budget_window)
@@ -568,7 +571,7 @@ class ProjectManagementWindow(QWidget):
             
             # 在文件资源管理器中打开导出目录
             import os
-            os.startfile(os.path.dirname(file_name))
+            os.startfile(os.path.dirname(file_name)) if os.name == 'nt' else os.system(f'open {os.path.dirname(file_name)}')
             
         except Exception as e:
             UIUtils.show_error(
@@ -696,21 +699,35 @@ class ProjectManagementWindow(QWidget):
                             
                         session.add(budget_item)
                 
+                # 创建预算ID映射表
+                budget_id_map = {}
+                
                 # 导入支出数据
                 for expense_data in import_data['expenses']:
                     try:
-                        expense = Expense(
-                            project_id=project.id,
-                            budget_id=expense_data['budget_id'],
-                            category=BudgetCategory(expense_data['category']),
-                            content=expense_data['content'],
-                            specification=expense_data['specification'],
-                            supplier=expense_data['supplier'],
-                            amount=expense_data['amount'],
-                            date=datetime.fromisoformat(expense_data['date']),
-                            remarks=expense_data['remarks'],
-                            voucher_path=expense_data.get('voucher_path', '')
-                        )
+                        # 根据年份找到对应的新预算ID
+                        expense_date = datetime.fromisoformat(expense_data['date'])
+                        expense_year = expense_date.year
+                        
+                        # 查找对应年份的预算
+                        budget = session.query(Budget).filter(
+                            Budget.project_id == project.id,
+                            Budget.year == expense_year
+                        ).first()
+                        
+                        if budget:
+                            expense = Expense(
+                                project_id=project.id,
+                                budget_id=budget.id,  # 使用新的预算ID
+                                category=BudgetCategory(expense_data['category']),
+                                content=expense_data['content'],
+                                specification=expense_data['specification'],
+                                supplier=expense_data['supplier'],
+                                amount=expense_data['amount'],
+                                date=expense_date,
+                                remarks=expense_data['remarks'],
+                                voucher_path=expense_data.get('voucher_path', '')
+                            )
                     except KeyError as e:
                         raise Exception(f"支出数据缺少必要字段：{str(e)}")
                         
@@ -726,6 +743,11 @@ class ProjectManagementWindow(QWidget):
                 
                 # 刷新项目表格
                 self.refresh_project_table()
+                
+                # 如果当前有打开的支出管理窗口，刷新其数据
+                if hasattr(self, 'expense_window') and self.expense_window is not None:
+                    self.expense_window.load_expenses()
+                    self.expense_window.load_statistics()
                 
             except Exception as e:
                 session.rollback()
