@@ -11,7 +11,7 @@ from datetime import datetime
 from ...components.expense_dialog import ExpenseDialog
 from ...utils.ui_utils import UIUtils
 from ...utils.db_utils import DBUtils
-from ...utils.voucher_utils import create_voucher_button
+from ...utils.voucher_utils import create_voucher_button, create_voucher_menu, view_voucher
 from collections import defaultdict
 
 class ExpenseManagementWindow(QWidget):
@@ -97,7 +97,7 @@ class ExpenseManagementWindow(QWidget):
         header.setSortIndicatorShown(True)  # 显示排序指示器
         header.sectionClicked.connect(self.sort_table)  # 连接点击事件到排序函数
 
-                # 隐藏行号
+        # 隐藏行号
         self.expense_table.verticalHeader().setVisible(False)     
 
         # 设置初始列宽

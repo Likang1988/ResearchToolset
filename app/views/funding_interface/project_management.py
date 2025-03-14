@@ -117,7 +117,7 @@ class ProjectManagementWindow(QWidget):
         self.project_table.verticalHeader().setVisible(False)
         
         # 设置初始列宽
-        header.resizeSection(0, 95)  # 财务编号
+        header.resizeSection(0, 93)  # 财务编号
         header.resizeSection(1, 320)  # 项目名称
         header.resizeSection(2, 130)  # 项目编号
         header.resizeSection(3, 150)  # 项目类别
@@ -258,6 +258,7 @@ class ProjectManagementWindow(QWidget):
             content = item.text()
             clipboard = QApplication.clipboard()
             clipboard.setText(content)
+            
     def add_project(self):
         """添加项目"""
         dialog = ProjectDialog(self)

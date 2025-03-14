@@ -22,7 +22,39 @@ class ProjectDialog(QDialog):
             }
         """)
         self.setup_ui()
+        self.load_history_data()
         
+    def load_history_data(self):
+        """从数据库加载历史数据"""
+        from ..models.database import sessionmaker, Project
+        try:
+            # 遍历父窗口链，找到包含engine属性的窗口
+            parent = self.parent()
+            while parent:
+                if hasattr(parent, 'engine'):
+                    engine = parent.engine
+                    break
+                parent = parent.parent()
+            else:
+                raise AttributeError("无法找到包含engine属性的父窗口")
+            Session = sessionmaker(bind=engine)
+            session = Session()
+            
+            # 获取项目类别历史记录
+            project_type = session.query(Project.project_type).distinct().all()
+            self.project_type.addItems([c[0] for c in project_type if c[0]])            
+            
+        except Exception as e:
+            UIUtils.show_error(
+                title='错误',
+                content=f'加载历史数据失败: {str(e)}',
+                parent=self
+            )
+        finally:
+            if session:
+                session.close()
+
+
     def setup_ui(self):
         layout = QVBoxLayout(self)
         layout.setSpacing(16)

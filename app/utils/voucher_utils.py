@@ -21,7 +21,7 @@ def create_voucher_button(expense_id, voucher_path, handle_voucher_func):
     """
     # 创建按钮
     upload_btn = ToolButton()
-    upload_btn.setFixedSize(28, 28)  # 设置按钮大小
+    upload_btn.setFixedSize(26, 26)  # 设置按钮大小
     
     # 根据是否有凭证设置不同的图标和样式
     if not voucher_path:
