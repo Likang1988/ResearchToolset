@@ -1,6 +1,10 @@
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtWidgets import QWidget, QHBoxLayout
-from qfluentwidgets import FluentIcon, ToolButton
+from qfluentwidgets import FluentIcon, ToolButton, RoundMenu, Action
+import os
+import subprocess
+import platform
+from ..utils.ui_utils import UIUtils
 
 
 def create_voucher_button(expense_id, voucher_path, handle_voucher_func):
@@ -30,8 +34,6 @@ def create_voucher_button(expense_id, voucher_path, handle_voucher_func):
     # 设置图标大小
     upload_btn.setIconSize(QSize(16, 16))
     
-
-    
     # 设置属性
     upload_btn.setProperty("expense_id", expense_id)
     upload_btn.setProperty("voucher_path", voucher_path)
@@ -48,3 +50,60 @@ def create_voucher_button(expense_id, voucher_path, handle_voucher_func):
     layout.addWidget(upload_btn, 0, Qt.AlignCenter)
     
     return container
+
+
+def view_voucher(voucher_path, parent=None):
+    """
+    查看凭证文件
+    
+    Args:
+        voucher_path: 凭证文件路径
+        parent: 父窗口，用于显示错误信息
+    """
+    try:
+        if platform.system() == 'Darwin':  # macOS
+            subprocess.run(['open', voucher_path])
+        elif platform.system() == 'Windows':
+            os.startfile(voucher_path)
+        else:  # Linux或其他系统
+            subprocess.run(['xdg-open', voucher_path])
+    except Exception as e:
+        if parent:
+            UIUtils.show_warning(
+                title='警告',
+                content=f"打开凭证文件失败: {str(e)}",
+                parent=parent
+            )
+
+
+def create_voucher_menu(parent, current_path, view_func, replace_func, delete_func):
+    """
+    创建凭证右键菜单
+    
+    Args:
+        parent: 父窗口
+        current_path: 当前凭证路径
+        view_func: 查看凭证的回调函数
+        replace_func: 替换凭证的回调函数
+        delete_func: 删除凭证的回调函数
+    
+    Returns:
+        menu: 创建的右键菜单
+    """
+    menu = RoundMenu(parent=parent)
+    
+    # 添加菜单项并设置图标
+    view_action = Action(FluentIcon.VIEW, "查看凭证", parent)
+    replace_action = Action(FluentIcon.SYNC, "替换凭证", parent)
+    delete_action = Action(FluentIcon.DELETE, "删除凭证", parent)
+    
+    # 连接信号到槽函数
+    view_action.triggered.connect(lambda: view_func(current_path))
+    replace_action.triggered.connect(replace_func)
+    delete_action.triggered.connect(delete_func)
+    
+    menu.addAction(view_action)
+    menu.addAction(replace_action)
+    menu.addAction(delete_action)
+    
+    return menu

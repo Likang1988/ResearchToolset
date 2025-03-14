@@ -807,11 +807,6 @@ class ExpenseManagementWindow(QWidget):
 
     def handle_voucher(self, event, btn):
         """处理凭证上传、替换、删除或查看"""
-        import os
-        import shutil
-        import subprocess
-        import platform
-        
         expense_id = btn.property("expense_id")
         current_path = btn.property("voucher_path")
         
@@ -829,37 +824,18 @@ class ExpenseManagementWindow(QWidget):
         if has_valid_voucher:  # 已有有效凭证
             if event and event.button() == Qt.RightButton:  # 右键点击
                 # 创建右键菜单
-                menu = RoundMenu(parent=self)
-                # 添加菜单项并设置图标
-                view_action = Action(FluentIcon.VIEW, "查看凭证", self)
-                replace_action = Action(FluentIcon.SYNC, "替换凭证", self)
-                delete_action = Action(FluentIcon.DELETE, "删除凭证", self)
-                
-                # 连接信号到槽函数
-                view_action.triggered.connect(lambda: self.view_voucher(current_path))
-                replace_action.triggered.connect(lambda: self.replace_voucher(expense, session, btn))
-                delete_action.triggered.connect(lambda: self.delete_voucher(expense, session, btn, current_path))
-                
-                menu.addAction(view_action)
-                menu.addAction(replace_action)
-                menu.addAction(delete_action)
+                menu = create_voucher_menu(
+                    parent=self,
+                    current_path=current_path,
+                    view_func=lambda path: view_voucher(path, self),
+                    replace_func=lambda: self.replace_voucher(expense, session, btn),
+                    delete_func=lambda: self.delete_voucher(expense, session, btn, current_path)
+                )
                 
                 # 显示菜单并获取用户选择
                 menu.exec_(event.globalPos())
             else:  # 左键点击，直接查看凭证
-                try:
-                    if platform.system() == 'Darwin':  # macOS
-                        subprocess.run(['open', current_path])
-                    elif platform.system() == 'Windows':
-                        os.startfile(current_path)
-                    else:  # Linux或其他系统
-                        subprocess.run(['xdg-open', current_path])
-                except Exception as e:
-                    UIUtils.show_warning(
-                        title='警告',
-                        content=f"打开凭证文件失败: {str(e)}",
-                        parent=self
-                    )
+                view_voucher(current_path, self)
         else:  # 无凭证或凭证文件不存在
             if current_path:  # 数据库中有路径但文件不存在
                 # 更新数据库和按钮状态
@@ -1322,7 +1298,7 @@ class ExpenseManagementWindow(QWidget):
                 if col == 8:  # 支出凭证列
                     if cell_data:
                         # 创建新的按钮和容器
-                        container = create_voucher_button(cell_data['expense_id'], cell_data['voucher_path'], self.handle_voucher)
+                        container = create_voucher_button(cell_data['expense_id'], cell_data['voucher_path'], self.handle_voucher)                        
                         self.expense_table.setCellWidget(row, col, container)
                 else:
                     item = QTableWidgetItem(str(cell_data))
