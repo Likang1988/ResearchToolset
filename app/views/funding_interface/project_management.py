@@ -40,10 +40,7 @@ class ProjectManagementWindow(QWidget):
         # 初始显示项目管理页面
         self.stacked_widget.setCurrentWidget(self.project_page)
 
-            # 添加作者信息
-        author_label = QLabel("© Likang")
-        author_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        main_layout.addWidget(author_label)
+
 
     def setup_project_page(self):
         layout = QVBoxLayout(self.project_page)
@@ -100,7 +97,7 @@ class ProjectManagementWindow(QWidget):
         self.project_table.setColumnCount(9)  # 增加一列
         self.project_table.setHorizontalHeaderLabels([
             "财务编号", "项目名称", "项目编号", 
-            "项目类别", "开始日期", "结束日期", "总经费\n（万元）", "执行率", "操作"
+            "项目类别", "开始日期", "结束日期", "总经费\n（万元）", "执行率", "预算管理"
         ])
         self.project_table.setSelectionBehavior(TableWidget.SelectRows)
         self.project_table.setSelectionMode(TableWidget.SingleSelection)

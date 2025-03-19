@@ -91,7 +91,7 @@ class TotalBudgetChart(BudgetChartBase):
             category_amounts[expense.category.value] += expense.amount / 10000
         
         total_amount = sum(category_amounts.values())
-        title = f"总预算支出 - 类别分布 \n(预算金额：{total_amount:.2f}万元)"
+        title = f"总预算支出 - 类别分布"
         return self.create_pie_chart(title, category_amounts)
     
     def show_time_distribution(self):
@@ -102,7 +102,7 @@ class TotalBudgetChart(BudgetChartBase):
             year_amounts[f"{year}年"] += expense.amount / 10000
         
         total_amount = sum(year_amounts.values())
-        title = f"总预算支出 - 年度分布 \n(预算金额：{total_amount:.2f}万元)"
+        title = f"总预算支出 - 年度分布"
         return self.create_pie_chart(title, year_amounts)
 
 class AnnualBudgetChart(BudgetChartBase):
@@ -122,7 +122,7 @@ class AnnualBudgetChart(BudgetChartBase):
         
         year = self.budget_items[0].budget.year if self.budget_items else "未知"
         total_amount = sum(category_amounts.values())
-        title = f"{year}年度预算支出 - 类别分布 \n(预算金额：{total_amount:.2f}万元)"
+        title = f"{year}年度预算支出 - 类别分布"
         return self.create_pie_chart(title, category_amounts)
     
     def show_time_distribution(self):
@@ -134,7 +134,7 @@ class AnnualBudgetChart(BudgetChartBase):
         
         year = self.budget_items[0].budget.year if self.budget_items else "未知"
         total_amount = sum(month_amounts.values())
-        title = f"{year}年度预算支出 - 月度分布 \n(预算金额：{total_amount:.2f}万元)"
+        title = f"{year}年度预算支出 - 月度分布"
         return self.create_pie_chart(title, month_amounts)
 
 class BudgetChartWidget(QWidget):

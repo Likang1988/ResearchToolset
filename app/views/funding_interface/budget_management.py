@@ -109,7 +109,7 @@ class BudgetManagementWindow(QWidget):
         # 设置表头
         self.budget_tree.setHeaderLabels([
             "预算年度", "预算额\n(万元)", 
-            "支出额\n(万元)", "结余额\n(万元)", "执行率", "操作"
+            "支出额\n(万元)", "结余额\n(万元)", "执行率", "支出管理"
         ])
         
         self.budget_tree.setAlternatingRowColors(True)  # 启用交替行颜色
