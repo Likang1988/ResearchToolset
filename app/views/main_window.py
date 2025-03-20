@@ -19,7 +19,7 @@ class MainWindow(FluentWindow):
         self.setMinimumSize(1200, 800)
         
         # 创建界面实例
-        self.home_interface = HomeInterface()
+        self.home_interface = HomeInterface(self.engine)
         self.home_interface.setObjectName("homeInterface")
         
         self.funding_interface = ProjectManagementWindow(self.engine)

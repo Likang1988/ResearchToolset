@@ -1,10 +1,12 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QHBoxLayout, QGridLayout
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from qfluentwidgets import (TitleLabel, SubtitleLabel, CardWidget, PrimaryPushButton,
+from qfluentwidgets import (TitleLabel, SubtitleLabel, ScrollArea, CardWidget, PrimaryPushButton,
                           FluentIcon, InfoBadge, BodyLabel)
-from ..models.database import sessionmaker, Project, Budget, BudgetCategory
+from sqlalchemy import func
+from ..models.database import sessionmaker, Project, Budget, BudgetCategory, get_budget_usage
 from datetime import datetime
+from ..utils.ui_utils import UIUtils
 import os
 
 class HomeInterface(QWidget):
@@ -20,14 +22,20 @@ class HomeInterface(QWidget):
         self.background_label.setObjectName("backgroundLabel")
         
         # 加载背景图片
-        bg_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'header1.png')
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        app_dir = os.path.dirname(current_dir)
+        bg_path = os.path.join(app_dir, 'assets', 'header1.png')
+        bg_path = os.path.normpath(bg_path)
+        
         if os.path.exists(bg_path):
             pixmap = QPixmap(bg_path)
             self.background_label.setPixmap(pixmap)
             self.background_label.setScaledContents(True)
+        else:
+            print(f"背景图片不存在: {bg_path}")
         
         # 设置背景标签的大小和位置
-        self.background_label.setGeometry(0, 0, self.width(), 300)
+        self.background_label.setGeometry(0, 0, self.width(), 340)
         self.background_label.lower()
         
         # 添加样式
@@ -36,160 +44,145 @@ class HomeInterface(QWidget):
                 background-repeat: no-repeat;
                 background-position: top;
                 background-size: cover;
+                border-radius: 8px;
             }
         """)
+    
+    def setup_ui(self):
+        # 主布局
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(20, 350, 20, 20)
+        
+        # 标题
+        title_label = TitleLabel("科研工具集", self)
+        title_label.setGeometry(20, 20, self.width() - 36, 40)
+        title_label.setStyleSheet("font-size: 28px;")
+
+
+
+        # 左右布局
+        hbox = QHBoxLayout()
+        hbox.setSpacing(20)
+        
+        # 左侧项目概览
+        self.project_overview = ScrollArea()
+        self.project_overview.setWidgetResizable(True)
+        self.project_overview.setFixedWidth(530)
+        self.project_overview.setStyleSheet("""
+            QScrollArea {
+                background-color: transparent;
+                border: 1px solid rgba(0, 0, 0, 0.1);
+                border-radius: 8px;
+            }
+            QWidget#qt_scrollarea_viewport {
+                background-color: transparent;
+            }
+        """)
+        
+        project_container = QWidget()
+        project_container.setObjectName("qt_scrollarea_viewport")
+        self.project_layout = QVBoxLayout(project_container)
+        self.project_layout.setSpacing(10)
+        self.project_layout.setAlignment(Qt.AlignTop)
+        
+        # 左侧项目概览标题
+        project_title = TitleLabel("项目概览", self)
+        project_title.setStyleSheet("font-size: 20px; margin-bottom: 10px;")
+        project_title.setGeometry(20, 320, self.width() - 36, 40)
+        
+        self.project_overview.setWidget(project_container)
+        hbox.addWidget(self.project_overview)
+        
+        # 右侧最近活动
+        activity_container = QWidget()
+        self.activity_layout = QVBoxLayout(activity_container)
+        self.activity_layout.setSpacing(10)
+        self.activity_layout.setAlignment(Qt.AlignTop)
+        
+        # 右侧最近活动标题
+        activity_title = TitleLabel("最近活动", self)
+        activity_title.setStyleSheet("font-size: 20px; margin-bottom: 10px;")
+        activity_title.setGeometry(570, 320, 530, 40)
+        
+        # 右侧最近活动
+        self.recent_activity = ScrollArea()
+        self.recent_activity.setWidgetResizable(True)
+        self.recent_activity.setStyleSheet("""
+            QScrollArea {
+                background-color: transparent;
+                border: 1px solid rgba(0, 0, 0, 0.1);
+                border-radius: 8px;
+            }
+            QWidget#qt_scrollarea_viewport {
+                background-color: transparent;
+            }
+        """)
+        
+        activity_container = QWidget()
+        activity_container.setObjectName("qt_scrollarea_viewport")
+        self.activity_layout = QVBoxLayout(activity_container)
+        self.activity_layout.setSpacing(5)
+        self.activity_layout.setAlignment(Qt.AlignTop)
+        
+        self.recent_activity.setWidget(activity_container)
+        hbox.addWidget(self.recent_activity)
+        
+        main_layout.addLayout(hbox)
+        
+        # 加载数据
+        self.load_projects()
+        self.load_activities()
+    
+    def load_projects(self):
+        Session = sessionmaker(bind=self.engine)
+        session = Session()
+        
+        try:
+            projects = session.query(Project).all()
+            for project in projects:
+                card = CardWidget()
+                card_layout = QVBoxLayout(card)
+                
+                # 显示项目信息
+                card_layout.addWidget(BodyLabel(f"财务编号: {project.financial_code}"))
+                card_layout.addWidget(BodyLabel(f"总预算: {project.total_budget}"))
+                # 获取预算使用情况
+                budget_usage = get_budget_usage(session, project.id)
+                execution_rate = (budget_usage['total_spent'] / budget_usage['total_budget']) * 100 if budget_usage['total_budget'] > 0 else 0
+                card_layout.addWidget(BodyLabel(f"执行率: {execution_rate:.2f}%"))
+                
+                # 点击事件
+                card.mousePressEvent = lambda event, p=project: self.open_project_budget(p)
+                
+                self.project_layout.addWidget(card)
+        finally:
+            session.close()
+    
+    def load_activities(self):
+        Session = sessionmaker(bind=self.engine)
+        session = Session()
+        
+        try:
+            # TODO: 从数据库获取最近50条操作记录
+            # 示例数据
+            activities = [
+                {"type": "项目", "action": "新增", "name": "项目A", "time": "2025-03-19 16:00"},
+                {"type": "预算", "action": "编辑", "name": "预算B", "time": "2025-03-19 15:30"},
+                {"type": "支出", "action": "删除", "name": "支出C", "time": "2025-03-19 15:00"}
+            ]
+            
+            for activity in activities:
+                label = BodyLabel(f"{activity['time']} {activity['type']} {activity['action']}: {activity['name']}")
+                self.activity_layout.addWidget(label)
+        finally:
+            session.close()
+    
+    def open_project_budget(self, project):
+        from ..views.funding_interface.budget_management import BudgetManagementWindow
+        self.budget_interface = BudgetManagementWindow(self.engine, project)
+        self.budget_interface.show()
     
     def resizeEvent(self, event):
         super().resizeEvent(event)
         if hasattr(self, 'background_label'):
             self.background_label.setGeometry(0, 0, self.width(), 300)
-    
-    def setup_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(18, 18, 18, 18)
-        layout.setSpacing(20)
-        
-        # 使用绝对定位设置标题
-        title_label = TitleLabel("科研工具集", self)
-        title_label.setGeometry(20, 20, self.width() - 36, 40)
-        title_label.setStyleSheet("font-size: 28px;")
-        title_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        
-        # 创建项目概览和最近活动的水平布局
-        cards_layout = QHBoxLayout()
-        cards_layout.setSpacing(15)
-        cards_layout.setContentsMargins(0, 280, 0, 0)  # 设置上边距为320像素，确保在背景图片下方20像素
-        
-        # 创建项目概览卡片
-        overview_card = CardWidget(self)
-        overview_layout = QVBoxLayout(overview_card)
-        overview_title = SubtitleLabel("项目概览", self)
-        overview_layout.addWidget(overview_title)
-        
-        # 添加项目统计信息
-        stats_layout = QGridLayout()
-        stats_layout.setSpacing(10)
-        
-        # 从数据库获取统计信息
-        stats = self.get_project_stats()
-        
-        # 显示统计信息
-        stats_items = [
-            ("进行中项目", stats['active_projects'], FluentIcon.PEOPLE),
-            ("总经费（万元）", f"{stats['total_budget']/10000:.2f}", FluentIcon.GAME),
-            ("本年支出（万元）", f"{stats['year_expense']/10000:.2f}", FluentIcon.CALENDAR),
-            ("预算执行率", f"{stats['budget_usage']}%", FluentIcon.PIE_SINGLE)
-        ]
-        
-        for i, (label_text, value, icon) in enumerate(stats_items):
-            container = QWidget()
-            container_layout = QVBoxLayout(container)
-            container_layout.setSpacing(5)
-            
-            label = BodyLabel(label_text)
-            value_label = TitleLabel(str(value))
-            
-            container_layout.addWidget(label)
-            container_layout.addWidget(value_label)
-            
-            stats_layout.addWidget(container, i//2, i%2)
-        
-        overview_layout.addLayout(stats_layout)
-        overview_card.setFixedSize(550, 400)
-        
-        # 创建最近活动卡片
-        activity_card = CardWidget(self)
-        activity_layout = QVBoxLayout(activity_card)
-        activity_title = SubtitleLabel("最近活动", self)
-        activity_layout.addWidget(activity_title)
-        
-        # 获取最近的经费使用记录
-        recent_activities = self.get_recent_activities()
-        for activity in recent_activities:
-            activity_item = QLabel(activity)
-            activity_layout.addWidget(activity_item)
-        
-        activity_card.setFixedSize(550, 400)
-        
-        # 将卡片添加到水平布局
-        cards_layout.addWidget(overview_card)
-        cards_layout.addWidget(activity_card)
-        layout.addLayout(cards_layout)
-        
-        
-        
-    def get_project_stats(self):
-        """获取项目统计信息"""
-        if not self.engine:
-            return {
-                'active_projects': 0,
-                'total_budget': 0,
-                'year_expense': 0,
-                'budget_usage': 0
-            }
-        
-        try:
-            Session = sessionmaker(bind=self.engine)
-            session = Session()
-            
-            # 获取进行中的项目数量
-            current_date = datetime.now().date()
-            active_projects = session.query(Project).filter(
-                Project.start_date <= current_date,
-                Project.end_date >= current_date
-            ).count()
-            
-            # 获取总经费
-            total_budget = session.query(func.sum(Project.total_budget)).scalar() or 0
-            
-            # 获取本年支出
-            current_year = datetime.now().year
-            year_expense = session.query(func.sum(Budget.spent_amount))\
-                .filter(Budget.year == current_year).scalar() or 0
-            
-            # 计算预算执行率
-            budget_usage = round((year_expense / total_budget * 100) if total_budget > 0 else 0, 2)
-            
-            session.close()
-            return {
-                'active_projects': active_projects,
-                'total_budget': total_budget,
-                'year_expense': year_expense,
-                'budget_usage': budget_usage
-            }
-        except Exception as e:
-            print(f"获取项目统计信息失败：{str(e)}")
-            return {
-                'active_projects': 0,
-                'total_budget': 0,
-                'year_expense': 0,
-                'budget_usage': 0
-            }
-    
-    def get_recent_activities(self):
-        """获取最近的经费使用记录"""
-        if not self.engine:
-            return ["暂无活动记录"]
-        
-        try:
-            Session = sessionmaker(bind=self.engine)
-            session = Session()
-            
-            # 获取最近5条支出记录
-            recent_expenses = session.query(Budget)\
-                .order_by(Budget.id.desc())\
-                .limit(5).all()
-            
-            activities = []
-            for expense in recent_expenses:
-                project = session.query(Project).get(expense.project_id)
-                if project:
-                    activities.append(
-                        f"{project.name} - {expense.year}年度支出：{expense.spent_amount:.2f}元"
-                    )
-            
-            session.close()
-            return activities if activities else ["暂无活动记录"]
-        except Exception as e:
-            print(f"获取最近活动失败：{str(e)}")
-            return ["暂无活动记录"]
