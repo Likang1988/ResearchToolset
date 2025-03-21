@@ -106,6 +106,25 @@ class BudgetPlanItem(Base):
     # 建立自引用关系，用于树形结构
     children = relationship("BudgetPlanItem", backref=backref('parent', remote_side=[id]))
 
+class Activity(Base):
+    """操作记录"""
+    __tablename__ = 'activities'
+    
+    id = Column(Integer, primary_key=True)
+    project_id = Column(Integer, ForeignKey('projects.id'), nullable=True)
+    budget_id = Column(Integer, ForeignKey('budgets.id'), nullable=True)
+    expense_id = Column(Integer, ForeignKey('expenses.id'), nullable=True)
+    type = Column(String(50), nullable=False)  # 操作类型：项目/预算/支出
+    action = Column(String(50), nullable=False)  # 操作：新增/编辑/删除
+    description = Column(String(200), nullable=False)  # 操作描述
+    operator = Column(String(50), nullable=False)  # 操作人
+    timestamp = Column(Date, default=datetime.now)  # 操作时间
+
+    project = relationship("Project", backref="activities")
+    budget = relationship("Budget", backref="activities")
+    expense = relationship("Expense", backref="activities")
+
+
 class Expense(Base):
     """支出"""
     __tablename__ = 'expenses'

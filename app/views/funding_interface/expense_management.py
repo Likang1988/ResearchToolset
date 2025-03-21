@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
 from PySide6.QtCore import Qt, Signal, QDate, QSize
 from qfluentwidgets import (FluentIcon, TableWidget, PushButton, ComboBox, CompactDateEdit, 
                            LineEdit, SpinBox, TableItemDelegate, TitleLabel, InfoBar, Dialog, RoundMenu, PrimaryPushButton, ToolButton, Action)
-from ...models.database import sessionmaker, Budget, BudgetCategory, Expense, BudgetItem
+from ...models.database import sessionmaker, Budget, BudgetCategory, Expense, BudgetItem, Activity
 from datetime import datetime
 from ...components.expense_dialog import ExpenseDialog
 from ...utils.ui_utils import UIUtils
@@ -531,6 +531,18 @@ class ExpenseManagementWindow(QWidget):
                     )
                     session.add(expense)
                     
+                    # 记录添加支出的活动
+                    activity = Activity(
+                        project_id=self.project.id,
+                        budget_id=self.budget.id,
+                        expense_id=expense.id,
+                        type="支出",
+                        action="新增",
+                        description=f"添加支出：{data['content']} - {data['amount']}元",
+                        operator="系统用户"
+                    )
+                    session.add(activity)
+                    
                     # 更新预算子项的已支出金额
                     budget_item = session.query(BudgetItem).filter_by(
                         budget_id=self.budget.id,
@@ -648,6 +660,18 @@ class ExpenseManagementWindow(QWidget):
                         self.budget = session.merge(self.budget)
                         self.budget.spent_amount = self.budget.spent_amount - (old_amount / 10000) + (data['amount'] / 10000)
                         
+                        # 记录编辑支出的活动
+                        activity = Activity(
+                            project_id=self.project.id,
+                            budget_id=self.budget.id,
+                            expense_id=expense.id,
+                            type="支出",
+                            action="编辑",
+                            description=f"编辑支出：{data['content']} - {data['amount']}元",
+                            operator="系统用户"
+                        )
+                        session.add(activity)
+                        
                         session.commit()
                         self.load_expenses()
                         self.load_statistics()
@@ -751,6 +775,19 @@ class ExpenseManagementWindow(QWidget):
                     self.budget = session.merge(self.budget)
                     self.budget.spent_amount -= total_amount / 10000
 
+                    # 记录删除支出的活动
+                    for expense in expenses:
+                        activity = Activity(
+                            project_id=self.project.id,
+                            budget_id=self.budget.id,
+                            expense_id=expense.id,
+                            type="支出",
+                            action="删除",
+                            description=f"删除支出：{expense.content} - {expense.amount}元",
+                            operator="系统用户"
+                        )
+                        session.add(activity)
+                    
                     # 批量删除记录
                     session.query(Expense).filter(Expense.id.in_(expense_ids)).delete(synchronize_session=False)
                     session.commit()

@@ -6,7 +6,7 @@ from PySide6.QtGui import QIcon
 from qfluentwidgets import FluentIcon, TableWidget, TableItemDelegate, TitleLabel, RoundMenu, Action
 from ...components.project_dialog import ProjectDialog
 from .budget_management import BudgetManagementWindow
-from ...models.database import init_db, add_project_to_db, sessionmaker, Project, Budget, Expense
+from ...models.database import init_db, add_project_to_db, sessionmaker, Project, Budget, Expense, Activity
 from ...utils.ui_utils import UIUtils
 from ...utils.db_utils import DBUtils
 from sqlalchemy import func
@@ -290,6 +290,16 @@ class ProjectManagementWindow(QWidget):
                 # 保存项目ID供后续使用
                 self.project_id = project.id
                 
+                # 记录添加项目的活动
+                activity = Activity(
+                    project_id=project.id,
+                    type="项目",
+                    action="新增",
+                    description=f"添加项目：{name} - {financial_code}",
+                    operator="系统用户"
+                )
+                session.add(activity)
+                
                 # 提交事务
                 session.commit()
                 
@@ -342,6 +352,9 @@ class ProjectManagementWindow(QWidget):
                 dialog.total_budget.setText(str(project.total_budget))
                 
                 if dialog.exec() == ProjectDialog.Accepted:
+                    old_name = project.name
+                    old_financial_code = project.financial_code
+                    
                     project.financial_code = dialog.financial_code.text().strip()
                     project.name = dialog.project_name.text().strip()
                     project.project_code = dialog.project_code.text().strip()
@@ -349,6 +362,16 @@ class ProjectManagementWindow(QWidget):
                     project.start_date = dialog.start_date.date().toPython()
                     project.end_date = dialog.end_date.date().toPython()
                     project.total_budget = float(dialog.total_budget.text()) if dialog.total_budget.text() else 0.0
+                    
+                    # 记录编辑项目的活动
+                    activity = Activity(
+                        project_id=project.id,
+                        type="项目",
+                        action="编辑",
+                        description=f"编辑项目：{old_name} - {old_financial_code}",
+                        operator="系统用户"
+                    )
+                    session.add(activity)
                     
                     session.commit()
                     self.refresh_project_table()
@@ -394,10 +417,24 @@ class ProjectManagementWindow(QWidget):
             session = Session()
             
             try:
-                session.query(Project).filter(Project.id == project_id).delete()
-                session.commit()
-                self.refresh_project_table()
-                UIUtils.show_success(
+                # 获取项目信息用于记录活动
+                project = session.query(Project).filter(Project.id == project_id).first()
+                if project:
+                    # 记录删除项目的活动
+                    activity = Activity(
+                        project_id=project.id,
+                        type="项目",
+                        action="删除",
+                        description=f"删除项目：{project.name} - {project.financial_code}",
+                        operator="系统用户"
+                    )
+                    session.add(activity)
+                    
+                    # 删除项目
+                    session.delete(project)
+                    session.commit()
+                    self.refresh_project_table()
+                    UIUtils.show_success(
                     title='成功',
                     content='项目已成功删除',
                     parent=self

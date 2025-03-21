@@ -4,7 +4,7 @@ from PySide6.QtGui import QPixmap
 from qfluentwidgets import (TitleLabel, SubtitleLabel, ScrollArea, CardWidget, PrimaryPushButton,
                           FluentIcon, InfoBadge, BodyLabel)
 from sqlalchemy import func
-from ..models.database import sessionmaker, Project, Budget, BudgetCategory, get_budget_usage
+from ..models.database import sessionmaker, Project, Budget, BudgetCategory, get_budget_usage, Activity
 from datetime import datetime
 from ..utils.ui_utils import UIUtils
 import os
@@ -220,13 +220,13 @@ class HomeInterface(QWidget):
         session = Session()
         
         try:
-            # TODO: 从数据库获取最近50条操作记录
-            # 示例数据
-            activities = [
-                {"type": "项目", "action": "新增", "name": "项目A", "time": "2025-03-19 16:00"},
-                {"type": "预算", "action": "编辑", "name": "预算B", "time": "2025-03-19 15:30"},
-                {"type": "支出", "action": "删除", "name": "支出C", "time": "2025-03-19 15:00"}
-            ]
+            activities = session.query(Activity).order_by(Activity.timestamp.desc()).limit(50).all()
+            activities = [{
+                "type": activity.type,
+                "action": activity.action,
+                "name": activity.project.name if activity.project else activity.budget.project.name if activity.budget else activity.expense.budget.project.name,
+                "time": activity.timestamp.strftime("%Y-%m-%d %H:%M")
+            } for activity in activities]
             
             for activity in activities:
                 label = BodyLabel(f"{activity['time']} {activity['type']} {activity['action']}: {activity['name']}")

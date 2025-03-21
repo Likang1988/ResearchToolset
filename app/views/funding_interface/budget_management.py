@@ -7,7 +7,7 @@ from PySide6.QtCore import Qt, QSize, Signal
 from PySide6.QtGui import QIcon
 from ...components.budget_dialog import BudgetDialog, TotalBudgetDialog
 from .expense_management import ExpenseManagementWindow
-from ...models.database import sessionmaker, Budget, BudgetCategory, BudgetItem, Expense
+from ...models.database import sessionmaker, Budget, BudgetCategory, BudgetItem, Expense, Activity
 from datetime import datetime
 from sqlalchemy import func
 from ...components.progress_bar_delegate import ProgressBarDelegate
@@ -519,6 +519,17 @@ class BudgetManagementWindow(QWidget):
                         )
                         session.add(budget_item)
                     
+                    # 记录添加预算的活动
+                    activity = Activity(
+                        project_id=self.project.id,
+                        budget_id=budget.id,
+                        type="预算",
+                        action="新增",
+                        description=f"添加{data['year']}年度预算：{data['total_amount']}万元",
+                        operator="系统用户"
+                    )
+                    session.add(activity)
+                    
                     session.commit()
                     self.load_budgets()
                     
@@ -589,6 +600,17 @@ class BudgetManagementWindow(QWidget):
                 ).first()
                 
                 if budget:
+                    # 记录删除预算的活动
+                    activity = Activity(
+                        project_id=self.project.id,
+                        budget_id=budget.id,
+                        type="预算",
+                        action="删除",
+                        description=f"删除{budget.year}年度预算",
+                        operator="系统用户"
+                    )
+                    session.add(activity)
+                    
                     # 删除预算及其子项
                     session.query(BudgetItem).filter_by(budget_id=budget.id).delete()
                     session.delete(budget)
@@ -723,6 +745,17 @@ class BudgetManagementWindow(QWidget):
                                     else:
                                         # 如果类别不存在于新数据中，则设置为0
                                         item.amount = 0.0
+                                
+                                # 记录编辑预算的活动
+                                activity = Activity(
+                                    project_id=self.project.id,
+                                    budget_id=budget.id,
+                                    type="预算",
+                                    action="编辑",
+                                    description=f"编辑{budget.year}年度预算：{data['total_amount']}万元",
+                                    operator="系统用户"
+                                )
+                                session.add(activity)
                                 
                                 session.commit()
                                 self.load_budgets()
@@ -923,6 +956,17 @@ class BudgetManagementWindow(QWidget):
                         )
                         session.add(budget_item)
                     
+                    # 记录添加预算的活动
+                    activity = Activity(
+                        project_id=self.project.id,
+                        budget_id=budget.id,
+                        type="预算",
+                        action="新增",
+                        description=f"添加{data['year']}年度预算：{data['total_amount']}万元",
+                        operator="系统用户"
+                    )
+                    session.add(activity)
+                    
                     session.commit()
                     self.load_budgets()
                     
@@ -993,6 +1037,17 @@ class BudgetManagementWindow(QWidget):
                 ).first()
                 
                 if budget:
+                    # 记录删除预算的活动
+                    activity = Activity(
+                        project_id=self.project.id,
+                        budget_id=budget.id,
+                        type="预算",
+                        action="删除",
+                        description=f"删除{budget.year}年度预算",
+                        operator="系统用户"
+                    )
+                    session.add(activity)
+                    
                     # 删除预算及其子项
                     session.query(BudgetItem).filter_by(budget_id=budget.id).delete()
                     session.delete(budget)
@@ -1127,6 +1182,17 @@ class BudgetManagementWindow(QWidget):
                                     else:
                                         # 如果类别不存在于新数据中，则设置为0
                                         item.amount = 0.0
+                                
+                                # 记录编辑预算的活动
+                                activity = Activity(
+                                    project_id=self.project.id,
+                                    budget_id=budget.id,
+                                    type="预算",
+                                    action="编辑",
+                                    description=f"编辑{budget.year}年度预算：{data['total_amount']}万元",
+                                    operator="系统用户"
+                                )
+                                session.add(activity)
                                 
                                 session.commit()
                                 self.load_budgets()
