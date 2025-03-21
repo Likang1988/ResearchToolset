@@ -1,7 +1,8 @@
 import sys
+import os
 from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QLineEdit, QPushButton, QTextEdit, QFormLayout, QGroupBox)
-from PySide6.QtGui import QFont, QColor
+from PySide6.QtGui import QFont, QColor, QAction, QIcon
 from PySide6.QtCore import Qt
 
 class IndirectCostCalculator(QWidget):
@@ -12,6 +13,11 @@ class IndirectCostCalculator(QWidget):
     def initUI(self):
         main_layout = QVBoxLayout()
         
+        # 设置应用图标
+        icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'logo', 'calculator.svg')
+        icon = QIcon(icon_path)
+        self.setWindowIcon(icon)
+
         # 创建输入表单
         form_group = QGroupBox("输入参数")
         form_layout = QFormLayout()

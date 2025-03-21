@@ -24,6 +24,10 @@ def build_app():
         project_root = get_project_root()
         os.chdir(project_root)
 
+        # 确保输出目录存在
+        output_dir = 'C:\\Compile'
+        os.makedirs(output_dir, exist_ok=True)
+
         # 构建命令
         build_command = [
             'python', '-m', 'nuitka',
@@ -33,16 +37,9 @@ def build_app():
             '--show-progress',  # 显示编译进度
             '--show-memory',  # 显示内存使用情况
             '--plugin-enable=pyside6',  # 启用PySide6插件
-            '--include-package=pandas',  # 包含pandas包
-            '--include-package=matplotlib',  # 包含matplotlib包
-            '--include-package=openpyxl',  # 包含openpyxl包
-            '--include-package=sqlalchemy',  # 包含sqlalchemy包
-            '--include-package=dateutil',  # 包含dateutil包
             '--include-data-dir=app/assets=app/assets',  # 包含资源文件
-            '--output-dir=dist',  # 输出目录
+            '--output-dir=' + output_dir,  # 输出目录
             '--output-filename=ResearchToolset',  # 输出文件名
-            '--enable-plugin=numpy',  # 启用numpy插件
-            '--enable-plugin=tk-inter',  # 启用tkinter插件
             '--follow-imports',  # 自动跟踪导入
             '--prefer-source-code',  # 优先使用源代码
             '--assume-yes-for-downloads',  # 自动下载依赖
@@ -52,7 +49,7 @@ def build_app():
         # 执行构建命令
         os.system(' '.join(build_command))
 
-        print('\n构建完成！输出目录：dist')
+        print('\n构建完成！输出目录：' + output_dir)
         return True
 
     except Exception as e:

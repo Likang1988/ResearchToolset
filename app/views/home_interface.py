@@ -43,7 +43,6 @@ class HomeInterface(QWidget):
             QLabel#backgroundLabel {
                 background-repeat: no-repeat;
                 background-position: top;
-                background-size: cover;
                 border-radius: 8px;
             }
         """)
@@ -141,15 +140,73 @@ class HomeInterface(QWidget):
             projects = session.query(Project).all()
             for project in projects:
                 card = CardWidget()
+                card.setFixedHeight(80)  # 设置卡片高度
                 card_layout = QVBoxLayout(card)
+                card_layout.setContentsMargins(15, 15, 15, 15)
                 
-                # 显示项目信息
-                card_layout.addWidget(BodyLabel(f"财务编号: {project.financial_code}"))
-                card_layout.addWidget(BodyLabel(f"总预算: {project.total_budget}"))
+                # 创建网格布局用于显示项目信息
+                grid_layout = QGridLayout()
+                grid_layout.setSpacing(10)
+                
                 # 获取预算使用情况
                 budget_usage = get_budget_usage(session, project.id)
-                execution_rate = (budget_usage['total_spent'] / budget_usage['total_budget']) * 100 if budget_usage['total_budget'] > 0 else 0
-                card_layout.addWidget(BodyLabel(f"执行率: {execution_rate:.2f}%"))
+                total_budget = project.total_budget   
+                total_spent = budget_usage['total_spent'] / 10000  # 转换为万元
+                execution_rate = (budget_usage['total_spent'] / (project.total_budget * 10000)) * 100 if project.total_budget > 0 else 0
+                
+                # 添加财务编号标题
+                financial_code_title = QLabel("财务编号")
+                financial_code_title.setAlignment(Qt.AlignCenter)
+                financial_code_title.setStyleSheet("font-size: 14px; color: #666;")
+                grid_layout.addWidget(financial_code_title, 0, 0)
+                
+                # 添加总经费标题
+                total_budget_title = QLabel("总预算")
+                total_budget_title.setAlignment(Qt.AlignCenter)
+                total_budget_title.setStyleSheet("font-size: 14px; color: #666;")
+                grid_layout.addWidget(total_budget_title, 0, 1)
+                
+                # 添加总支出标题
+                total_spent_title = QLabel("总支出")
+                total_spent_title.setAlignment(Qt.AlignCenter)
+                total_spent_title.setStyleSheet("font-size: 14px; color: #666;")
+                grid_layout.addWidget(total_spent_title, 0, 2)
+                
+                # 添加执行率标题
+                execution_rate_title = QLabel("执行率")
+                execution_rate_title.setAlignment(Qt.AlignCenter)
+                execution_rate_title.setStyleSheet("font-size: 14px; color: #666;")
+                grid_layout.addWidget(execution_rate_title, 0, 3)
+                
+                # 添加财务编号值
+                financial_code_value = QLabel(project.financial_code if project.financial_code else "--")
+                financial_code_value.setAlignment(Qt.AlignCenter)
+                financial_code_value.setStyleSheet("font-size: 18px; font-weight: bold;")
+                grid_layout.addWidget(financial_code_value, 1, 0)
+                
+                # 添加总经费值
+                total_budget_value = QLabel(f"{total_budget:.2f}<span style='font-size: 14px; font-weight: normal;'> 万元</span>")
+                total_budget_value.setAlignment(Qt.AlignCenter)
+                total_budget_value.setStyleSheet("font-size: 18px; font-weight: bold;")
+                grid_layout.addWidget(total_budget_value, 1, 1)
+                
+                # 添加总支出值
+                total_spent_value = QLabel(f"{total_spent:.2f}<span style='font-size: 14px; font-weight: normal;'> 万元</span>")
+                total_spent_value.setAlignment(Qt.AlignCenter)
+                total_spent_value.setStyleSheet("font-size: 18px; font-weight: bold;")
+                grid_layout.addWidget(total_spent_value, 1, 2)
+                
+                # 添加执行率值
+                execution_rate_value = QLabel(f"{execution_rate:.2f}<span style='font-size: 14px; font-weight: normal;'> %</span>")
+                execution_rate_value.setAlignment(Qt.AlignCenter)
+                execution_rate_value.setStyleSheet("font-size: 18px; font-weight: bold;")
+                grid_layout.addWidget(execution_rate_value, 1, 3)
+                execution_rate_value.setAlignment(Qt.AlignCenter)
+                execution_rate_value.setStyleSheet("font-size: 18px; font-weight: bold;")
+                grid_layout.addWidget(execution_rate_value, 1, 3)
+                
+                # 添加网格布局到卡片布局
+                card_layout.addLayout(grid_layout)
                 
                 # 点击事件
                 card.mousePressEvent = lambda event, p=project: self.open_project_budget(p)

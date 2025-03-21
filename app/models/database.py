@@ -159,7 +159,9 @@ def get_budget_usage(session, project_id, budget_id=None):
         ).all()
 
         # 计算总支出
-        total_spent = sum(b.spent_amount for b in annual_budgets)
+        total_spent = session.query(func.sum(Expense.amount)).filter(
+            Expense.project_id == project_id
+        ).scalar() or 0.0
 
         # 计算各科目支出
         category_spent = {}
