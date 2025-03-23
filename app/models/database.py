@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey, Date, Enum as SQLEnum, UniqueConstraint, func, text
+from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey, Date, DateTime, Enum as SQLEnum, UniqueConstraint, func, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker, backref
 from enum import Enum
@@ -118,7 +118,7 @@ class Activity(Base):
     action = Column(String(50), nullable=False)  # 操作：新增/编辑/删除
     description = Column(String(200), nullable=False)  # 操作描述
     operator = Column(String(50), nullable=False)  # 操作人
-    timestamp = Column(Date, default=datetime.now)  # 操作时间
+    timestamp = Column(DateTime, default=datetime.now)  # 操作时间
 
     project = relationship("Project", backref="activities")
     budget = relationship("Budget", backref="activities")
@@ -169,7 +169,12 @@ def get_budget_usage(session, project_id, budget_id=None):
         ).first()
 
         if not total_budget:
-            raise ValueError("项目总预算不存在")
+            return {
+                "total_budget": 0.0,
+                "total_spent": 0.0,
+                "remaining": 0.0,
+                "category_spent": {category: 0.0 for category in BudgetCategory}
+            }
 
         # 查询年度预算
         annual_budgets = session.query(Budget).filter(
@@ -258,7 +263,52 @@ def migrate_db(engine):
                 transaction.commit()
                 print("成功添加voucher_path列")
         
-
+        # 检查activities表是否存在
+        result = connection.execute(
+            text("SELECT name FROM sqlite_master WHERE type='table' AND name='activities'")
+        )
+        if result.fetchone():
+            # 检查activities表中timestamp列的类型
+            result = connection.execute(text("PRAGMA table_info(activities)"))
+            columns = {row[1]: row[2] for row in result.fetchall()}
+            
+            # 如果timestamp列存在且不是DATETIME类型，则进行迁移
+            if 'timestamp' in columns and columns['timestamp'] != 'DATETIME':
+                # 创建临时表，确保timestamp列为DATETIME类型
+                connection.execute(text("""
+                    CREATE TABLE activities_temp (
+                        id INTEGER PRIMARY KEY,
+                        project_id INTEGER,
+                        budget_id INTEGER,
+                        expense_id INTEGER,
+                        type TEXT NOT NULL,
+                        action TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        operator TEXT NOT NULL,
+                        timestamp DATETIME
+                    )
+                """))
+                
+                # 复制数据到临时表，将timestamp转换为DATETIME格式
+                connection.execute(text("""
+                    INSERT INTO activities_temp (
+                        id, project_id, budget_id, expense_id, type,
+                        action, description, operator, timestamp
+                    )
+                    SELECT id, project_id, budget_id, expense_id, type,
+                           action, description, operator, datetime(timestamp)
+                    FROM activities
+                """))
+                
+                # 删除原表
+                connection.execute(text("DROP TABLE activities"))
+                
+                # 重命名临时表
+                connection.execute(text("ALTER TABLE activities_temp RENAME TO activities"))
+                
+                # 提交事务
+                transaction.commit()
+                print("成功将activities表的timestamp列类型更改为DATETIME")
         
     except Exception as e:
         print(f"数据库迁移失败: {str(e)}")
