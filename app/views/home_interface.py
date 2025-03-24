@@ -224,46 +224,37 @@ class HomeInterface(QWidget):
             formatted_activities = []
             
             for activity in activities:
-                # 获取基本信息
-                project_name = activity.project.name if activity.project else activity.budget.project.name if activity.budget else activity.expense.budget.project.name
                 time_str = activity.timestamp.strftime("%Y-%m-%d %H:%M:%S")
-                
-                # 根据活动类型获取详细信息
+                main_info = ""
                 details = ""
-                if activity.type == "项目":
-                    # 项目类型活动的详细信息
-                    if activity.project:
-                        details = f"财务编号: {activity.project.financial_code or '--'}, 总预算: {activity.project.total_budget or 0} 万元"
                 
-                elif activity.type == "预算":
-                    # 预算类型活动的详细信息
-                    if activity.budget:
-                        year_info = f"年度: {activity.budget.year}" if activity.budget.year else "总预算"
-                        details = f"{year_info}, 预算金额: {activity.budget.total_amount or 0} 元"
+                # 第一行信息（基本信息）
+                if activity.type == "项目" and activity.project:
+                    main_info = f"{time_str} {activity.action} {activity.type}"
+                    details = f"项目名称：{activity.project.name}，财务编号：{activity.project.financial_code or '--'}，总预算：{activity.project.total_budget or 0} 万元"
                 
-                elif activity.type == "支出":
-                    # 支出类型活动的详细信息
-                    if activity.expense:
-                        expense = activity.expense
-                        details = f"类别: {expense.category.value}, 内容: {expense.content}, 金额: {expense.amount or 0} 元"
-                        if expense.budget and expense.budget.year:
-                            details = f"年度: {expense.budget.year}, " + details
+                elif activity.type == "预算" and activity.budget:
+                    project_info = f"{activity.budget.project.financial_code}"
+                #    if activity.budget.year:
+                #        project_info += f"-{activity.budget.year}"
+                    main_info = f"{time_str} {project_info} {activity.action} {activity.type}"
+                    details = f"预算年度：{activity.budget.year or '总预算'}，预算金额：{activity.budget.total_amount or 0} 万元"
                 
-                # 添加操作人信息
-                operator_info = f"操作人: {activity.operator}" if activity.operator else ""
+                elif activity.type == "支出" and activity.expense:
+                    expense = activity.expense
+                    project_info = f"{expense.budget.project.financial_code}"
+                    if expense.budget.year:
+                        project_info += f"-{expense.budget.year}"
+                    main_info = f"{time_str} {project_info} {activity.action} {activity.type} 支出ID：{expense.id}"
+                    details = f"费用类别：{expense.category.value}，开支内容：{expense.content}，规格型号：{expense.specification or '--'}，报账金额：{expense.amount or 0} 元，报账日期：{expense.date.strftime('%Y-%m-%d') if expense.date else '--'}"
                 
-                # 组合完整的活动信息
-                activity_info = {
-                    "time": time_str,
-                    "type": activity.type,
-                    "action": activity.action,
-                    "name": project_name,
-                    "details": details,
-                    "operator": operator_info,
-                    "description": activity.description
-                }
-                
-                formatted_activities.append(activity_info)
+                # 只有当成功生成了活动信息时才添加到列表中
+                if main_info and details:
+                    activity_info = {
+                        "main_info": main_info,
+                        "details": details
+                    }
+                    formatted_activities.append(activity_info)
             
             # 清空现有布局中的所有小部件
             while self.activity_layout.count():
@@ -272,30 +263,16 @@ class HomeInterface(QWidget):
                     item.widget().deleteLater()
             
             # 添加格式化后的活动信息到布局
-            for activity in formatted_activities:
-                # 创建主要信息标签
-                main_info = f"{activity['time']} {activity['type']} {activity['action']}: {activity['name']}"
-                label = BodyLabel(main_info)
-                label.setStyleSheet("font-weight: bold;")
-                self.activity_layout.addWidget(label)
+            for activity_info in formatted_activities:
+                # 创建主要信息标签（第一行）
+                main_label = BodyLabel(activity_info['main_info'])
+                main_label.setStyleSheet("font-weight: bold;")
+                self.activity_layout.addWidget(main_label)
                 
-                # 创建详细信息标签（如果有）
-                if activity['details']:
-                    details_label = BodyLabel(f"    {activity['details']}")
-                    details_label.setStyleSheet("color: #666; margin-left: 20px;")
-                    self.activity_layout.addWidget(details_label)
-                
-                # 添加描述信息（如果与主要信息不同）
-                if activity['description'] and activity['description'] != main_info:
-                    desc_label = BodyLabel(f"    {activity['description']}")
-                    desc_label.setStyleSheet("color: #666; margin-left: 20px;")
-                    self.activity_layout.addWidget(desc_label)
-                
-                # 添加操作人信息（如果有）
-                if activity['operator']:
-                    operator_label = BodyLabel(f"    {activity['operator']}")
-                    operator_label.setStyleSheet("color: #666; margin-left: 20px; font-style: italic;")
-                    self.activity_layout.addWidget(operator_label)
+                # 创建详细信息标签（第二行）
+                details_label = BodyLabel(activity_info['details'])
+                details_label.setStyleSheet("color: #666;")
+                self.activity_layout.addWidget(details_label)
                 
                 # 添加分隔线
                 separator = QLabel()

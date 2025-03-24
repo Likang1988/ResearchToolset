@@ -119,6 +119,13 @@ class Activity(Base):
     description = Column(String(200), nullable=False)  # 操作描述
     operator = Column(String(50), nullable=False)  # 操作人
     timestamp = Column(DateTime, default=datetime.now)  # 操作时间
+    
+    # 变更前后的详细信息
+    old_data = Column(String(500))  # 变更前的数据，JSON格式
+    new_data = Column(String(500))  # 变更后的数据，JSON格式
+    category = Column(String(50))  # 操作对象的类别（如费用类别、预算年度等）
+    amount = Column(Float)  # 涉及的金额（如有）
+    related_info = Column(String(200))  # 相关信息（如项目编号、财务编号等）
 
     project = relationship("Project", backref="activities")
     budget = relationship("Budget", backref="activities")
@@ -268,13 +275,24 @@ def migrate_db(engine):
             text("SELECT name FROM sqlite_master WHERE type='table' AND name='activities'")
         )
         if result.fetchone():
-            # 检查activities表中timestamp列的类型
+            # 检查activities表中的列信息
             result = connection.execute(text("PRAGMA table_info(activities)"))
             columns = {row[1]: row[2] for row in result.fetchall()}
             
-            # 如果timestamp列存在且不是DATETIME类型，则进行迁移
-            if 'timestamp' in columns and columns['timestamp'] != 'DATETIME':
-                # 创建临时表，确保timestamp列为DATETIME类型
+            # 需要迁移的情况：
+            # 1. timestamp列不是DATETIME类型
+            # 2. 缺少新增的字段
+            needs_migration = (
+                ('timestamp' in columns and columns['timestamp'] != 'DATETIME') or
+                'old_data' not in columns or
+                'new_data' not in columns or
+                'category' not in columns or
+                'amount' not in columns or
+                'related_info' not in columns
+            )
+            
+            if needs_migration:
+                # 创建临时表，包含所有新字段
                 connection.execute(text("""
                     CREATE TABLE activities_temp (
                         id INTEGER PRIMARY KEY,
@@ -285,18 +303,26 @@ def migrate_db(engine):
                         action TEXT NOT NULL,
                         description TEXT NOT NULL,
                         operator TEXT NOT NULL,
-                        timestamp DATETIME
+                        timestamp DATETIME,
+                        old_data TEXT,
+                        new_data TEXT,
+                        category TEXT,
+                        amount FLOAT,
+                        related_info TEXT
                     )
                 """))
                 
-                # 复制数据到临时表，将timestamp转换为DATETIME格式
+                # 复制数据到临时表，对于新字段使用NULL值
                 connection.execute(text("""
                     INSERT INTO activities_temp (
                         id, project_id, budget_id, expense_id, type,
-                        action, description, operator, timestamp
+                        action, description, operator, timestamp,
+                        old_data, new_data, category, amount, related_info
                     )
-                    SELECT id, project_id, budget_id, expense_id, type,
-                           action, description, operator, datetime(timestamp)
+                    SELECT 
+                        id, project_id, budget_id, expense_id, type,
+                        action, description, operator, datetime(timestamp),
+                        NULL, NULL, NULL, NULL, NULL
                     FROM activities
                 """))
                 
@@ -308,7 +334,7 @@ def migrate_db(engine):
                 
                 # 提交事务
                 transaction.commit()
-                print("成功将activities表的timestamp列类型更改为DATETIME")
+                print("成功更新activities表结构，添加了新字段并修正了timestamp列类型")
         
     except Exception as e:
         print(f"数据库迁移失败: {str(e)}")
