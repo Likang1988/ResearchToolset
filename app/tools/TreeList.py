@@ -6,9 +6,36 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-                              QTreeWidget, QTreeWidgetItem, QPushButton, QFileDialog, QMenu)
+                              QTreeWidget, QTreeWidgetItem, QPushButton, QFileDialog, QMenu,
+                              QDialog, QPlainTextEdit, QLabel, QDialogButtonBox)
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QIcon
+
+class MultiChildDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle('添加多个标题')
+        self.resize(400, 300)
+        
+        layout = QVBoxLayout(self)
+        
+        # 添加说明标签
+        label = QLabel('键入标题文本，然后针对每个新标题按 Enter 键(T):')
+        layout.addWidget(label)
+        
+        # 添加文本编辑框
+        self.text_edit = QPlainTextEdit()
+        layout.addWidget(self.text_edit)
+        
+        # 添加按钮
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+    
+    def get_titles(self):
+        text = self.text_edit.toPlainText()
+        return [line.strip() for line in text.split('\n') if line.strip()]
 
 class TreeListApp(QMainWindow):
     def __init__(self):
@@ -34,18 +61,20 @@ class TreeListApp(QMainWindow):
         self.btn_create = QPushButton('创建项目')
         self.btn_add_sibling = QPushButton('增加同级')
         self.btn_add_child = QPushButton('增加子级')
+        self.btn_add_multi_child = QPushButton('多个子级')
         self.btn_delete = QPushButton('删除该级')
         
         # 初始化按钮状态
         self.btn_add_sibling.setEnabled(False)
         self.btn_add_child.setEnabled(False)
+        self.btn_add_multi_child.setEnabled(False)
         self.btn_delete.setEnabled(False)
         left_btns.addWidget(self.btn_create)
         left_btns.addWidget(self.btn_add_sibling)
         left_btns.addWidget(self.btn_add_child)
+        left_btns.addWidget(self.btn_add_multi_child)
         left_btns.addWidget(self.btn_delete)
-        self.btn_add_column = QPushButton('增加新列')
-        left_btns.addWidget(self.btn_add_column)
+
         
         # 右侧按钮组
         right_btns = QHBoxLayout()
@@ -134,8 +163,9 @@ class TreeListApp(QMainWindow):
         self.btn_create.clicked.connect(self.create_root_item)
         self.btn_add_sibling.clicked.connect(self.add_sibling_item)
         self.btn_add_child.clicked.connect(self.add_child_item)
+        self.btn_add_multi_child.clicked.connect(self.add_multi_child_item)
         self.btn_delete.clicked.connect(self.delete_item)
-        self.btn_add_column.clicked.connect(self.add_column_item)
+
         self.btn_import.clicked.connect(self.import_data)
         self.btn_export.clicked.connect(self.export_data)
         
@@ -147,10 +177,9 @@ class TreeListApp(QMainWindow):
                     data = json.load(f)
                 # 清空当前树
                 self.tree.clear()
-                # 设置列数
-                if 'columns' in data and len(data['columns']) > 0:
-                    self.tree.setColumnCount(len(data['columns']))
-                    self.tree.setHeaderLabels(data['columns'])
+                # 设置单列
+                self.tree.setColumnCount(1)
+                self.tree.setHeaderLabels(['名称'])
                 # 递归构建树
                 self._build_tree_from_data(data, self.tree.invisibleRootItem())
             except Exception as e:
@@ -162,9 +191,8 @@ class TreeListApp(QMainWindow):
         # 处理子节点
         for child_data in data.get('children', []):
             child = QTreeWidgetItem(parent_item)
-            # 设置各列的值
-            for col, text in enumerate(child_data.get('columns', [])):
-                child.setText(col, text)
+            # 设置名称列的值
+            child.setText(0, child_data.get('columns', [''])[0])
             # 设置可编辑
             child.setFlags(child.flags() | Qt.ItemIsEditable)
             # 递归处理子节点
@@ -189,10 +217,12 @@ class TreeListApp(QMainWindow):
                     self._export_excel(items, path)
 
     def _get_tree_data(self, item):
+        # 获取名称列数据
         data = {
-            'columns': [item.text(col) for col in range(self.tree.columnCount())],
+            'columns': [item.text(0)],
             'children': []
         }
+        # 递归处理子节点
         for i in range(item.childCount()):
             child = item.child(i)
             data['children'].append(self._get_tree_data(child))
@@ -216,24 +246,15 @@ class TreeListApp(QMainWindow):
         for i, name in enumerate(current_chain):
             item_data[f'level_{i}'] = name
         
-        # 保留自定义列数据（从第二列开始）
-        for col in range(1, self.tree.columnCount()):
-            item_data[f'col_{col}'] = item.text(col) if item.text(col) else ''
-            
-        # 如果是叶子节点或者最末级节点，添加到结果中
+        # 如果是叶子节点，添加到结果中
         if item.childCount() == 0:
             items.append(item_data)
-        else:
-            # 如果有子节点，递归处理子节点
-            for i in range(item.childCount()):
-                child = item.child(i)
-                items.extend(self._flatten_tree(child, level+1, current_chain))
-            
-            # 如果当前节点有自定义列数据，也添加到结果中
-            has_custom_data = any(item.text(col) for col in range(1, self.tree.columnCount()))
-            if has_custom_data:
-                items.append(item_data)
-                
+        
+        # 递归处理子节点
+        for i in range(item.childCount()):
+            child = item.child(i)
+            items.extend(self._flatten_tree(child, level+1, current_chain))
+        
         return items
 
     def _get_max_depth(self):
@@ -252,12 +273,10 @@ class TreeListApp(QMainWindow):
             # 动态生成表头
             max_depth = self._get_max_depth()
             level_headers = [f'层级{i+1}' for i in range(max_depth)]
-            custom_headers = [self.tree.headerItem().text(col) for col in range(1, self.tree.columnCount())]
-            writer.writerow(level_headers + custom_headers)
+            writer.writerow(level_headers)
             
             for item in items:
                 row = [item.get(f'level_{i}', '') for i in range(max_depth)]
-                row.extend(item.get(f'col_{col}', '') for col in range(1, self.tree.columnCount()))
                 writer.writerow(row)
 
     def _export_excel(self, items, path):
@@ -353,14 +372,6 @@ class TreeListApp(QMainWindow):
                 ws.merge_cells(start_row=current_row, start_column=level, 
                               end_row=current_row + row_span - 1, end_column=level)
             
-            # 如果是叶子节点，填充自定义列数据
-            if not children:
-                for col in range(1, self.tree.columnCount()):
-                    col_value = data['data'].get(f'col_{col}', '')
-                    cell = ws.cell(row=current_row, column=max_depth + col - 1, value=col_value)
-                    cell.alignment = Alignment(horizontal='center', vertical='center')
-                    cell.border = border_style
-            
             # 递归处理子项
             if children:
                 child_row = current_row
@@ -406,6 +417,18 @@ class TreeListApp(QMainWindow):
             item.setFlags(item.flags() | Qt.ItemIsEditable)
             current.setExpanded(True)
         
+    def add_multi_child_item(self):
+        current = self.tree.currentItem()
+        if current:
+            dialog = MultiChildDialog(self)
+            if dialog.exec():
+                titles = dialog.get_titles()
+                for title in titles:
+                    item = QTreeWidgetItem(current)
+                    item.setText(0, title)
+                    item.setFlags(item.flags() | Qt.ItemIsEditable)
+                current.setExpanded(True)
+    
     def delete_item(self):
         current = self.tree.currentItem()
         if current:
@@ -416,24 +439,7 @@ class TreeListApp(QMainWindow):
             elif current.parent():
                 current.parent().removeChild(current)
 
-    def add_column_item(self):
-        from PySide6.QtWidgets import QInputDialog
-        col_name, ok = QInputDialog.getText(self, '新建列', '请输入列标题:')
-        if ok and col_name:
-            # 动态增加列
-            self.tree.setColumnCount(self.tree.columnCount() + 1)
-            self.tree.setHeaderLabels([self.tree.headerItem().text(i) for i in range(self.tree.columnCount()-1)] + [col_name])
-            
-            # 为所有现有项初始化新列
-            root = self.tree.invisibleRootItem()
-            self._init_new_column(root)
-    
-    def _init_new_column(self, item):
-        for i in range(item.childCount()):
-            child = item.child(i)
-            child.setText(self.tree.columnCount()-1, '')
-            child.setFlags(child.flags() | Qt.ItemIsEditable)
-            self._init_new_column(child)
+
 
     def contextMenuEvent(self, event):
         menu = QMenu(self)
@@ -449,6 +455,7 @@ class TreeListApp(QMainWindow):
         
         self.btn_add_sibling.setEnabled(has_selection and current.parent() is not None)
         self.btn_add_child.setEnabled(has_selection)
+        self.btn_add_multi_child.setEnabled(has_selection)
         self.btn_delete.setEnabled(has_selection)
         
         # 根节点特殊处理
@@ -468,3 +475,29 @@ if __name__ == '__main__':
     window = TreeListApp()
     window.show()
     sys.exit(app.exec())
+
+class MultiChildDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle('添加多个标题')
+        self.resize(400, 300)
+        
+        layout = QVBoxLayout(self)
+        
+        # 添加说明标签
+        label = QLabel('键入标题文本，然后针对每个新标题按 Enter 键(T):')
+        layout.addWidget(label)
+        
+        # 添加文本编辑框
+        self.text_edit = QPlainTextEdit()
+        layout.addWidget(self.text_edit)
+        
+        # 添加按钮
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+    
+    def get_titles(self):
+        text = self.text_edit.toPlainText()
+        return [line.strip() for line in text.split('\n') if line.strip()]
