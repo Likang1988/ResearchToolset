@@ -1326,8 +1326,22 @@ class ExpenseManagementWindow(QWidget):
         
         # 根据选定列排序
         if column != 8:  # 不对支出凭证列进行排序
-            rows_data.sort(key=lambda x: float(x[column]) if x[column].replace('.', '').isdigit() else x[column],
-                          reverse=(order == Qt.DescendingOrder))
+            def sort_key(x):
+                value = x[column]
+                if not value:  # 处理空值
+                    return float('-inf') if order == Qt.AscendingOrder else float('inf')
+                # 尝试转换为数字
+                try:
+                    # 移除可能的货币符号和空格
+                    cleaned_value = value.strip().replace('¥', '').replace(',', '')
+                    if cleaned_value.replace('.', '').isdigit():
+                        return float(cleaned_value)
+                except (ValueError, AttributeError):
+                    pass
+                # 如果不是数字，返回原始值
+                return value
+            
+            rows_data.sort(key=sort_key, reverse=(order == Qt.DescendingOrder))
         
         # 更新表格数据
         for row, row_data in enumerate(rows_data):

@@ -32,7 +32,7 @@ class Project(Base):
     leader = Column(String(50))
     start_date = Column(Date)
     end_date = Column(Date)
-    total_budget = Column(Float, default=0.0)
+    total_budget = Column(Float, default=0.00)
     budgets = relationship("Budget", back_populates="project", cascade="all, delete-orphan")
 
 class Budget(Base):

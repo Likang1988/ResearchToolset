@@ -24,6 +24,7 @@ class BudgetManagementWindow(QWidget):
         self.engine = engine
         self.project = project
         self.budget = None
+        self.setObjectName(f"budget_management_{project.financial_code}")
         self.setup_ui()
         self.load_budgets()
         

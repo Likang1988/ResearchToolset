@@ -1,8 +1,9 @@
 from PySide6.QtWidgets import QApplication, QStackedWidget
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QIcon
 from qfluentwidgets import NavigationInterface, FluentWindow, FluentIcon, NavigationItemPosition
 from .funding_interface.project_management import ProjectManagementWindow
+from .funding_interface.budget_management import BudgetManagementWindow
 from .home_interface import HomeInterface
 from .help_interface import HelpInterface
 from .budgeting_interface import BudgetingInterface
@@ -10,9 +11,14 @@ from .tools_interface import ToolsInterface
 import os
 
 class MainWindow(FluentWindow):
+    # 定义信号
+    project_updated = Signal()
+    activity_updated = Signal()
+    
     def __init__(self, engine=None):
         super().__init__()
         self.engine = engine
+        self.budget_management_interface = None
         
         # 设置窗口标题和大小
         self.setWindowTitle("科研工具集")

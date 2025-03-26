@@ -14,7 +14,7 @@ from qfluentwidgets import (
     SpinBox, DoubleSpinBox, PushButton, BodyLabel, FluentIcon, 
     setTheme, Theme, setThemeColor, InfoBar
 )
-from ..models.database import BudgetCategory, Budget, BudgetItem, sessionmaker
+from ..models.database import BudgetCategory, Project, Budget, BudgetItem, sessionmaker
 from sqlalchemy.orm import sessionmaker
 from ..utils.ui_utils import UIUtils
 from sqlalchemy import func
@@ -40,6 +40,7 @@ class TotalBudgetDialog(QDialog):
     def setup_ui(self):
         """初始化并设置对话框的UI界面"""
         self.setWindowTitle("编辑总预算")
+        self.setFixedWidth(550)  # 设置对话框固定宽度
         layout = QVBoxLayout()
         
         # 总金额显示
@@ -49,6 +50,14 @@ class TotalBudgetDialog(QDialog):
         self.total_label.setAlignment(Qt.AlignRight)
         total_layout.addWidget(total_label)
         total_layout.addWidget(self.total_label)
+        
+        # 总经费显示
+        total_budget_label = BodyLabel("总经费:")
+        self.total_budget_label = BodyLabel(f"{self.project.total_budget:.2f} 万元")
+        self.total_budget_label.setAlignment(Qt.AlignRight)
+        total_layout.addSpacing(270)
+        total_layout.addWidget(total_budget_label)
+        total_layout.addWidget(self.total_budget_label)
         total_layout.addStretch()  #
         
         # 预算子项输入

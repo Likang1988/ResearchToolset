@@ -16,6 +16,32 @@ class HomeInterface(QWidget):
         self.setup_ui()
         self.setup_background()
     
+    def showEvent(self, event):
+        super().showEvent(event)
+        # 获取主窗口实例并连接信号
+        main_window = self.window()
+        if main_window:
+            main_window.project_updated.connect(self.refresh_data)
+            main_window.activity_updated.connect(self.refresh_data)
+    
+    def post_init(self):
+        # 获取主窗口实例并连接信号
+        main_window = self.window()
+        if main_window:
+            main_window.project_updated.connect(self.refresh_data)
+            main_window.activity_updated.connect(self.refresh_data)
+    
+    def refresh_data(self):
+        # 清空现有布局
+        for i in reversed(range(self.project_layout.count())): 
+            self.project_layout.itemAt(i).widget().setParent(None)
+        for i in reversed(range(self.activity_layout.count())): 
+            self.activity_layout.itemAt(i).widget().setParent(None)
+        
+        # 重新加载数据
+        self.load_projects()
+        self.load_activities()
+    
     def setup_background(self):
         # 创建背景标签
         self.background_label = QLabel(self)
@@ -283,9 +309,19 @@ class HomeInterface(QWidget):
             session.close()
     
     def open_project_budget(self, project):
-        from ..views.funding_interface.budget_management import BudgetManagementWindow
-        self.budget_interface = BudgetManagementWindow(self.engine, project)
-        self.budget_interface.show()
+        # 获取主窗口实例
+        main_window = self.window()
+        if main_window:
+            # 创建新的预算管理界面实例
+            from ..views.funding_interface.budget_management import BudgetManagementWindow
+            budget_interface = BudgetManagementWindow(self.engine, project)
+            
+            # 先切换导航栏选项卡
+            main_window.navigationInterface.setCurrentItem("经费追踪")
+            
+            # 再切换界面
+            main_window.stackedWidget.addWidget(budget_interface)
+            main_window.stackedWidget.setCurrentWidget(budget_interface)
     
     def resizeEvent(self, event):
         super().resizeEvent(event)
