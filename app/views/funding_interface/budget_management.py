@@ -445,17 +445,15 @@ class BudgetManagementWindow(QWidget):
                     )
                 return
                 
-            # 计算已有年度预算总和
-            annual_total = session.query(func.sum(Budget.total_amount)).filter(
-                Budget.project_id == self.project.id,
-                Budget.year.isnot(None)
-            ).scalar() or 0.0
+            # 创建临时的BudgetDialog实例来计算总结余
+            temp_dialog = BudgetDialog(self)
+            temp_dialog.update_balance_amounts()
+            total_balance = float(temp_dialog.total_balance_label.text().replace(' 万元', ''))
             
-            remaining_budget = total_budget.total_amount - annual_total
-            if remaining_budget <= 0:
+            if total_balance <= 0:
                 UIUtils.show_warning(
                     title="警告", 
-                    content="已达到总预算限额，无法添加新的年度预算！",
+                    content="当前总结余为0，无法添加新的年度预算！",
                     parent=self
                     )
                 return
@@ -484,17 +482,15 @@ class BudgetManagementWindow(QWidget):
                         )
                         return
                     
-                    # 重新检查预算限额（因为可能在对话框打开期间发生变化）
-                    annual_total = session.query(func.sum(Budget.total_amount)).filter(
-                        Budget.project_id == self.project.id,
-                        Budget.year.isnot(None)
-                    ).scalar() or 0.0
+                    # 重新检查预算限额（使用总结余）
+                    temp_dialog = BudgetDialog(self)
+                    temp_dialog.update_balance_amounts()
+                    total_balance = float(temp_dialog.total_balance_label.text().replace(' 万元', ''))
                     
-                    remaining_budget = total_budget.total_amount - annual_total
-                    if data['total_amount'] > remaining_budget:
+                    if data['total_amount'] > total_balance:
                         UIUtils.show_warning(
                             title="警告", 
-                            content=f"年度预算({data['total_amount']}万元)超出剩余总预算({remaining_budget:.2f}万元)！",
+                            content=f"年度预算({data['total_amount']}万元)超出当前总结余({total_balance:.2f}万元)！",
                             parent=self
                             )
                         return
@@ -882,17 +878,15 @@ class BudgetManagementWindow(QWidget):
                     )
                 return
                 
-            # 计算已有年度预算总和
-            annual_total = session.query(func.sum(Budget.total_amount)).filter(
-                Budget.project_id == self.project.id,
-                Budget.year.isnot(None)
-            ).scalar() or 0.0
+            # 创建临时的BudgetDialog实例来计算总结余
+            temp_dialog = BudgetDialog(self)
+            temp_dialog.update_balance_amounts()
+            total_balance = float(temp_dialog.total_balance_label.text().replace(' 万元', ''))
             
-            remaining_budget = total_budget.total_amount - annual_total
-            if remaining_budget <= 0:
+            if total_balance <= 0:
                 UIUtils.show_warning(
                     title="警告", 
-                    content="已达到总预算限额，无法添加新的年度预算！",
+                    content="当前总结余为0，无法添加新的年度预算！",
                     parent=self
                     )
                 return
@@ -921,17 +915,15 @@ class BudgetManagementWindow(QWidget):
                         )
                         return
                     
-                    # 重新检查预算限额（因为可能在对话框打开期间发生变化）
-                    annual_total = session.query(func.sum(Budget.total_amount)).filter(
-                        Budget.project_id == self.project.id,
-                        Budget.year.isnot(None)
-                    ).scalar() or 0.0
+                    # 重新检查预算限额（使用总结余）
+                    temp_dialog = BudgetDialog(self)
+                    temp_dialog.update_balance_amounts()
+                    total_balance = float(temp_dialog.total_balance_label.text().replace(' 万元', ''))
                     
-                    remaining_budget = total_budget.total_amount - annual_total
-                    if data['total_amount'] > remaining_budget:
+                    if data['total_amount'] > total_balance:
                         UIUtils.show_warning(
                             title="警告", 
-                            content=f"年度预算({data['total_amount']}万元)超出剩余总预算({remaining_budget:.2f}万元)！",
+                            content=f"年度预算({data['total_amount']}万元)超出当前总结余({total_balance:.2f}万元)！",
                             parent=self
                             )
                         return

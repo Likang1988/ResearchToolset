@@ -27,7 +27,14 @@ def main():
         print(f"图标文件不存在: {icon_path}")
     
     # 获取数据库路径
-    db_path = os.path.join(os.path.dirname(__file__), 'database', 'database.db')
+    if getattr(sys, 'frozen', False):
+        # 如果是打包后的exe
+        base_dir = os.path.dirname(sys.executable)
+    else:
+        # 如果是源码运行
+        base_dir = os.path.dirname(__file__)
+    
+    db_path = os.path.join(base_dir, 'database', 'database.db')
     
     # 确保数据库目录存在
     db_dir = os.path.dirname(db_path)

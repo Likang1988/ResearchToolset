@@ -346,7 +346,10 @@ def migrate_db(engine):
 
 def init_db(db_path):
     """初始化数据库"""
-    db_path = os.path.abspath(db_path)  # 获取绝对路径
+    # 获取程序根目录
+    root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    # 确保使用程序根目录下的database路径
+    db_path = os.path.join(root_dir, db_path)
     engine = create_engine(f'sqlite:///{db_path}')
     Base.metadata.create_all(engine)
     return engine
