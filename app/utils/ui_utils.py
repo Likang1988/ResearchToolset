@@ -41,8 +41,6 @@ class UIUtils:
         """)
         
         # 设置表格基本属性
-        table.setBorderVisible(True)
-        table.setBorderRadius(8)
         table.setWordWrap(False)
         
         # 设置表头属性

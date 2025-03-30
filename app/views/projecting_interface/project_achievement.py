@@ -1,0 +1,329 @@
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QComboBox, QLineEdit, QDialog, QDateEdit
+from PySide6.QtCore import Qt
+from qfluentwidgets import TitleLabel, PrimaryPushButton, FluentIcon, InfoBar
+from ...utils.ui_utils import UIUtils
+from ...models.database import Project, Base, get_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum as SQLEnum
+from enum import Enum
+from datetime import datetime
+
+class AchievementType(Enum):
+    PAPER = "论文"
+    PATENT = "专利"
+    SOFTWARE = "软件著作权"
+    STANDARD = "标准"
+    AWARD = "获奖"
+    OTHER = "其他"
+
+class AchievementStatus(Enum):
+    DRAFT = "草稿"
+    SUBMITTED = "已提交"
+    ACCEPTED = "已接收"
+    PUBLISHED = "已发表/授权"
+    REJECTED = "已拒绝"
+
+class ProjectAchievement(Base):
+    __tablename__ = 'project_achievements'
+    
+    id = Column(Integer, primary_key=True)
+    project_id = Column(Integer, ForeignKey('projects.id'), nullable=False)
+    name = Column(String(200), nullable=False)  # 成果名称
+    type = Column(SQLEnum(AchievementType), nullable=False)  # 成果类型
+    status = Column(SQLEnum(AchievementStatus), default=AchievementStatus.DRAFT)  # 成果状态
+    authors = Column(String(200))  # 作者/完成人
+    publish_date = Column(Date)  # 发表/授权日期
+    journal = Column(String(200))  # 期刊/授权单位
+    description = Column(String(500))  # 成果描述
+    remarks = Column(String(200))  # 备注
+
+class AchievementDialog(QDialog):
+    def __init__(self, parent=None, achievement=None, project=None):
+        super().__init__(parent)
+        self.achievement = achievement
+        self.project = project
+        self.setup_ui()
+        if achievement:
+            self.load_achievement_data()
+    
+    def setup_ui(self):
+        self.setWindowTitle("成果信息")
+        layout = QVBoxLayout(self)
+        
+        # 成果表单
+        self.name_edit = QLineEdit()
+        self.name_edit.setPlaceholderText("成果名称")
+        layout.addWidget(self.name_edit)
+        
+        self.type_combo = QComboBox()
+        for type in AchievementType:
+            self.type_combo.addItem(type.value)
+        layout.addWidget(self.type_combo)
+        
+        self.status_combo = QComboBox()
+        for status in AchievementStatus:
+            self.status_combo.addItem(status.value)
+        layout.addWidget(self.status_combo)
+        
+        self.authors_edit = QLineEdit()
+        self.authors_edit.setPlaceholderText("作者/完成人")
+        layout.addWidget(self.authors_edit)
+        
+        self.publish_date = QDateEdit()
+        self.publish_date.setCalendarPopup(True)
+        self.publish_date.setDate(datetime.now())
+        layout.addWidget(self.publish_date)
+        
+        self.journal_edit = QLineEdit()
+        self.journal_edit.setPlaceholderText("期刊/授权单位")
+        layout.addWidget(self.journal_edit)
+        
+        self.description_edit = QLineEdit()
+        self.description_edit.setPlaceholderText("成果描述")
+        layout.addWidget(self.description_edit)
+        
+        self.remarks_edit = QLineEdit()
+        self.remarks_edit.setPlaceholderText("备注")
+        layout.addWidget(self.remarks_edit)
+        
+        # 按钮
+        button_layout = QHBoxLayout()
+        save_btn = PrimaryPushButton("保存")
+        cancel_btn = PrimaryPushButton("取消")
+        save_btn.clicked.connect(self.accept)
+        cancel_btn.clicked.connect(self.reject)
+        button_layout.addWidget(save_btn)
+        button_layout.addWidget(cancel_btn)
+        layout.addLayout(button_layout)
+    
+    def load_achievement_data(self):
+        self.name_edit.setText(self.achievement.name)
+        self.type_combo.setCurrentText(self.achievement.type.value)
+        self.status_combo.setCurrentText(self.achievement.status.value)
+        self.authors_edit.setText(self.achievement.authors)
+        self.publish_date.setDate(self.achievement.publish_date)
+        self.journal_edit.setText(self.achievement.journal)
+        self.description_edit.setText(self.achievement.description)
+        self.remarks_edit.setText(self.achievement.remarks)
+
+class ProjectAchievementWidget(QWidget):
+    def __init__(self, project, parent=None):
+        super().__init__(parent=parent)
+        self.project = project
+        self.setup_ui()
+        self.load_achievements()
+    
+    def setup_ui(self):
+        self.main_layout = QVBoxLayout(self)
+        
+        # 标题栏
+        title_layout = UIUtils.create_title_layout("项目成果管理")
+        self.main_layout.addLayout(title_layout)
+        
+        # 项目选择
+        self.project_combo = QComboBox()
+        self.load_projects()
+        self.main_layout.addWidget(self.project_combo)
+        
+        # 搜索栏
+        search_layout = QHBoxLayout()
+        self.search_edit = QLineEdit()
+        self.search_edit.setPlaceholderText("输入关键词搜索成果")
+        self.search_edit.textChanged.connect(self.search_achievements)
+        search_layout.addWidget(self.search_edit)
+        
+        self.type_filter = QComboBox()
+        self.type_filter.addItem("全部类型")
+        for type in AchievementType:
+            self.type_filter.addItem(type.value)
+        self.type_filter.currentTextChanged.connect(self.search_achievements)
+        search_layout.addWidget(self.type_filter)
+        
+        self.status_filter = QComboBox()
+        self.status_filter.addItem("全部状态")
+        for status in AchievementStatus:
+            self.status_filter.addItem(status.value)
+        self.status_filter.currentTextChanged.connect(self.search_achievements)
+        search_layout.addWidget(self.status_filter)
+        
+        self.main_layout.addLayout(search_layout)
+        
+        # 按钮栏
+        add_btn = UIUtils.create_action_button("新增成果", FluentIcon.ADD)
+        edit_btn = UIUtils.create_action_button("编辑成果", FluentIcon.EDIT)
+        delete_btn = UIUtils.create_action_button("删除成果", FluentIcon.DELETE)
+        
+        add_btn.clicked.connect(self.add_achievement)
+        edit_btn.clicked.connect(self.edit_achievement)
+        delete_btn.clicked.connect(self.delete_achievement)
+        
+        button_layout = UIUtils.create_button_layout(add_btn, edit_btn, delete_btn)
+        self.main_layout.addLayout(button_layout)
+        
+        # 成果列表
+        self.achievement_table = QTableWidget()
+        self.achievement_table.setColumnCount(8)
+        self.achievement_table.setHorizontalHeaderLabels(["成果名称", "类型", "状态", "作者/完成人", "发表/授权日期", "期刊/授权单位", "描述", "备注"])
+        UIUtils.set_table_style(self.achievement_table)
+        
+        self.main_layout.addWidget(self.achievement_table)
+    
+    def load_projects(self):
+        Session = sessionmaker(bind=get_engine())
+        session = Session()
+        
+        try:
+            projects = session.query(Project).all()
+            self.project_combo.clear()
+            for project in projects:
+                self.project_combo.addItem(project.name, project.id)
+            
+            self.project_combo.currentIndexChanged.connect(self.load_achievements)
+        finally:
+            session.close()
+    
+    def load_achievements(self):
+        if self.project_combo.currentData() is None:
+            return
+            
+        Session = sessionmaker(bind=get_engine())
+        session = Session()
+        
+        try:
+            achievements = session.query(ProjectAchievement).filter(
+                ProjectAchievement.project_id == self.project_combo.currentData()
+            ).all()
+            
+            self.achievement_table.setRowCount(len(achievements))
+            for row, achievement in enumerate(achievements):
+                self.achievement_table.setItem(row, 0, QTableWidgetItem(achievement.name))
+                self.achievement_table.setItem(row, 1, QTableWidgetItem(achievement.type.value))
+                self.achievement_table.setItem(row, 2, QTableWidgetItem(achievement.status.value))
+                self.achievement_table.setItem(row, 3, QTableWidgetItem(achievement.authors))
+                self.achievement_table.setItem(row, 4, QTableWidgetItem(str(achievement.publish_date)))
+                self.achievement_table.setItem(row, 5, QTableWidgetItem(achievement.journal))
+                self.achievement_table.setItem(row, 6, QTableWidgetItem(achievement.description))
+                self.achievement_table.setItem(row, 7, QTableWidgetItem(achievement.remarks))
+        finally:
+            session.close()
+    
+    def search_achievements(self):
+        keyword = self.search_edit.text().lower()
+        achievement_type = self.type_filter.currentText()
+        achievement_status = self.status_filter.currentText()
+        
+        for row in range(self.achievement_table.rowCount()):
+            show_row = True
+            
+            # 关键词匹配
+            if keyword:
+                match_found = False
+                for col in [0, 3, 5, 6]:  # 搜索成果名称、作者、期刊和描述列
+                    cell_text = self.achievement_table.item(row, col).text().lower()
+                    if keyword in cell_text:
+                        match_found = True
+                        break
+                show_row = match_found
+            
+            # 类型过滤
+            if show_row and achievement_type != "全部类型":
+                cell_type = self.achievement_table.item(row, 1).text()
+                show_row = (cell_type == achievement_type)
+            
+            # 状态过滤
+            if show_row and achievement_status != "全部状态":
+                cell_status = self.achievement_table.item(row, 2).text()
+                show_row = (cell_status == achievement_status)
+            
+            self.achievement_table.setRowHidden(row, not show_row)
+    
+    def add_achievement(self):
+        if self.project_combo.currentData() is None:
+            UIUtils.show_warning(self, "警告", "请先选择项目")
+            return
+            
+        dialog = AchievementDialog(self, project=self.project)
+        if dialog.exec():
+            Session = sessionmaker(bind=get_engine())
+            session = Session()
+            
+            try:
+                achievement = ProjectAchievement(
+                    project_id=self.project_combo.currentData(),
+                    name=dialog.name_edit.text(),
+                    type=AchievementType(dialog.type_combo.currentText()),
+                    status=AchievementStatus(dialog.status_combo.currentText()),
+                    authors=dialog.authors_edit.text(),
+                    publish_date=dialog.publish_date.date().toPython(),
+                    journal=dialog.journal_edit.text(),
+                    description=dialog.description_edit.text(),
+                    remarks=dialog.remarks_edit.text()
+                )
+                session.add(achievement)
+                session.commit()
+                self.load_achievements()
+                UIUtils.show_success(self, "成功", "成果添加成功")
+            finally:
+                session.close()
+    
+    def edit_achievement(self):
+        selected_items = self.achievement_table.selectedItems()
+        if not selected_items:
+            UIUtils.show_warning(self, "警告", "请先选择要编辑的成果")
+            return
+        
+        row = selected_items[0].row()
+        achievement_name = self.achievement_table.item(row, 0).text()
+        
+        Session = sessionmaker(bind=get_engine())
+        session = Session()
+        
+        try:
+            achievement = session.query(ProjectAchievement).filter(
+                ProjectAchievement.project_id == self.project_combo.currentData(),
+                ProjectAchievement.name == achievement_name
+            ).first()
+            
+            if achievement:
+                dialog = AchievementDialog(self, achievement)
+                if dialog.exec():
+                    achievement.name = dialog.name_edit.text()
+                    achievement.type = AchievementType(dialog.type_combo.currentText())
+                    achievement.status = AchievementStatus(dialog.status_combo.currentText())
+                    achievement.authors = dialog.authors_edit.text()
+                    achievement.publish_date = dialog.publish_date.date().toPython()
+                    achievement.journal = dialog.journal_edit.text()
+                    achievement.description = dialog.description_edit.text()
+                    achievement.remarks = dialog.remarks_edit.text()
+                    
+                    session.commit()
+                    self.load_achievements()
+                    UIUtils.show_success(self, "成功", "成果更新成功")
+        finally:
+            session.close()
+    
+    def delete_achievement(self):
+        selected_items = self.achievement_table.selectedItems()
+        if not selected_items:
+            UIUtils.show_warning(self, "警告", "请先选择要删除的成果")
+            return
+        
+        row = selected_items[0].row()
+        achievement_name = self.achievement_table.item(row, 0).text()
+        
+        Session = sessionmaker(bind=get_engine())
+        session = Session()
+        
+        try:
+            achievement = session.query(ProjectAchievement).filter(
+                ProjectAchievement.project_id == self.project_combo.currentData(),
+                ProjectAchievement.name == achievement_name
+            ).first()
+            
+            if achievement:
+                session.delete(achievement)
+                session.commit()
+                self.load_achievements()
+                UIUtils.show_success(self, "成功", "成果删除成功")
+        finally:
+            session.close()

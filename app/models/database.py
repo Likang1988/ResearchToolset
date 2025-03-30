@@ -354,6 +354,15 @@ def init_db(db_path):
     Base.metadata.create_all(engine)
     return engine
 
+def get_engine():
+    """获取数据库引擎实例"""
+    # 获取程序根目录
+    root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    # 确保使用程序根目录下的database路径
+    db_path = os.path.join(root_dir, 'database', 'database.db')
+    engine = create_engine(f'sqlite:///{db_path}')
+    return engine
+
 def add_project_to_db(engine, name, financial_code, project_code, project_type, start_date, end_date, total_budget=None):
     """添加项目到数据库"""
     Session = sessionmaker(bind=engine)

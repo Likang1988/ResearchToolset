@@ -313,8 +313,8 @@ class HomeInterface(QWidget):
         main_window = self.window()
         if main_window:
             # 创建新的预算管理界面实例
-            from ..views.funding_interface.budget_management import BudgetManagementWindow
-            budget_interface = BudgetManagementWindow(self.engine, project)
+            from ..views.funding_interface.budget_list import BudgetlistWindow
+            budget_interface = BudgetlistWindow(self.engine, project)
             
             # 先切换导航栏选项卡
             main_window.navigationInterface.setCurrentItem("经费追踪")

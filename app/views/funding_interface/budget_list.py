@@ -6,7 +6,7 @@ from qfluentwidgets import PrimaryPushButton, TitleLabel, FluentIcon, ToolButton
 from PySide6.QtCore import Qt, QSize, Signal
 from PySide6.QtGui import QIcon
 from ...components.budget_dialog import BudgetDialog, TotalBudgetDialog
-from .expense_management import ExpenseManagementWindow
+from .expense_list import ExpenseListWindow
 from ...models.database import sessionmaker, Budget, BudgetCategory, BudgetItem, Expense, Activity
 from datetime import datetime
 from sqlalchemy import func
@@ -15,8 +15,8 @@ from ...utils.ui_utils import UIUtils
 from ...utils.db_utils import DBUtils
 from ...components.budget_chart_widget import BudgetChartWidget
 
-class BudgetManagementWindow(QWidget):
-    # 添加信号用于通知项目管理窗口更新数据
+class BudgetListWindow(QWidget):
+    # 添加信号用于通知项目清单窗口更新数据
     budget_updated = Signal()
     
     def __init__(self, engine, project):   
@@ -24,35 +24,35 @@ class BudgetManagementWindow(QWidget):
         self.engine = engine
         self.project = project
         self.budget = None
-        self.setObjectName(f"budget_management_{project.financial_code}")
+        self.setObjectName(f"budget_list_{project.financial_code}")
         self.setup_ui()
         self.load_budgets()
         
     def setup_ui(self):
         """设置UI界面"""
-        self.setWindowTitle("预算管理")
+        self.setWindowTitle("预算清单")
         main_layout = QVBoxLayout(self)
         
         # 创建QStackedWidget
         self.stacked_widget = QStackedWidget()
         main_layout.addWidget(self.stacked_widget)
         
-        # 创建预算管理页面
+        # 创建预算清单页面
         self.budget_page = QWidget()
         self.setup_budget_page()
         self.stacked_widget.addWidget(self.budget_page)
         
-        # 初始显示预算管理页面
+        # 初始显示预算清单页面
         self.stacked_widget.setCurrentWidget(self.budget_page)
         
     def setup_budget_page(self):
-        """设置预算管理页面"""
+        """设置预算清单页面"""
         layout = QVBoxLayout(self.budget_page)
         layout.setContentsMargins(0, 0, 0, 0)  # 统一设置边距
         layout.setSpacing(10)  # 设置组件之间的垂直间距
         
         # 标题
-        title_layout = UIUtils.create_title_layout(f"预算管理-{self.project.financial_code}", True, self.back_to_project)
+        title_layout = UIUtils.create_title_layout(f"预算清单-{self.project.financial_code}", True, self.back_to_project)
         layout.addLayout(title_layout)
         
         # 按钮栏
@@ -174,25 +174,25 @@ class BudgetManagementWindow(QWidget):
         layout.addWidget(splitter)
         
     def back_to_project(self):
-        """返回到项目管理页面"""
-        # 获取父窗口（ProjectManagementWindow）
-        # 由于BudgetManagementWindow是添加到QStackedWidget中的，
-        # 需要获取QStackedWidget的父窗口才是ProjectManagementWindow
+        """返回到项目清单页面"""
+        # 获取父窗口（ProjectListWindow）
+        # 由于BudgetlistWindow是添加到QStackedWidget中的，
+        # 需要获取QStackedWidget的父窗口才是ProjectListWindow
         stacked_widget = self.parent()
         if isinstance(stacked_widget, QStackedWidget):
             project_window = stacked_widget.parent()
             if hasattr(project_window, 'project_page'):
-                # 切换到项目管理页面
+                # 切换到项目清单页面
                 stacked_widget.setCurrentWidget(project_window.project_page)
 
-    def open_expense_management(self, budget):
-        """打开支出管理窗口"""
-        expense_window = ExpenseManagementWindow(self.engine, self.project, budget)
+    def open_expense_list(self, budget):
+        """打开支出清单窗口"""
+        expense_window = ExpenseListWindow(self.engine, self.project, budget)
         # 连接支出更新信号
         expense_window.expense_updated.connect(self.load_budgets)
-        # 将支出管理窗口添加到当前预算管理窗口的QStackedWidget中
+        # 将支出清单窗口添加到当前预算清单窗口的QStackedWidget中
         self.stacked_widget.addWidget(expense_window)
-        # 切换到支出管理页面
+        # 切换到支出清单页面
         self.stacked_widget.setCurrentWidget(expense_window)
         
 
@@ -363,7 +363,7 @@ class BudgetManagementWindow(QWidget):
                 expense_btn = ToolButton()
                 expense_btn.setIcon(QIcon(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'logo', 'expense.svg'))))
                 expense_btn.setToolTip("支出管理")
-                expense_btn.clicked.connect(lambda checked=False, b=budget: self.open_expense_management(b))
+                expense_btn.clicked.connect(lambda checked=False, b=budget: self.open_expense_list(b))
                 btn_layout.addWidget(expense_btn)
                 # 按钮大小 - 增加尺寸以提高用户体验
                 expense_btn.setFixedSize(28, 28)

@@ -99,7 +99,7 @@ class HelpInterface(ScrollArea):
         readme_layout.addWidget(plan_title)
         
         plan_text = BodyLabel(
-            "- ✅ 基于qfluentwidgets重构UI（持续优化中）\n"
+            "- ✅ 基于qfluentwidgets重构UI\n"
             "- ✅ 支出信息批量导入\n"
             "- ✅ 支出信息列表排序、筛选、导出\n"
             "- ✅ 支出凭证插入、导出\n"
@@ -107,9 +107,9 @@ class HelpInterface(ScrollArea):
             "- ✅ 预算管理界面统计图表\n"
             "  - ✅ 按列表支出分布\n"
             "  - ✅ 按时间支出分布\n"
-            "- ❌ 预算编制功能模块 (开发中...)\n"
-            "- ❌ 预算编制数据导出 (明细、汇总、分年度...)\n"
-            "- ❌ 丰富主页功能 (项目执行率、统计图卡片...)",
+            "- ✅ 预算编制功能模块\n"
+            "- ✅ 预算编制数据导出 (明细、汇总、分年度)\n"
+            "- ✅ 丰富主页功能 (项目概览、最近活动)",
             readme_card
         )
         plan_text.setWordWrap(True)
