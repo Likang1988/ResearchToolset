@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QComboBox, QDateEdit, QTextEdit, QSpinBox, QLabel
 from PySide6.QtCore import Qt, QDate
+from PySide6.QtWidgets import QTreeWidget, QTreeWidgetItem
 from qfluentwidgets import TitleLabel, PrimaryPushButton, FluentIcon, InfoBar, Dialog, LineEdit
 from ...utils.ui_utils import UIUtils
 from ...models.database import Project, Base, get_engine
@@ -26,68 +27,7 @@ class ProjectTask(Base):
     assignee = Column(String(50))  # 负责人
     progress = Column(Integer, default=0)  # 进度百分比
 
-class TaskDialog(Dialog):
-    def __init__(self, parent=None, task=None):
-        super().__init__("任务信息", "", parent)
-        self.task = task
-        self.setup_ui()
-        if task:
-            self.load_task_data()
-    
-    def setup_ui(self):
-        self.setWindowTitle("任务信息")
-        # 使用父类的布局而不是创建新的
-        layout = self.layout()
-        
-        # 任务表单
-        self.name_edit = LineEdit()
-        self.name_edit.setPlaceholderText("任务名称")
-        layout.addWidget(self.name_edit)
-        
-        self.description_edit = QTextEdit()
-        self.description_edit.setPlaceholderText("任务描述")
-        layout.addWidget(self.description_edit)
-        
-        self.start_date = QDateEdit()
-        self.start_date.setCalendarPopup(True)
-        layout.addWidget(self.start_date)
-        
-        self.end_date = QDateEdit()
-        self.end_date.setCalendarPopup(True)
-        layout.addWidget(self.end_date)
-        
-        self.status_combo = QComboBox()
-        for status in TaskStatus:
-            self.status_combo.addItem(status.value)
-        layout.addWidget(self.status_combo)
-        
-        self.assignee_edit = LineEdit()
-        self.assignee_edit.setPlaceholderText("负责人")
-        layout.addWidget(self.assignee_edit)
-        
-        self.progress_spin = QSpinBox()
-        self.progress_spin.setRange(0, 100)
-        self.progress_spin.setSuffix("%")
-        layout.addWidget(self.progress_spin)
-        
-        # 按钮
-        button_layout = QHBoxLayout()
-        save_btn = PrimaryPushButton("保存")
-        cancel_btn = PrimaryPushButton("取消")
-        save_btn.clicked.connect(self.accept)
-        cancel_btn.clicked.connect(self.reject)
-        button_layout.addWidget(save_btn)
-        button_layout.addWidget(cancel_btn)
-        layout.addLayout(button_layout)
-    
-    def load_task_data(self):
-        self.name_edit.setText(self.task.name)
-        self.description_edit.setText(self.task.description)
-        self.start_date.setDate(self.task.start_date)
-        self.end_date.setDate(self.task.end_date)
-        self.status_combo.setCurrentText(self.task.status.value)
-        self.assignee_edit.setText(self.task.assignee)
-        self.progress_spin.setValue(self.task.progress)
+
 
 class ProjectProgressWidget(QWidget):
     def __init__(self, project, parent=None):
@@ -110,23 +50,23 @@ class ProjectProgressWidget(QWidget):
         
         # 按钮栏
         add_btn = UIUtils.create_action_button("新建任务", FluentIcon.ADD)
-        edit_btn = UIUtils.create_action_button("编辑任务", FluentIcon.EDIT)
+        add_child_btn = UIUtils.create_action_button("添加子级", FluentIcon.ADD_TO)
         delete_btn = UIUtils.create_action_button("删除任务", FluentIcon.DELETE)
         
         add_btn.clicked.connect(self.add_task)
-        edit_btn.clicked.connect(self.edit_task)
+        add_child_btn.clicked.connect(self.add_child_task)
         delete_btn.clicked.connect(self.delete_task)
         
-        button_layout = UIUtils.create_button_layout(add_btn, edit_btn, delete_btn)
+        button_layout = UIUtils.create_button_layout(add_btn, add_child_btn, delete_btn)
         self.main_layout.addLayout(button_layout)
         
-        # 任务列表
-        self.task_table = QTableWidget()
-        self.task_table.setColumnCount(7)
-        self.task_table.setHorizontalHeaderLabels(["任务名称", "描述", "开始日期", "结束日期", "状态", "负责人", "进度"])
-        UIUtils.set_table_style(self.task_table)
+        # 任务树形列表
+        self.task_tree = QTreeWidget()
+        self.task_tree.setColumnCount(7)
+        self.task_tree.setHeaderLabels(["任务名称", "描述", "开始日期", "结束日期", "状态", "负责人", "进度"])
+        UIUtils.set_tree_style(self.task_tree)
         
-        self.main_layout.addWidget(self.task_table)
+        self.main_layout.addWidget(self.task_tree)
     
     def load_projects(self):
         Session = sessionmaker(bind=get_engine())
@@ -152,15 +92,17 @@ class ProjectProgressWidget(QWidget):
                 ProjectTask.project_id == self.project_combo.currentData()
             ).all()
             
-            self.task_table.setRowCount(len(tasks))
-            for row, task in enumerate(tasks):
-                self.task_table.setItem(row, 0, QTableWidgetItem(task.name))
-                self.task_table.setItem(row, 1, QTableWidgetItem(task.description))
-                self.task_table.setItem(row, 2, QTableWidgetItem(str(task.start_date)))
-                self.task_table.setItem(row, 3, QTableWidgetItem(str(task.end_date)))
-                self.task_table.setItem(row, 4, QTableWidgetItem(task.status.value))
-                self.task_table.setItem(row, 5, QTableWidgetItem(task.assignee))
-                self.task_table.setItem(row, 6, QTableWidgetItem(f"{task.progress}%"))
+            self.task_tree.clear()
+            for task in tasks:
+                item = QTreeWidgetItem()
+                item.setText(0, task.name)
+                item.setText(1, task.description)
+                item.setText(2, str(task.start_date))
+                item.setText(3, str(task.end_date))
+                item.setText(4, task.status.value)
+                item.setText(5, task.assignee)
+                item.setText(6, f"{task.progress}%")
+                self.task_tree.addTopLevelItem(item)
         finally:
             session.close()
     
@@ -169,72 +111,54 @@ class ProjectProgressWidget(QWidget):
             UIUtils.show_warning(self, "警告", "请先选择项目")
             return
             
-        dialog = TaskDialog(self)
-        if dialog.exec():
-            Session = sessionmaker(bind=get_engine())
-            session = Session()
+        # 添加新行
+        item = QTreeWidgetItem()
+        item.setText(0, "新任务")
+        item.setText(1, "")
+        item.setText(2, QDate.currentDate().toString(Qt.ISODate))
+        item.setText(3, QDate.currentDate().toString(Qt.ISODate))
+        item.setText(4, TaskStatus.NOT_STARTED.value)
+        item.setText(5, "")
+        item.setText(6, "0%")
+        
+        # 设置可编辑
+        for i in range(7):
+            item.setFlags(item.flags() | Qt.ItemIsEditable)
             
-            try:
-                task = ProjectTask(
-                    project_id=self.project_combo.currentData(),
-                    name=dialog.name_edit.text(),
-                    description=dialog.description_edit.toPlainText(),
-                    start_date=dialog.start_date.date().toPython(),
-                    end_date=dialog.end_date.date().toPython(),
-                    status=TaskStatus(dialog.status_combo.currentText()),
-                    assignee=dialog.assignee_edit.text(),
-                    progress=dialog.progress_spin.value()
-                )
-                session.add(task)
-                session.commit()
-                self.load_tasks()
-                UIUtils.show_success(self, "成功", "任务创建成功")
-            finally:
-                session.close()
+        self.task_tree.addTopLevelItem(item)
+        self.task_tree.editItem(item, 0)
     
-    def edit_task(self):
-        selected_items = self.task_table.selectedItems()
+    def add_child_task(self):
+        selected_items = self.task_tree.selectedItems()
         if not selected_items:
-            UIUtils.show_warning(self, "警告", "请先选择要编辑的任务")
+            UIUtils.show_warning(self, "警告", "请先选择父级任务")
             return
-        
-        row = selected_items[0].row()
-        task_name = self.task_table.item(row, 0).text()
-        
-        Session = sessionmaker(bind=get_engine())
-        session = Session()
-        
-        try:
-            task = session.query(ProjectTask).filter(
-                ProjectTask.project_id == self.project_combo.currentData(),
-                ProjectTask.name == task_name
-            ).first()
             
-            if task:
-                dialog = TaskDialog(self, task)
-                if dialog.exec():
-                    task.name = dialog.name_edit.text()
-                    task.description = dialog.description_edit.toPlainText()
-                    task.start_date = dialog.start_date.date().toPython()
-                    task.end_date = dialog.end_date.date().toPython()
-                    task.status = TaskStatus(dialog.status_combo.currentText())
-                    task.assignee = dialog.assignee_edit.text()
-                    task.progress = dialog.progress_spin.value()
-                    
-                    session.commit()
-                    self.load_tasks()
-                    UIUtils.show_success(self, "成功", "任务更新成功")
-        finally:
-            session.close()
+        # 添加子级任务
+        parent_item = selected_items[0]
+        child_item = QTreeWidgetItem(parent_item)
+        child_item.setText(0, "子任务")
+        child_item.setText(1, "")
+        child_item.setText(2, QDate.currentDate().toString(Qt.ISODate))
+        child_item.setText(3, QDate.currentDate().toString(Qt.ISODate))
+        child_item.setText(4, TaskStatus.NOT_STARTED.value)
+        child_item.setText(5, "")
+        child_item.setText(6, "0%")
+        
+        # 设置可编辑
+        for i in range(7):
+            child_item.setFlags(child_item.flags() | Qt.ItemIsEditable)
+            
+        self.task_tree.expandItem(parent_item)
+        self.task_tree.editItem(child_item, 0)
     
     def delete_task(self):
-        selected_items = self.task_table.selectedItems()
+        selected_items = self.task_tree.selectedItems()
         if not selected_items:
             UIUtils.show_warning(self, "警告", "请先选择要删除的任务")
             return
         
-        row = selected_items[0].row()
-        task_name = self.task_table.item(row, 0).text()
+        task_name = selected_items[0].text(0)
         
         Session = sessionmaker(bind=get_engine())
         session = Session()

@@ -78,14 +78,9 @@ class ProjectListWidget(QWidget):
             management_widget = ProjectManagementWidget(project)
             management_widget.setObjectName("projectManagementInterface")
             management_widget.engine = self.engine
-            # 添加到主窗口的导航栏
-            main_window.addSubInterface(
-                management_widget,
-                FluentIcon.SETTING,
-                f"项目管理 - {project.name}"
-            )
-            # 切换到项目管理界面
-            main_window.navigationInterface.setCurrentItem(f"项目管理 - {project.name}")
+            # 直接在主窗口中显示项目管理界面
+            main_window.stackedWidget.addWidget(management_widget)
+            main_window.stackedWidget.setCurrentWidget(management_widget)
     
     def add_project(self):
         dialog = ProjectDialog(self)

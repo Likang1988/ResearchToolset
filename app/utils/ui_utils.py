@@ -54,6 +54,44 @@ class UIUtils:
         table.setSelectionMode(QTableWidget.ExtendedSelection)
         
     @staticmethod
+    def set_tree_style(tree):
+        """设置树形控件通用样式"""
+        tree.setStyleSheet("""
+            QTreeWidget {
+                background-color: transparent;
+                border: 1px solid rgba(0, 0, 0, 0.1);
+                border-radius: 8px;
+                selection-background-color: rgba(0, 120, 212, 0.1);
+                selection-color: black;
+            }
+            QTreeWidget::item {
+                padding: 4px 8px;
+                border: none;
+                height: 32px;
+            }
+            QTreeWidget::item:hover {
+                background-color: rgba(0, 0, 0, 0.05);
+            }
+            QHeaderView::section {
+                background-color: #f3f3f3;  
+                color: #333333;
+                font-weight: 500;
+                padding: 8px;
+                border: none;
+                border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            }
+            QHeaderView::section:hover {
+                background-color: #e5e5e5;
+            }
+        """)
+        
+        # 设置表头属性
+        header = tree.header()
+        header.setSectionResizeMode(QHeaderView.Interactive)
+        header.setSortIndicatorShown(True)
+        header.setSectionsMovable(True)
+        
+    @staticmethod
     def create_title_layout(title_text: str, with_back_button: bool = False, back_button_callback = None):
         """创建标准的标题栏布局"""
         title_layout = QHBoxLayout()
