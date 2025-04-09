@@ -612,7 +612,15 @@ class GanttView(QGraphicsView):
         
         # 计算时间范围
         days = self.start_date.daysTo(self.end_date) + 1
-        total_width = days * self.day_width
+        total_width = days * self.day_width * self.zoom_factor
+        
+        # 根据缩放级别自动调整时间粒度
+        if self.zoom_factor <= 0.5:
+            self.time_scale = "month"
+        elif self.zoom_factor <= 1.0:
+            self.time_scale = "week"
+        else:
+            self.time_scale = "day"
         
         # 绘制时间轴标尺
         self.draw_time_ruler(total_width, days)
@@ -625,44 +633,92 @@ class GanttView(QGraphicsView):
         
     def draw_time_ruler(self, total_width, days):
         """绘制时间标尺"""
-        # 主时间轴
-        ruler = QGraphicsRectItem(0, 0, total_width, 30)
-        ruler.setBrush(QBrush(QColor(240, 240, 240)))
-        ruler.setPen(QPen(Qt.NoPen))
-        self.scene.addItem(ruler)
+        # 双层时间轴
+        header_height = 25  # 每层表头高度
+        total_header_height = header_height * 2
         
-        # 时间刻度
+        # 上层表头背景
+        upper_ruler = QGraphicsRectItem(0, 0, total_width, header_height)
+        upper_ruler.setBrush(QBrush(QColor(240, 240, 240)))
+        upper_ruler.setPen(QPen(Qt.NoPen))
+        self.scene.addItem(upper_ruler)
+        
+        # 下层表头背景
+        lower_ruler = QGraphicsRectItem(0, header_height, total_width, header_height)
+        lower_ruler.setBrush(QBrush(QColor(245, 245, 245)))
+        lower_ruler.setPen(QPen(Qt.NoPen))
+        self.scene.addItem(lower_ruler)
+        
         font = QFont("Arial", 8)
         current_date = self.start_date
-        for i in range(days + 1):
-            x = i * self.day_width
-            line = QGraphicsLineItem(x, 0, x, 30)
+        
+        # 绘制上层表头（年/半年/季度/月）
+        last_upper_x = 0
+        last_upper_label = ""
+        
+        for i in range(days):
+            x = i * self.day_width * self.zoom_factor
+            
+            # 绘制垂直分隔线
+            line = QGraphicsLineItem(x, 0, x, total_header_height)
             line.setPen(QPen(QColor(200, 200, 200)))
             self.scene.addItem(line)
             
-            # 每天/每周/每月显示日期标签
-            if self.time_scale == "day" or \
-               (self.time_scale == "week" and current_date.dayOfWeek() == 1) or \
-               (self.time_scale == "month" and current_date.day() == 1):
-                text = QGraphicsTextItem(current_date.toString("MM-dd"))
+            # 上层表头标签
+            upper_label = ""
+            if self.time_scale == "month":
+                if current_date.day() == 1:
+                    upper_label = current_date.toString("yyyy年MM月")
+            elif self.time_scale == "week":
+                if current_date.dayOfWeek() == 1:
+                    upper_label = f"{current_date.year()}年第{current_date.weekNumber()[0]}周"
+            else:  # day
+                if current_date.day() == 1:
+                    upper_label = current_date.toString("yyyy年MM月")
+            
+            if upper_label and upper_label != last_upper_label:
+                text = QGraphicsTextItem(upper_label)
                 text.setFont(font)
                 text.setPos(x + 2, 5)
                 self.scene.addItem(text)
-                
+                last_upper_x = x
+                last_upper_label = upper_label
+            
+            # 下层表头标签
+            if self.time_scale == "month":
+                if current_date.day() == 1:
+                    text = QGraphicsTextItem(current_date.toString("MM月"))
+                    text.setFont(font)
+                    text.setPos(x + 2, header_height + 5)
+                    self.scene.addItem(text)
+            elif self.time_scale == "week":
+                if current_date.dayOfWeek() == 1:
+                    text = QGraphicsTextItem(current_date.toString("MM-dd"))
+                    text.setFont(font)
+                    text.setPos(x + 2, header_height + 5)
+                    self.scene.addItem(text)
+            else:  # day
+                text = QGraphicsTextItem(current_date.toString("dd"))
+                text.setFont(font)
+                text.setPos(x + 2, header_height + 5)
+                self.scene.addItem(text)
+            
             current_date = current_date.addDays(1)
             
     def draw_grid_lines(self, total_width, days):
         """绘制网格线"""
+        header_height = 50  # 双层表头总高度
+        
         # 垂直网格线
         for i in range(days + 1):
-            x = i * self.day_width
-            line = QGraphicsLineItem(x, 30, x, 1000)
+            x = i * self.day_width * self.zoom_factor
+            line = QGraphicsLineItem(x, header_height, x, 1000)
             line.setPen(QPen(QColor(230, 230, 230)))
             self.scene.addItem(line)
             
         # 水平网格线
         for i in range(50):  # 假设最多50行
-            y = 30 + i * self.row_height
+            y = header_height + i * self.row_height
             line = QGraphicsLineItem(0, y, total_width, y)
             line.setPen(QPen(QColor(230, 230, 230)))
             self.scene.addItem(line)
@@ -677,7 +733,7 @@ class GanttView(QGraphicsView):
             start_offset = self.start_date.daysTo(QDate.fromString(str(task.start_date), "yyyy-MM-dd"))
             duration = (task.end_date - task.start_date).days + 1
             x = start_offset * self.day_width * self.zoom_factor
-            y = 30 + i * self.row_height + 5
+            y = 50 + i * self.row_height + 5  # 调整起始位置到双层表头下方
             width = duration * self.day_width * self.zoom_factor
             height = self.row_height - 10
             

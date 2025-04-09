@@ -8,7 +8,6 @@ from .home_interface import HomeInterface
 from .help_interface import HelpInterface
 from .budgeting_interface import BudgetingInterface
 from .tools_interface import ToolsInterface
-from .projecting_interface.project_list import ProjectListWidget
 import os
 
 class MainWindow(FluentWindow):
@@ -39,10 +38,6 @@ class MainWindow(FluentWindow):
         self.help_interface = HelpInterface()
         self.help_interface.setObjectName("helpInterface")
 
-        # 创建项目管理界面实例
-        self.project_interface = ProjectListWidget()
-        self.project_interface.setObjectName("projectInterface")
-        self.project_interface.engine = self.engine
         
         # 添加导航项
         self.addSubInterface(
@@ -56,7 +51,7 @@ class MainWindow(FluentWindow):
         self.addSubInterface(  
             self.funding_interface,
             QIcon(funding_icon_path),
-            "经费追踪"
+            "科研项目"
         )
         
         # 添加预算编制导航项
@@ -83,13 +78,6 @@ class MainWindow(FluentWindow):
             "小工具"
         )
 
-        # 添加项目管理导航项
-        project_icon_path = os.path.join(os.path.dirname(__file__), '..', 'assets', 'icons', 'project_tab.svg')
-        self.addSubInterface(
-            self.project_interface,
-            QIcon(project_icon_path),
-            "项目管理"
-        )
         
         # 设置当前页面
         self.navigationInterface.setCurrentItem("主页")

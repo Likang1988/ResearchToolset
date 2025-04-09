@@ -96,8 +96,8 @@ class ProjectListWindow(QWidget):
         self.project_table = TableWidget()
         self.project_table.setColumnCount(9)  # 增加一列
         self.project_table.setHorizontalHeaderLabels([
-            "财务编号", "项目名称", "项目编号", 
-            "项目类别", "开始日期", "结束日期", "总经费\n（万元）", "执行率", "预算管理"
+            "财务编号", "项目名称", "项目编号",
+            "项目类别", "开始日期", "结束日期", "总经费\n（万元）", "项目\n管理", "经费\n管理"
         ])
         self.project_table.setSelectionBehavior(TableWidget.SelectRows)
         self.project_table.setSelectionMode(TableWidget.SingleSelection)
@@ -115,14 +115,14 @@ class ProjectListWindow(QWidget):
         
         # 设置初始列宽
         header.resizeSection(0, 93)  # 财务编号
-        header.resizeSection(1, 320)  # 项目名称
-        header.resizeSection(2, 130)  # 项目编号
-        header.resizeSection(3, 150)  # 项目类别
+        header.resizeSection(1, 330)  # 项目名称
+        header.resizeSection(2, 150)  # 项目编号
+        header.resizeSection(3, 180)  # 项目类别
         header.resizeSection(4, 90)  # 开始日期
         header.resizeSection(5, 90)  # 结束日期
         header.resizeSection(6, 80)  # 总经费
-        header.resizeSection(7, 80)  # 执行率
-        header.resizeSection(8, 80)  # 操作
+        header.resizeSection(7, 50)  # 项目管理
+        header.resizeSection(8, 50)  # 经费管理
         
         # 允许用户调整列宽
         header.setSectionsMovable(True)  # 可移动列
@@ -171,13 +171,40 @@ class ProjectListWindow(QWidget):
                         Budget.year.isnot(None)  # 只计算年度预算
                     ).scalar() or 0.0
                     
-                    execution_rate = (total_spent / total_budget.total_amount) * 100
-                    self.project_table.setItem(row_position, 7, QTableWidgetItem(f"{execution_rate:.2f}%"))
+                    # 添加项目管理按钮
+                    btn_widget = QWidget()
+                    btn_layout = QHBoxLayout(btn_widget)
+                    btn_layout.setContentsMargins(0, 0, 0, 0)
+                    btn_layout.setAlignment(Qt.AlignCenter)
+                    
+                    manage_btn = ToolButton()
+                    manage_btn.setIcon(FluentIcon.SETTING)
+                    manage_btn.setToolTip("项目管理")
+                    manage_btn.clicked.connect(lambda checked, p=project: self.open_project_management(p))
+                    btn_layout.addWidget(manage_btn)
+                    manage_btn.setFixedSize(26, 26)
+                    manage_btn.setIconSize(QSize(16, 16))
+                    
+                    self.project_table.setCellWidget(row_position, 7, btn_widget)
                 else:
-                    self.project_table.setItem(row_position, 7, QTableWidgetItem("0.00%"))
+                    # 添加项目管理按钮（默认启用）
+                    btn_widget = QWidget()
+                    btn_layout = QHBoxLayout(btn_widget)
+                    btn_layout.setContentsMargins(0, 0, 0, 0)
+                    btn_layout.setAlignment(Qt.AlignCenter)
+                    
+                    manage_btn = ToolButton()
+                    manage_btn.setIcon(FluentIcon.SETTING)
+                    manage_btn.setToolTip("项目管理")
+                    manage_btn.clicked.connect(lambda checked, p=project: self.open_project_management(p))
+                    btn_layout.addWidget(manage_btn)
+                    manage_btn.setFixedSize(26, 26)
+                    manage_btn.setIconSize(QSize(16, 16))
+                    
+                    self.project_table.setCellWidget(row_position, 7, btn_widget)
                 
                 
-                # 预算管理按钮
+                # 经费管理按钮
                 btn_widget = QWidget()  # 创建一个新的QWidget
                 btn_layout = QHBoxLayout(btn_widget)
                 btn_layout.setContentsMargins(0, 0, 0, 0)
@@ -185,7 +212,7 @@ class ProjectListWindow(QWidget):
                 
                 budget_btn = ToolButton()
                 budget_btn.setIcon(QIcon(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'icons', 'budget.svg'))))
-                budget_btn.setToolTip("预算管理")
+                budget_btn.setToolTip("经费管理")
                 budget_btn.clicked.connect(lambda checked=False, p=project: self.open_budget_list(p))  # 传递项目对象
                 btn_layout.addWidget(budget_btn)  # 将按钮添加到布局中
                 # 按钮大小
@@ -207,7 +234,7 @@ class ProjectListWindow(QWidget):
                     item = self.project_table.item(row_position, col)
                     if item:
                         # 第0、2、3、4、5列设置为居中对齐
-                        if col in [0, 2, 3, 4, 5]:
+                        if col in [0, 1, 2, 3, 4, 5]:
                             item.setTextAlignment(Qt.AlignCenter)
                         # 第6列(总经费)设置为右对齐
                         elif col in [6, 7]:
@@ -468,6 +495,20 @@ class ProjectListWindow(QWidget):
         
         # 切换到经费清单页面
         self.stacked_widget.setCurrentWidget(self.budget_window)
+
+    def open_project_management(self, project):
+        """打开项目管理界面"""
+        # 获取主窗口实例
+        main_window = self.window()
+        if main_window:
+            # 创建项目管理界面
+            from app.views.projecting_interface.project_management import ProjectManagementWidget
+            management_widget = ProjectManagementWidget(project)
+            management_widget.setObjectName("projectManagementInterface")
+            management_widget.engine = self.engine
+            # 直接在主窗口中显示项目管理界面
+            main_window.stackedWidget.addWidget(management_widget)
+            main_window.stackedWidget.setCurrentWidget(management_widget)
     def add_budget(self, budget_data):
         """添加项目预算"""
         Session = sessionmaker(bind=self.engine)
