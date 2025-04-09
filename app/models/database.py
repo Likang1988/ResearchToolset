@@ -217,9 +217,23 @@ def get_budget_usage(session, project_id, budget_id=None):
 def migrate_db(engine):
     """迁移数据库"""
     from sqlalchemy import text
+    from .project_task import migrate_project_tasks
     
     connection = engine.connect()
     transaction = connection.begin()
+    
+    # 执行项目任务表迁移
+    migrate_project_tasks(engine)
+    
+    # 检查project_achievements表是否存在submit_date列
+    result = connection.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='project_achievements'"))
+    if result.fetchone():
+        result = connection.execute(text("PRAGMA table_info(project_achievements)"))
+        columns = [row[1] for row in result.fetchall()]
+        
+        if 'submit_date' not in columns:
+            # 添加submit_date列
+            connection.execute(text("ALTER TABLE project_achievements ADD COLUMN submit_date DATE"))
     
     try:
         # 检查expenses表是否存在

@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QComboBox, QLineEdit, QFileDialog
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QComboBox, QLineEdit, QFileDialog, QDialog
 from PySide6.QtCore import Qt
 from qfluentwidgets import TitleLabel, PrimaryPushButton, FluentIcon, InfoBar, Dialog
 from ...utils.ui_utils import UIUtils
@@ -12,7 +12,7 @@ import shutil
 
 class DocumentType(Enum):
     APPLICATION = "申请书"
-    CONTRACT = "合同"
+    CONTRACT = "合同/任务书"
     RESEARCH_DATA = "研究数据"
     RESULT = "成果文件"
     MEETING = "会议纪要"
@@ -32,23 +32,24 @@ class ProjectDocument(Base):
     uploader = Column(String(50))  # 上传人
     keywords = Column(String(200))  # 关键词，用于检索
 
-class DocumentDialog(Dialog):
+class DocumentDialog(QDialog):
     def __init__(self, parent=None, document=None):
         self.document = document
-        super().__init__("文档信息", "", parent)
+        super().__init__(parent)
+        self.setWindowTitle("文档信息")
         self.setup_ui()
         if document:
             self.load_document_data()
     
     def setup_ui(self):
-        self.setWindowTitle("文档信息")
-        layout = self.contentLayout()
+        layout = QVBoxLayout(self)
+        layout.setSpacing(16)
+        layout.setContentsMargins(24, 24, 24, 24)
         
         # 文档表单
         self.name_edit = QLineEdit()
         self.name_edit.setPlaceholderText("文档名称")
         layout.addWidget(self.name_edit)
-        
         self.type_combo = QComboBox()
         for doc_type in DocumentType:
             self.type_combo.addItem(doc_type.value)
@@ -115,31 +116,6 @@ class ProjectDocumentWidget(QWidget):
     def setup_ui(self):
         self.main_layout = QVBoxLayout(self)
         
-        # 标题栏
-        title_layout = UIUtils.create_title_layout("项目文档管理")
-        self.main_layout.addLayout(title_layout)
-        
-        # 项目选择
-        self.project_combo = QComboBox()
-        self.load_projects()
-        self.main_layout.addWidget(self.project_combo)
-        
-        # 搜索栏
-        search_layout = QHBoxLayout()
-        self.search_edit = QLineEdit()
-        self.search_edit.setPlaceholderText("输入关键词搜索文档")
-        self.search_edit.textChanged.connect(self.search_documents)
-        search_layout.addWidget(self.search_edit)
-        
-        self.type_filter = QComboBox()
-        self.type_filter.addItem("全部类型")
-        for doc_type in DocumentType:
-            self.type_filter.addItem(doc_type.value)
-        self.type_filter.currentTextChanged.connect(self.search_documents)
-        search_layout.addWidget(self.type_filter)
-        
-        self.main_layout.addLayout(search_layout)
-        
         # 按钮栏
         add_btn = UIUtils.create_action_button("上传文档", FluentIcon.ADD)
         edit_btn = UIUtils.create_action_button("编辑文档", FluentIcon.EDIT)
@@ -161,31 +137,30 @@ class ProjectDocumentWidget(QWidget):
         UIUtils.set_table_style(self.document_table)
         
         self.main_layout.addWidget(self.document_table)
-    
-    def load_projects(self):
-        Session = sessionmaker(bind=get_engine())
-        session = Session()
         
-        try:
-            projects = session.query(Project).all()
-            self.project_combo.clear()
-            for project in projects:
-                self.project_combo.addItem(project.name, project.id)
-            
-            self.project_combo.currentIndexChanged.connect(self.load_documents)
-        finally:
-            session.close()
+        # 搜索栏
+        search_layout = QHBoxLayout()
+        self.search_edit = QLineEdit()
+        self.search_edit.setPlaceholderText("输入关键词搜索文档")
+        self.search_edit.textChanged.connect(self.search_documents)
+        search_layout.addWidget(self.search_edit)
+        
+        self.type_filter = QComboBox()
+        self.type_filter.addItem("全部类型")
+        for doc_type in DocumentType:
+            self.type_filter.addItem(doc_type.value)
+        self.type_filter.currentTextChanged.connect(self.search_documents)
+        search_layout.addWidget(self.type_filter)
+        
+        self.main_layout.addLayout(search_layout)
     
     def load_documents(self):
-        if self.project_combo.currentData() is None:
-            return
-            
         Session = sessionmaker(bind=get_engine())
         session = Session()
         
         try:
             documents = session.query(ProjectDocument).filter(
-                ProjectDocument.project_id == self.project_combo.currentData()
+                ProjectDocument.project_id == self.project.id
             ).all()
             
             self.document_table.setRowCount(len(documents))
@@ -226,10 +201,6 @@ class ProjectDocumentWidget(QWidget):
             self.document_table.setRowHidden(row, not show_row)
     
     def add_document(self):
-        if self.project_combo.currentData() is None:
-            UIUtils.show_warning(self, "警告", "请先选择项目")
-            return
-            
         dialog = DocumentDialog(self)
         if dialog.exec():
             file_path = dialog.file_path_edit.text()
@@ -238,7 +209,7 @@ class ProjectDocumentWidget(QWidget):
                 return
             
             # 复制文件到项目文档目录
-            project_doc_dir = os.path.join("documents", str(self.project_combo.currentData()))
+            project_doc_dir = os.path.join("documents", str(self.project.id))
             os.makedirs(project_doc_dir, exist_ok=True)
             
             new_file_path = os.path.join(project_doc_dir, os.path.basename(file_path))
@@ -249,7 +220,7 @@ class ProjectDocumentWidget(QWidget):
             
             try:
                 document = ProjectDocument(
-                    project_id=self.project_combo.currentData(),
+                    project_id=self.project.id,
                     name=dialog.name_edit.text(),
                     doc_type=DocumentType(dialog.type_combo.currentText()),
                     version=dialog.version_edit.text(),
@@ -279,7 +250,7 @@ class ProjectDocumentWidget(QWidget):
         
         try:
             document = session.query(ProjectDocument).filter(
-                ProjectDocument.project_id == self.project_combo.currentData(),
+                ProjectDocument.project_id == self.project.id,
                 ProjectDocument.name == doc_name
             ).first()
             
@@ -295,7 +266,7 @@ class ProjectDocumentWidget(QWidget):
                     
                     new_file_path = dialog.file_path_edit.text()
                     if new_file_path and new_file_path != document.file_path:
-                        project_doc_dir = os.path.join("documents", str(self.project_combo.currentData()))
+                        project_doc_dir = os.path.join("documents", str(self.project.id))
                         os.makedirs(project_doc_dir, exist_ok=True)
                         
                         new_file_path = os.path.join(project_doc_dir, os.path.basename(new_file_path))
@@ -322,7 +293,7 @@ class ProjectDocumentWidget(QWidget):
         
         try:
             document = session.query(ProjectDocument).filter(
-                ProjectDocument.project_id == self.project_combo.currentData(),
+                ProjectDocument.project_id == self.project.id,
                 ProjectDocument.name == doc_name
             ).first()
             
