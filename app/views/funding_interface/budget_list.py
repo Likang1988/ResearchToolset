@@ -361,7 +361,7 @@ class BudgetListWindow(QWidget):
                 btn_layout.setContentsMargins(0, 0, 0, 0)
                 
                 expense_btn = ToolButton()
-                expense_btn.setIcon(QIcon(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'logo', 'expense.svg'))))
+                expense_btn.setIcon(QIcon(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'icons', 'expense.svg'))))
                 expense_btn.setToolTip("支出管理")
                 expense_btn.clicked.connect(lambda checked=False, b=budget: self.open_expense_list(b))
                 btn_layout.addWidget(expense_btn)

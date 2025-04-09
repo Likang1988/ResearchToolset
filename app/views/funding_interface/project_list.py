@@ -184,7 +184,7 @@ class ProjectListWindow(QWidget):
                 btn_layout.setAlignment(Qt.AlignCenter)  # 设置按钮居中对齐
                 
                 budget_btn = ToolButton()
-                budget_btn.setIcon(QIcon(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'logo', 'budget.svg'))))
+                budget_btn.setIcon(QIcon(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'icons', 'budget.svg'))))
                 budget_btn.setToolTip("预算管理")
                 budget_btn.clicked.connect(lambda checked=False, p=project: self.open_budget_list(p))  # 传递项目对象
                 btn_layout.addWidget(budget_btn)  # 将按钮添加到布局中

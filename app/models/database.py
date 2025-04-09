@@ -34,6 +34,7 @@ class Project(Base):
     end_date = Column(Date)
     total_budget = Column(Float, default=0.00)
     budgets = relationship("Budget", back_populates="project", cascade="all, delete-orphan")
+    tasks = relationship("ProjectTask", back_populates="project", cascade="all, delete-orphan")
 
 class Budget(Base):
     """预算"""

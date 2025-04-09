@@ -39,7 +39,7 @@ class ToolsInterface(QWidget):
         # 工具图标和名称
         tool_layout = QHBoxLayout()
         icon_label = QLabel()
-        icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'logo', 'calculator.svg')
+        icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'icons', 'calculator.svg')
         icon_label.setPixmap(QIcon(icon_path).pixmap(32, 32)) # 设置图标大小
         name_label = QLabel("间接经费计算器")
         tool_layout.addWidget(icon_label)
@@ -61,7 +61,7 @@ class ToolsInterface(QWidget):
         # 工具图标和名称
         treelist_tool_layout = QHBoxLayout()
         treelist_icon_label = QLabel()
-        treelist_icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'logo', 'treelist.svg')
+        treelist_icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'icons', 'treelist.svg')
         treelist_icon_label.setPixmap(QIcon(treelist_icon_path).pixmap(32, 32)) # 设置图标大小
         treelist_name_label = QLabel("树形列表工具")
         treelist_tool_layout.addWidget(treelist_icon_label)

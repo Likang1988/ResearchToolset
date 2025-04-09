@@ -1,465 +1,855 @@
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QComboBox,
-                              QDateEdit, QTextEdit, QSpinBox, QLabel, QMenu,
-                              QGraphicsItem, QGraphicsRectItem, QDialog,
-                              QListWidget, QPushButton, QInputDialog,
-                              QGraphicsView, QTreeWidget, QTreeWidgetItem)
-from PySide6.QtCore import Qt, QDate, QRectF, QPoint, Signal
-from PySide6.QtGui import (QPainter, QColor, QLinearGradient,
-                          QMouseEvent, QContextMenuEvent, QBrush, QPen,
-                          QCursor)
-from PySide6.QtCharts import (QChart, QChartView, QBarCategoryAxis,
-                             QValueAxis, QBarSet, QBarSeries, QLineSeries)
-from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest
-from PySide6.QtWebSockets import QWebSocket
-from qfluentwidgets import TitleLabel, PrimaryPushButton, FluentIcon, InfoBar, Dialog, LineEdit
-from app.utils.ui_utils import UIUtils
-from ...models.database import Project, Base, get_engine
+import sys
+import math
+from PySide6.QtWidgets import (QApplication, QMainWindow, QSplitter, QWidget,
+                            QVBoxLayout, QHBoxLayout, QToolBar,
+                            QTableView, QHeaderView, QAbstractItemView,
+                            QStyledItemDelegate, QComboBox, QGraphicsView,
+                            QGraphicsScene, QGraphicsRectItem, QGraphicsTextItem,
+                            QGraphicsLineItem, QGraphicsPolygonItem)
+from PySide6.QtCore import Qt, QSize, QDate, QAbstractTableModel, QModelIndex, QRectF, QPointF
+from PySide6.QtGui import QIcon, QBrush, QColor, QPen, QFont, QPainter, QPolygonF, QAction
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum as SQLEnum
-from enum import Enum
+from app.models.database import get_engine
+from app.models.project_task import ProjectTask, TaskStatus
+from datetime import datetime
+import os
 
-class TaskStatus(Enum):
-    NOT_STARTED = "未开始"
-    IN_PROGRESS = "进行中"
-    COMPLETED = "已完成"
-    DELAYED = "已延期"
-
-class ProjectTask(Base):
-    __tablename__ = 'project_tasks'
+class TaskTableModel(QAbstractTableModel):
+    """任务表格数据模型"""
+    COLUMNS = [
+        ("任务编码", "id"),
+        ("任务名称", "name"), 
+        ("开始时间", "start_date"),
+        ("结束时间", "end_date"),
+        ("工期(天)", "duration"),
+        ("进度(%)", "progress"),
+        ("前置任务", "dependencies"),
+        ("负责人", "assignee"),
+        ("描述", "description")
+    ]
     
-    id = Column(Integer, primary_key=True)
-    project_id = Column(Integer, ForeignKey('projects.id'), nullable=False)
-    name = Column(String(100), nullable=False)  # 任务名称
-    description = Column(String(500))  # 任务描述
-    start_date = Column(Date)  # 开始日期
-    end_date = Column(Date)  # 结束日期
-    status = Column(SQLEnum(TaskStatus), default=TaskStatus.NOT_STARTED)  # 任务状态
-    progress = Column(Integer, default=0)  # 进度百分比
-    dependencies = Column(String)  # 依赖任务ID列表(JSON格式)
-    assignee = Column(String(50))  # 负责人
-    phase = Column(String(20))  # 研究阶段
-
-
-
-class GanttBarItem(QGraphicsRectItem):
-    """甘特图任务条图形项"""
-    def __init__(self, task_id, rect, parent=None):
-        super().__init__(rect, parent)
-        self.task_id = task_id
-        self.setAcceptHoverEvents(True)
-        self.setFlag(QGraphicsItem.ItemIsMovable, True)
-        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
-        
-    def mousePressEvent(self, event):
-        self.setCursor(Qt.ClosedHandCursor)
-        super().mousePressEvent(event)
-        
-    def mouseReleaseEvent(self, event):
-        self.setCursor(Qt.OpenHandCursor)
-        super().mouseReleaseEvent(event)
-        
-    def hoverEnterEvent(self, event):
-        self.setCursor(Qt.OpenHandCursor)
-        super().hoverEnterEvent(event)
-        
-    def hoverLeaveEvent(self, event):
-        self.unsetCursor()
-        super().hoverLeaveEvent(event)
-
-class GanttChartView(QGraphicsView):
-    """自定义甘特图视图"""
-    def __init__(self, parent=None):
+    def __init__(self, session, project_id=None, parent=None):
         super().__init__(parent)
-        self.setRenderHint(QPainter.Antialiasing)
-        self.setRenderHint(QPainter.TextAntialiasing)
-        self.setDragMode(QGraphicsView.ScrollHandDrag)
-        self.setOptimizationFlag(QGraphicsView.DontAdjustForAntialiasing)
-        self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
-        
-    def wheelEvent(self, event):
-        """处理滚轮缩放事件"""
-        zoom_factor = 1.2
-        if event.angleDelta().y() > 0:
-            self.scale(zoom_factor, zoom_factor)
-        else:
-            self.scale(1.0 / zoom_factor, 1.0 / zoom_factor)
-
-class TeamManagementDialog(QDialog):
-    """团队管理对话框"""
-    def __init__(self, project_id, parent=None):
-        super().__init__(parent)
+        self.session = session
         self.project_id = project_id
-        self.setWindowTitle("团队管理")
-        self.setup_ui()
-        self.load_team_members()
-        
-    def setup_ui(self):
-        layout = QVBoxLayout(self)
-        
-        self.member_list = QListWidget()
-        layout.addWidget(self.member_list)
-        
-        button_layout = QHBoxLayout()
-        add_btn = QPushButton("添加成员")
-        remove_btn = QPushButton("移除成员")
-        
-        add_btn.clicked.connect(self.add_member)
-        remove_btn.clicked.connect(self.remove_member)
-        
-        button_layout.addWidget(add_btn)
-        button_layout.addWidget(remove_btn)
-        layout.addLayout(button_layout)
-        
-    def load_team_members(self):
-        """加载团队成员"""
-        Session = sessionmaker(bind=get_engine())
-        session = Session()
+        self.tasks = []
+        self.expanded_tasks = set()  # 记录展开的任务ID
+        self.visible_tasks = []  # 当前可见的任务列表
+        self.load_data()
+    
+    def load_data(self):
+        """从数据库加载任务数据"""
+        self.beginResetModel()
         try:
-            project = session.query(Project).get(self.project_id)
-            self.member_list.clear()
-            for member in project.team_members.split(','):
-                if member.strip():
-                    self.member_list.addItem(member.strip())
+            query = self.session.query(ProjectTask)
+            if self.project_id:
+                query = query.filter(ProjectTask.project_id == self.project_id)
+            self.tasks = query.order_by(ProjectTask.level, ProjectTask.id).all()
+            self.update_visible_tasks()
+        except Exception as e:
+            print(f"加载任务数据失败: {str(e)}")
+            self.tasks = []
+            self.visible_tasks = []
         finally:
-            session.close()
+            self.endResetModel()
+    
+    def update_visible_tasks(self):
+        """更新可见任务列表"""
+        self.visible_tasks = []
+        for task in self.tasks:
+            if task.parent_id is None:  # 顶层任务
+                self.visible_tasks.append(task)
+                if task.id in self.expanded_tasks:
+                    self._add_child_tasks(task)
+    
+    def _add_child_tasks(self, parent_task):
+        """递归添加子任务到可见列表"""
+        for task in self.tasks:
+            if task.parent_id == parent_task.id:
+                self.visible_tasks.append(task)
+                if task.id in self.expanded_tasks:
+                    self._add_child_tasks(task)
+    
+    def toggle_task_expanded(self, index):
+        """切换任务的展开/折叠状态"""
+        if not index.isValid():
+            return
+        
+        task = self.visible_tasks[index.row()]
+        has_children = any(t.parent_id == task.id for t in self.tasks)
+        
+        if has_children:
+            self.beginResetModel()
+            if task.id in self.expanded_tasks:
+                self.expanded_tasks.remove(task.id)
+            else:
+                self.expanded_tasks.add(task.id)
+            self.update_visible_tasks()
+            self.endResetModel()
+    
+
+        
+    def load_data(self):
+        """从数据库加载任务数据"""
+        self.beginResetModel()
+        try:
+            query = self.session.query(ProjectTask)
+            if self.project_id:
+                query = query.filter(ProjectTask.project_id == self.project_id)
+            self.tasks = query.order_by(ProjectTask.id).all()
+        except Exception as e:
+            print(f"加载任务数据失败: {str(e)}")
+            self.tasks = []
+        finally:
+            self.endResetModel()
+    
+    def rowCount(self, parent=QModelIndex()):
+        """返回行数"""
+        return len(self.visible_tasks)
+    
+    def columnCount(self, parent=QModelIndex()):
+        """返回列数"""
+        return len(self.COLUMNS)
+    
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
+        """设置表头数据"""
+        if role == Qt.DisplayRole and orientation == Qt.Horizontal:
+            return self.COLUMNS[section][0]
+        return super().headerData(section, orientation, role)
+    
+    def data(self, index, role=Qt.DisplayRole):
+        """获取单元格数据"""
+        if not index.isValid() or not (0 <= index.row() < len(self.visible_tasks)):
+            return None
             
-    def add_member(self):
-        """添加新成员"""
-        name, ok = QInputDialog.getText(
-            self, "添加成员", "输入成员姓名:")
-        if ok and name:
-            self.member_list.addItem(name)
+        task = self.visible_tasks[index.row()]
+        col_name = self.COLUMNS[index.column()][1]
+        
+        if role == Qt.DisplayRole or role == Qt.EditRole:
+            if col_name == "name":
+                indent = "    " * task.level
+                has_children = any(t.parent_id == task.id for t in self.tasks)
+                if has_children:
+                    expand_icon = "▼" if task.id in self.expanded_tasks else "▶"
+                    return f"{indent}{expand_icon} {task.name}"
+                return f"{indent}{task.name}"
+        
+        if role == Qt.DisplayRole or role == Qt.EditRole:
+            if col_name == "duration":
+                if task.start_date and task.end_date:
+                    return (task.end_date - task.start_date).days + 1
+                return 0
+            elif col_name == "dependencies":
+                deps = task.dependencies
+                return ", ".join(str(dep) for dep in deps) if deps else ""
+            return getattr(task, col_name, "")
             
-    def remove_member(self):
-        """移除选中成员"""
-        if self.member_list.currentItem():
-            self.member_list.takeItem(self.member_list.currentRow())
+        elif role == Qt.BackgroundRole:
+            if task.status == TaskStatus.COMPLETED:
+                return QBrush(QColor(220, 255, 220))
+            elif task.status == TaskStatus.DELAYED:
+                return QBrush(QColor(255, 220, 220))
+            elif task.status == TaskStatus.IN_PROGRESS:
+                return QBrush(QColor(220, 220, 255))
+                
+        return None
+    
+    def setData(self, index, value, role=Qt.EditRole):
+        """设置单元格数据"""
+        if not index.isValid() or role != Qt.EditRole:
+            return False
             
-    def get_team_members(self):
-        """获取团队成员列表"""
-        return [self.member_list.item(i).text()
-                for i in range(self.member_list.count())]
+        task = self.tasks[index.row()]
+        col_name = self.COLUMNS[index.column()][1]
+        
+        try:
+            if col_name == "start_date" or col_name == "end_date":
+                if isinstance(value, str):
+                    value = datetime.strptime(value, "%Y-%m-%d").date()
+                setattr(task, col_name, value)
+            elif col_name == "progress":
+                value = int(value)
+                setattr(task, col_name, value)
+                task.status = TaskStatus.COMPLETED if value == 100 else (
+                    TaskStatus.IN_PROGRESS if value > 0 else TaskStatus.NOT_STARTED)
+            elif col_name == "dependencies":
+                deps = [int(dep.strip()) for dep in value.split(",") if dep.strip()]
+                task.dependencies = deps
+            else:
+                setattr(task, col_name, value)
+                
+            self.session.commit()
+            self.dataChanged.emit(index, index)
+            return True
+        except Exception as e:
+            print(f"更新任务数据失败: {str(e)}")
+            self.session.rollback()
+            return False
+    
+    def flags(self, index):
+        """设置单元格标志"""
+        default_flags = super().flags(index)
+        if index.isValid():
+            return default_flags | Qt.ItemIsEditable
+        return default_flags
+    
+    def add_task(self, task_data):
+        """添加新任务"""
+        row = len(self.tasks)
+        self.beginInsertRows(QModelIndex(), row, row)
+        try:
+            task = ProjectTask(**task_data)
+            self.session.add(task)
+            self.session.commit()
+            self.tasks.append(task)
+            self.endInsertRows()
+            return True
+        except Exception as e:
+            print(f"添加任务失败: {str(e)}")
+            self.session.rollback()
+            self.endInsertRows()
+            return False
+    
+    def remove_task(self, row):
+        """删除任务"""
+        if 0 <= row < len(self.tasks):
+            self.beginRemoveRows(QModelIndex(), row, row)
+            try:
+                task = self.tasks.pop(row)
+                self.session.delete(task)
+                self.session.commit()
+                self.endRemoveRows()
+                return True
+            except Exception as e:
+                print(f"删除任务失败: {str(e)}")
+                self.session.rollback()
+                self.endRemoveRows()
+                return False
+        return False
+
+class StatusDelegate(QStyledItemDelegate):
+    """状态列委托"""
+    def createEditor(self, parent, option, index):
+        if index.column() == 5:  # 进度列
+            editor = QComboBox(parent)
+            editor.addItems([str(i) for i in range(0, 101, 10)])
+            return editor
+        return super().createEditor(parent, option, index)
 
 class ProjectProgressWidget(QWidget):
-    taskUpdated = Signal()
-    taskDragged = Signal(int, QDate, QDate)  # task_id, new_start, new_end
-    
+    """项目进度管理窗口"""
     def __init__(self, project, parent=None):
         super().__init__(parent=parent)
         self.project = project
-        self.dragging_task = None
-        self.drag_start_pos = None
-        self.network_manager = QNetworkAccessManager()
-        self.websocket = QWebSocket()
+        self.engine = get_engine()
+        self.session = sessionmaker(bind=self.engine)()
         self.setup_ui()
-        self.load_tasks()
-        self.setup_connections()
-    
+        
     def setup_ui(self):
-        """设置用户界面"""
         self.main_layout = QVBoxLayout(self)
         
-        # 工具栏
-        toolbar = QHBoxLayout()
+        # 创建工具栏
+        toolbar = QToolBar()
+        toolbar.setIconSize(QSize(24, 24))
         
-        # 时间范围选择
-        self.timeframe_combo = QComboBox()
-        self.timeframe_combo.addItems(["天视图", "周视图", "月视图"])
-        toolbar.addWidget(QLabel("显示:"))
-        toolbar.addWidget(self.timeframe_combo)
-        
-        # 团队按钮
-        team_btn = UIUtils.create_action_button("团队", FluentIcon.PEOPLE)
-        team_btn.clicked.connect(self.manage_team)
-        toolbar.addWidget(team_btn)
-        
-        # 导出按钮
-        export_btn = UIUtils.create_action_button("导出", FluentIcon.SAVE)
-        export_btn.clicked.connect(self.show_export_menu)
-        toolbar.addWidget(export_btn)
-        
-        # 协作按钮
-        self.collab_btn = UIUtils.create_action_button("协作", FluentIcon.SHARE)
-        self.collab_btn.setCheckable(True)
-        self.collab_btn.clicked.connect(self.toggle_collaboration)
-        toolbar.addWidget(self.collab_btn)
-        
-        self.main_layout.addLayout(toolbar)
-        
-        # 甘特图视图
-        self.chart = QChart()
-        self.chart.setAnimationOptions(QChart.SeriesAnimations)
-        self.chart.setTheme(QChart.ChartThemeLight)
-        
-        self.chart_view = GanttChartView(self)
-        self.chart_view.setRenderHint(QPainter.Antialiasing)
-        self.chart_view.setMouseTracking(True)
-        
-        # 任务树控件
-        self.task_tree = QTreeWidget()
-        self.task_tree.setHeaderLabels(["任务名称", "描述", "开始日期", "结束日期", "状态", "负责人", "进度"])
-        self.task_tree.setColumnWidth(0, 200)
-        self.main_layout.addWidget(self.task_tree)
-        
-        # 添加任务按钮
-        btn_layout = QHBoxLayout()
-        add_btn = QPushButton("添加任务")
-        add_child_btn = QPushButton("添加子任务")
-        delete_btn = QPushButton("删除任务")
-        
-        add_btn.clicked.connect(self.add_task)
-        add_child_btn.clicked.connect(self.add_child_task)
-        delete_btn.clicked.connect(self.delete_task)
-        
-        btn_layout.addWidget(add_btn)
-        btn_layout.addWidget(add_child_btn)
-        btn_layout.addWidget(delete_btn)
-        self.main_layout.addLayout(btn_layout)
-        
-        self.main_layout.addWidget(self.chart_view)
-        
-        # 状态栏
-        self.status_label = QLabel()
-        self.main_layout.addWidget(self.status_label)
-    
-    def setup_connections(self):
-        """设置信号槽连接"""
-        self.timeframe_combo.currentTextChanged.connect(self.update_chart)
-        self.websocket.connected.connect(self.on_websocket_connected)
-        self.websocket.textMessageReceived.connect(self.on_websocket_message)
-        self.taskUpdated.connect(self.update_chart)
-        
-    def manage_team(self):
-        """管理团队成员"""
-        dialog = TeamManagementDialog(self.project.id, self)
-        if dialog.exec_() == QDialog.Accepted:
-            Session = sessionmaker(bind=get_engine())
-            session = Session()
-            try:
-                project = session.query(Project).get(self.project.id)
-                project.team_members = ','.join(dialog.get_team_members())
-                session.commit()
-            finally:
-                session.close()
-                
-    def toggle_collaboration(self):
-        """切换协作模式"""
-        if self.collab_btn.isChecked():
-            self.websocket.open(QUrl("ws://localhost:8080/collab"))
-            self.collab_btn.setText("协作中")
-            self.collab_btn.setIcon(FluentIcon.CHECKBOX)
-        else:
-            self.websocket.close()
-            self.collab_btn.setText("协作")
-            self.collab_btn.setIcon(FluentIcon.SHARE)
-            
-    def on_websocket_connected(self):
-        """WebSocket连接成功"""
-        UIUtils.show_success(self, "成功", "已连接到协作服务器")
-        
-    def on_websocket_message(self, message):
-        """接收WebSocket消息"""
-        data = json.loads(message)
-        if data['type'] == 'task_update':
-            self.load_tasks()
-            self.update_chart()
-            
-    def send_task_update(self, task_id):
-        """发送任务更新到协作服务器"""
-        if self.websocket.state() == QAbstractSocket.ConnectedState:
-            message = {
-                'type': 'task_update',
-                'task_id': task_id,
-                'project_id': self.project.id
-            }
-            self.websocket.sendTextMessage(json.dumps(message))
+        # 获取图标路径
+        icons_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'icons'))
 
-    def update_chart(self):
-        """更新甘特图显示"""
-        self.chart.removeAllSeries()
-        
-        # 创建任务条系列
-        bar_set = QBarSet("任务进度")
-        categories = []
-        
-        # 添加任务条
-        for task in self.tasks:
-            duration = (task.end_date - task.start_date).days
-            bar_set.append(duration)
-            bar_set.setLabel(task.name)
-            categories.append(task.name)
-            
-            # 添加进度条
-            progress_duration = duration * task.progress / 100
-            if progress_duration > 0:
-                progress_set = QBarSet("")
-                progress_set.append(progress_duration)
-                progress_set.setLabel(f"{task.progress}%")
-                self.chart.addSeries(progress_set)
-        
-        # 添加依赖关系线
-        for task in self.tasks:
-            if task.dependencies:
-                line_series = QLineSeries()
-                for dep_id in task.dependencies:
-                    dep_task = next(t for t in self.tasks if t.id == dep_id)
-                    line_series.append(dep_task.end_date.toJulianDay(),
-                                      self.tasks.index(dep_task) + 0.5)
-                    line_series.append(task.start_date.toJulianDay(),
-                                     self.tasks.index(task) + 0.5)
-                self.chart.addSeries(line_series)
-        
-        # 设置图表轴
-        axis_x = QValueAxis()
-        axis_x.setRange(self.project.start_date.toJulianDay(),
-                       self.project.end_date.toJulianDay())
-        axis_x.setFormat("yyyy-MM-dd")
-        self.chart.addAxis(axis_x, Qt.AlignBottom)
-        
-        axis_y = QBarCategoryAxis()
-        axis_y.append(categories)
-        self.chart.addAxis(axis_y, Qt.AlignLeft)
-        
-    def show_export_menu(self):
-        """显示导出菜单"""
-        menu = QMenu(self)
-        
-        png_action = menu.addAction("导出为PNG")
-        pdf_action = menu.addAction("导出为PDF")
-        excel_action = menu.addAction("导出为Excel")
-        
-        action = menu.exec_(QCursor.pos())
-        if action == png_action:
-            self.export_to_png()
-        elif action == pdf_action:
-            self.export_to_pdf()
-        elif action == excel_action:
-            self.export_to_excel()
-            
-    def export_to_png(self):
-        """导出为PNG图片"""
-        file_path, _ = QFileDialog.getSaveFileName(
-            self, "导出PNG", "", "PNG图片 (*.png)")
-        if file_path:
-            pixmap = self.chart_view.grab()
-            pixmap.save(file_path, "PNG")
-            
-    def export_to_pdf(self):
-        """导出为PDF文档"""
-        file_path, _ = QFileDialog.getSaveFileName(
-            self, "导出PDF", "", "PDF文档 (*.pdf)")
-        if file_path:
-            printer = QPrinter(QPrinter.HighResolution)
-            printer.setOutputFormat(QPrinter.PdfFormat)
-            printer.setOutputFileName(file_path)
-            
-            painter = QPainter(printer)
-            self.chart_view.render(painter)
-            painter.end()
-            
-    def export_to_excel(self):
-        """导出为Excel文件"""
-        file_path, _ = QFileDialog.getSaveFileName(
-            self, "导出Excel", "", "Excel文件 (*.xlsx)")
-        if file_path:
-            df = pd.DataFrame([{
-                '任务名称': task.name,
-                '开始日期': task.start_date.toString(Qt.ISODate),
-                '结束日期': task.end_date.toString(Qt.ISODate),
-                '进度': f"{task.progress}%",
-                '状态': task.status.value,
-                '负责人': task.assignee
-            } for task in self.tasks])
-            
-            df.to_excel(file_path, index=False)
+        # 增删任务
+        self.add_action = QAction(QIcon(os.path.join(icons_dir, 'add.svg')), "添加", self)
+        self.delete_action = QAction(QIcon(os.path.join(icons_dir, 'delete.svg')), "删除", self)
 
-    def load_tasks(self):
-        Session = sessionmaker(bind=get_engine())
-        session = Session()
+        # 撤销/恢复
+        self.undo_action = QAction(QIcon(os.path.join(icons_dir, 'undo.svg')), "撤销", self)
+        self.redo_action = QAction(QIcon(os.path.join(icons_dir, 'redo.svg')), "恢复", self)
         
-        try:
-            tasks = session.query(ProjectTask).filter(
-                ProjectTask.project_id == self.project.id
-            ).all()
-            
-            self.task_tree.clear()
-            for task in tasks:
-                item = QTreeWidgetItem()
-                item.setText(0, task.name)
-                item.setText(1, task.description)
-                item.setText(2, str(task.start_date))
-                item.setText(3, str(task.end_date))
-                item.setText(4, task.status.value)
-                item.setText(5, task.assignee)
-                item.setText(6, f"{task.progress}%")
-                self.task_tree.addTopLevelItem(item)
-        finally:
-            session.close()
-    
-    def add_task(self):
-            
-        # 添加新行
-        item = QTreeWidgetItem()
-        item.setText(0, "新任务")
-        item.setText(1, "")
-        item.setText(2, QDate.currentDate().toString(Qt.ISODate))
-        item.setText(3, QDate.currentDate().toString(Qt.ISODate))
-        item.setText(4, TaskStatus.NOT_STARTED.value)
-        item.setText(5, "")
-        item.setText(6, "0%")
+        # 插入任务
+        self.insert_above_action = QAction(QIcon(os.path.join(icons_dir, 'insert_above.svg')), "上方插入", self)
+        self.insert_below_action = QAction(QIcon(os.path.join(icons_dir, 'insert_below.svg')), "下方插入", self)
         
-        # 设置可编辑
-        for i in range(7):
-            item.setFlags(item.flags() | Qt.ItemIsEditable)
-            
-        self.task_tree.addTopLevelItem(item)
-        self.task_tree.editItem(item, 0)
-    
-    def add_child_task(self):
-        selected_items = self.task_tree.selectedItems()
-        if not selected_items:
-            UIUtils.show_warning(self, "警告", "请先选择父级任务")
-            return
-            
-        # 添加子级任务
-        parent_item = selected_items[0]
-        child_item = QTreeWidgetItem(parent_item)
-        child_item.setText(0, "子任务")
-        child_item.setText(1, "")
-        child_item.setText(2, QDate.currentDate().toString(Qt.ISODate))
-        child_item.setText(3, QDate.currentDate().toString(Qt.ISODate))
-        child_item.setText(4, TaskStatus.NOT_STARTED.value)
-        child_item.setText(5, "")
-        child_item.setText(6, "0%")
+        # 任务层级
+        self.promote_action = QAction(QIcon(os.path.join(icons_dir, 'promote.svg')), "升级", self)
+        self.demote_action = QAction(QIcon(os.path.join(icons_dir, 'demote.svg')), "降级", self)
         
-        # 设置可编辑
-        for i in range(7):
-            child_item.setFlags(child_item.flags() | Qt.ItemIsEditable)
-            
-        self.task_tree.expandItem(parent_item)
-        self.task_tree.editItem(child_item, 0)
+        # 移动任务
+        self.move_up_action = QAction(QIcon(os.path.join(icons_dir, 'move_up.svg')), "上移", self)
+        self.move_down_action = QAction(QIcon(os.path.join(icons_dir, 'move_down.svg')), "下移", self)      
+        
+        # 展开/折叠
+        self.expand_all_action = QAction(QIcon(os.path.join(icons_dir, 'expand.svg')), "全部展开", self)
+        self.collapse_all_action = QAction(QIcon(os.path.join(icons_dir, 'collapse.svg')), "全部折叠", self)
+        
+        # 缩放
+        self.zoom_in_action = QAction(QIcon(os.path.join(icons_dir, 'zoom_in.svg')), "放大", self)
+        self.zoom_out_action = QAction(QIcon(os.path.join(icons_dir, 'zoom_out.svg')), "缩小", self)
+        
+        # 添加工具栏按钮
+        toolbar.addAction(self.add_action)
+        toolbar.addAction(self.delete_action)
+        toolbar.addSeparator()
+        
+        toolbar.addAction(self.insert_above_action)
+        toolbar.addAction(self.insert_below_action)
+        toolbar.addSeparator()
+        toolbar.addAction(self.promote_action)
+        toolbar.addAction(self.demote_action)
+        toolbar.addSeparator()
+        toolbar.addAction(self.move_up_action)
+        toolbar.addAction(self.move_down_action)
+        toolbar.addSeparator()
+
+        toolbar.addAction(self.expand_all_action)
+        toolbar.addAction(self.collapse_all_action)
+        toolbar.addSeparator()
+        toolbar.addAction(self.undo_action)
+        toolbar.addAction(self.redo_action)
+        toolbar.addSeparator()
+        toolbar.addAction(self.zoom_in_action)
+        toolbar.addAction(self.zoom_out_action)
+        
+        self.main_layout.addWidget(toolbar)
+        
+        # 创建分割器
+        splitter = QSplitter(Qt.Horizontal)
+        
+        # 创建任务表格
+        self.task_table = QTableView()
+        self.task_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.task_table.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.task_table.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.task_table.horizontalHeader().setStretchLastSection(True)
+        self.task_table.setItemDelegate(StatusDelegate())
+        
+        # 创建任务数据模型
+        self.task_model = TaskTableModel(self.session, self.project.id)
+        self.task_table.setModel(self.task_model)
+        
+        # 连接任务表格的点击事件
+        self.task_table.clicked.connect(self.on_task_clicked)
+        
+        splitter.addWidget(self.task_table)
+        
+        # 创建甘特图视图
+        self.gantt_view = GanttView(self)
+        splitter.addWidget(self.gantt_view)
+        
+        # 设置分割器初始比例
+        splitter.setSizes([500, 500])
+        
+        self.main_layout.addWidget(splitter)
+        
+        # 连接工具栏按钮信号
+        self.connect_actions()
+        
+    def connect_actions(self):
+        """连接工具栏按钮信号"""
+        self.insert_above_action.triggered.connect(self.insert_task_above)
+        self.insert_below_action.triggered.connect(self.insert_task_below)
+        self.promote_action.triggered.connect(self.promote_task)
+        self.demote_action.triggered.connect(self.demote_task)
+        self.move_up_action.triggered.connect(self.move_task_up)
+        self.move_down_action.triggered.connect(self.move_task_down)
+        self.delete_action.triggered.connect(self.delete_task)
+        self.expand_all_action.triggered.connect(self.expand_all_tasks)
+        self.collapse_all_action.triggered.connect(self.collapse_all_tasks)
+        self.zoom_in_action.triggered.connect(self.gantt_view.zoom_in)
+        self.zoom_out_action.triggered.connect(self.gantt_view.zoom_out)
     
+    def on_undo(self):
+        """撤销操作"""
+        print("撤销操作")
+        
+    def on_redo(self):
+        """恢复操作"""
+        print("恢复操作")
+        
+    def insert_task(self, above=False):
+        """插入任务"""
+        print(f"在{'上方' if above else '下方'}插入任务")
+        
+    def promote_task(self):
+        """升级任务层级"""
+        print("升级任务层级")
+        
+    def demote_task(self):
+        """降级任务层级"""
+        print("降级任务层级")
+        
+    def move_task_up(self):
+        """上移任务"""
+        print("上移任务")
+        
+    def move_task_down(self):
+        """下移任务"""
+        print("下移任务")
+        
     def delete_task(self):
-        selected_items = self.task_tree.selectedItems()
-        if not selected_items:
-            UIUtils.show_warning(self, "警告", "请先选择要删除的任务")
-            return
+        """删除任务"""
+        print("删除任务")
         
-        task_name = selected_items[0].text(0)
+    def expand_all(self):
+        """展开所有任务"""
+        print("展开所有任务")
         
-        Session = sessionmaker(bind=get_engine())
-        session = Session()
+    def collapse_all(self):
+        """折叠所有任务"""
+        print("折叠所有任务")
         
-        try:
-            task = session.query(ProjectTask).filter(
-                ProjectTask.project_id == self.project_combo.currentData(),
-                ProjectTask.name == task_name
-            ).first()
+    def zoom_in(self):
+        """放大视图"""
+        print("放大视图")
+        
+    def zoom_out(self):
+        """缩小视图"""
+        print("缩小视图")
+        
+    def on_task_clicked(self, index):
+        """处理任务点击事件"""
+        if index.column() == 1:  # 任务名称列
+            self.task_model.toggle_task_expanded(index)
+            self.gantt_view.update_view()
+        
+    def insert_task_above(self):
+        """在选中任务上方插入新任务"""
+        index = self.task_table.currentIndex()
+        if index.isValid():
+            task = self.task_model.visible_tasks[index.row()]
+            new_task = {
+                'project_id': self.project.id,
+                'name': '新任务',
+                'level': task.level,
+                'parent_id': task.parent_id
+            }
+            self.task_model.add_task(new_task)
             
-            if task:
-                session.delete(task)
-                session.commit()
-                self.load_tasks()
-                UIUtils.show_success(self, "成功", "任务删除成功")
-        finally:
-            session.close()
+    def insert_task_below(self):
+        """在选中任务下方插入新任务"""
+        index = self.task_table.currentIndex()
+        if index.isValid():
+            task = self.task_model.visible_tasks[index.row()]
+            new_task = {
+                'project_id': self.project.id,
+                'name': '新任务',
+                'level': task.level,
+                'parent_id': task.parent_id
+            }
+            self.task_model.add_task(new_task)
+            
+    def promote_task(self):
+        """提升任务层级"""
+        index = self.task_table.currentIndex()
+        if index.isValid():
+            task = self.task_model.visible_tasks[index.row()]
+            if task.level > 0:
+                parent_task = next((t for t in self.task_model.tasks if t.id == task.parent_id), None)
+                if parent_task:
+                    task.parent_id = parent_task.parent_id
+                    task.level -= 1
+                    self.task_model.session.commit()
+                    self.task_model.load_data()
+                    
+    def demote_task(self):
+        """降低任务层级"""
+        index = self.task_table.currentIndex()
+        if index.isValid():
+            row = index.row()
+            if row > 0:
+                task = self.task_model.visible_tasks[row]
+                prev_task = self.task_model.visible_tasks[row - 1]
+                if task.level <= prev_task.level:
+                    task.parent_id = prev_task.id
+                    task.level = prev_task.level + 1
+                    self.task_model.session.commit()
+                    self.task_model.load_data()
+                    
+    def move_task_up(self):
+        """上移任务"""
+        index = self.task_table.currentIndex()
+        if index.isValid() and index.row() > 0:
+            self.task_model.move_task(index.row(), index.row() - 1)
+            
+    def move_task_down(self):
+        """下移任务"""
+        index = self.task_table.currentIndex()
+        if index.isValid() and index.row() < len(self.task_model.visible_tasks) - 1:
+            self.task_model.move_task(index.row(), index.row() + 1)
+            
+    def delete_task(self):
+        """删除任务"""
+        index = self.task_table.currentIndex()
+        if index.isValid():
+            self.task_model.remove_task(index.row())
+            
+    def expand_all_tasks(self):
+        """展开所有任务"""
+        self.task_model.expanded_tasks = set(task.id for task in self.task_model.tasks)
+        self.task_model.load_data()
+        
+    def collapse_all_tasks(self):
+        """折叠所有任务"""
+        self.task_model.expanded_tasks.clear()
+        self.task_model.load_data()
+
+class GanttView(QGraphicsView):
+    """甘特图视图"""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.scene = QGraphicsScene(self)
+        self.setScene(self.scene)
+        self.setRenderHint(QPainter.Antialiasing)
+        self.setRenderHint(QPainter.TextAntialiasing)
+        self.setRenderHint(QPainter.SmoothPixmapTransform)
+        self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
+        self.setDragMode(QGraphicsView.ScrollHandDrag)
+        self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
+        self.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        
+        # 时间轴参数
+        self.time_scale = "day"  # day/week/month
+        self.start_date = QDate.currentDate()
+        self.end_date = self.start_date.addDays(30)
+        self.day_width = 30  # 每天的像素宽度
+        self.row_height = 30  # 每行高度
+        self.zoom_factor = 1.0  # 缩放因子
+        
+        # 拖拽相关
+        self.dragging_item = None
+        self.drag_start_pos = None
+        self.original_dates = None
+        
+        # 初始化UI
+        self.init_ui()
+        
+    def init_ui(self):
+        """初始化UI"""
+        self.setStyleSheet("background-color: white;")
+        self.setMouseTracking(True)  # 启用鼠标追踪
+        self.draw_timeline()
+        
+    def mousePressEvent(self, event):
+        """鼠标按下事件"""
+        if event.button() == Qt.LeftButton:
+            pos = self.mapToScene(event.pos())
+            item = self.scene.itemAt(pos, self.transform())
+            if isinstance(item, QGraphicsRectItem) and item.data(0):
+                self.dragging_item = item
+                self.drag_start_pos = pos
+                task_id = item.data(0)
+                task = next((t for t in self.parent().task_model.tasks if t.id == task_id), None)
+                if task:
+                    self.original_dates = (task.start_date, task.end_date)
+        super().mousePressEvent(event)
+        
+    def mouseMoveEvent(self, event):
+        """鼠标移动事件"""
+        if self.dragging_item and self.drag_start_pos:
+            pos = self.mapToScene(event.pos())
+            delta_x = pos.x() - self.drag_start_pos.x()
+            days_delta = int(delta_x / (self.day_width * self.zoom_factor))
+            
+            if days_delta != 0:
+                task_id = self.dragging_item.data(0)
+                task = next((t for t in self.parent().task_model.tasks if t.id == task_id), None)
+                if task:
+                    new_start = self.original_dates[0] + datetime.timedelta(days=days_delta)
+                    new_end = self.original_dates[1] + datetime.timedelta(days=days_delta)
+                    task.start_date = new_start
+                    task.end_date = new_end
+                    self.parent().task_model.session.commit()
+                    self.update_view()
+                    self.drag_start_pos = pos
+        super().mouseMoveEvent(event)
+        
+    def mouseReleaseEvent(self, event):
+        """鼠标释放事件"""
+        if event.button() == Qt.LeftButton:
+            self.dragging_item = None
+            self.drag_start_pos = None
+            self.original_dates = None
+        super().mouseReleaseEvent(event)
+        
+    def wheelEvent(self, event):
+        """鼠标滚轮事件"""
+        if event.modifiers() & Qt.ControlModifier:
+            # 缩放
+            delta = event.angleDelta().y()
+            if delta > 0:
+                self.zoom_in()
+            else:
+                self.zoom_out()
+            event.accept()
+        else:
+            super().wheelEvent(event)
+            
+    def zoom_in(self):
+        """放大"""
+        self.zoom_factor *= 1.2
+        self.update_view()
+        
+    def zoom_out(self):
+        """缩小"""
+        self.zoom_factor /= 1.2
+        self.update_view()
+        
+    def set_time_scale(self, scale):
+        """设置时间粒度"""
+        self.time_scale = scale
+        self.update_view()
+        
+    def update_view(self):
+        """更新视图"""
+        self.scene.clear()
+        self.draw_timeline()
+        if hasattr(self.parent(), 'task_model'):
+            self.draw_tasks(self.parent().task_model.visible_tasks)
+            self.draw_dependencies(self.parent().task_model.visible_tasks)
+        
+    def draw_timeline(self):
+        """绘制时间轴"""
+        self.scene.clear()
+        
+        # 计算时间范围
+        days = self.start_date.daysTo(self.end_date) + 1
+        total_width = days * self.day_width
+        
+        # 绘制时间轴标尺
+        self.draw_time_ruler(total_width, days)
+        
+        # 绘制网格线
+        self.draw_grid_lines(total_width, days)
+        
+        # 设置场景大小
+        self.scene.setSceneRect(0, 0, total_width + 100, 1000)
+        
+    def draw_time_ruler(self, total_width, days):
+        """绘制时间标尺"""
+        # 主时间轴
+        ruler = QGraphicsRectItem(0, 0, total_width, 30)
+        ruler.setBrush(QBrush(QColor(240, 240, 240)))
+        ruler.setPen(QPen(Qt.NoPen))
+        self.scene.addItem(ruler)
+        
+        # 时间刻度
+        font = QFont("Arial", 8)
+        current_date = self.start_date
+        for i in range(days + 1):
+            x = i * self.day_width
+            line = QGraphicsLineItem(x, 0, x, 30)
+            line.setPen(QPen(QColor(200, 200, 200)))
+            self.scene.addItem(line)
+            
+            # 每天/每周/每月显示日期标签
+            if self.time_scale == "day" or \
+               (self.time_scale == "week" and current_date.dayOfWeek() == 1) or \
+               (self.time_scale == "month" and current_date.day() == 1):
+                text = QGraphicsTextItem(current_date.toString("MM-dd"))
+                text.setFont(font)
+                text.setPos(x + 2, 5)
+                self.scene.addItem(text)
+                
+            current_date = current_date.addDays(1)
+            
+    def draw_grid_lines(self, total_width, days):
+        """绘制网格线"""
+        # 垂直网格线
+        for i in range(days + 1):
+            x = i * self.day_width
+            line = QGraphicsLineItem(x, 30, x, 1000)
+            line.setPen(QPen(QColor(230, 230, 230)))
+            self.scene.addItem(line)
+            
+        # 水平网格线
+        for i in range(50):  # 假设最多50行
+            y = 30 + i * self.row_height
+            line = QGraphicsLineItem(0, y, total_width, y)
+            line.setPen(QPen(QColor(230, 230, 230)))
+            self.scene.addItem(line)
+            
+    def draw_tasks(self, tasks):
+        """绘制任务条"""
+        for i, task in enumerate(tasks):
+            if not task.start_date or not task.end_date:
+                continue
+                
+            # 计算任务位置和大小
+            start_offset = self.start_date.daysTo(QDate.fromString(str(task.start_date), "yyyy-MM-dd"))
+            duration = (task.end_date - task.start_date).days + 1
+            x = start_offset * self.day_width * self.zoom_factor
+            y = 30 + i * self.row_height + 5
+            width = duration * self.day_width * self.zoom_factor
+            height = self.row_height - 10
+            
+            # 绘制任务条
+            task_rect = QGraphicsRectItem(x, y, width, height)
+            task_rect.setData(0, task.id)  # 存储任务ID
+            
+            # 根据状态设置颜色
+            if task.status == TaskStatus.COMPLETED:
+                color = QColor(100, 200, 100)
+            elif task.status == TaskStatus.IN_PROGRESS:
+                color = QColor(100, 100, 200)
+            elif task.status == TaskStatus.DELAYED:
+                color = QColor(200, 100, 100)
+            else:
+                color = QColor(200, 200, 200)
+                
+            task_rect.setBrush(QBrush(color))
+            task_rect.setPen(QPen(QColor(0, 0, 0), 1))
+            task_rect.setAcceptHoverEvents(True)  # 启用鼠标悬停事件
+            task_rect.setCursor(Qt.SizeHorCursor)  # 设置鼠标指针样式
+            self.scene.addItem(task_rect)
+            
+            # 绘制任务名称
+            indent = "    " * task.level
+            task_text = QGraphicsTextItem(indent + task.name)
+            task_text.setPos(x + 5, y + 5)
+            task_text.setDefaultTextColor(QColor(0, 0, 0))
+            self.scene.addItem(task_text)
+            
+            # 绘制进度条
+            if task.progress > 0:
+                progress_width = width * task.progress / 100
+                progress_rect = QGraphicsRectItem(x, y + height - 5, progress_width, 3)
+                progress_rect.setBrush(QBrush(QColor(0, 0, 0)))
+                progress_rect.setPen(QPen(Qt.NoPen))
+                self.scene.addItem(progress_rect)
+                
+    def draw_dependencies(self, tasks):
+        """绘制任务依赖关系"""
+        for i, task in enumerate(tasks):
+            if not task.dependencies:
+                continue
+                
+            deps = json.loads(task.dependencies)
+            for dep_id in deps:
+                # 查找依赖任务
+                dep_task = next((t for t in tasks if t.id == dep_id), None)
+                if not dep_task or not dep_task.end_date or not task.start_date:
+                    continue
+                    
+                # 计算箭头位置
+                dep_index = tasks.index(dep_task)
+                start_x = self.start_date.daysTo(QDate.fromString(str(dep_task.end_date), "yyyy-MM-dd")) * self.day_width * self.zoom_factor
+                start_y = 30 + dep_index * self.row_height + self.row_height / 2
+                end_x = self.start_date.daysTo(QDate.fromString(str(task.start_date), "yyyy-MM-dd")) * self.day_width * self.zoom_factor
+                end_y = 30 + i * self.row_height + self.row_height / 2
+                
+                # 绘制箭头线
+                line = QGraphicsLineItem(start_x, start_y, end_x, end_y)
+                line.setPen(QPen(QColor(100, 100, 100), 1, Qt.DashLine))
+                self.scene.addItem(line)
+                
+                # 绘制箭头
+                arrow_size = 5
+                angle = line.line().angle()
+                arrow_p1 = line.line().p2() - QPointF(
+                    arrow_size * 0.5 * (1 + math.cos(math.radians(angle + 30))),
+                    arrow_size * 0.5 * (1 - math.sin(math.radians(angle + 30)))
+                )
+                arrow_p2 = line.line().p2() - QPointF(
+                    arrow_size * 0.5 * (1 + math.cos(math.radians(angle - 30))),
+                    arrow_size * 0.5 * (1 - math.sin(math.radians(angle - 30)))
+                )
+                
+                arrow = QGraphicsPolygonItem(
+                    QPolygonF([line.line().p2(), arrow_p1, arrow_p2]))
+                arrow.setBrush(QBrush(QColor(100, 100, 100)))
+                arrow.setPen(QPen(Qt.NoPen))
+                self.scene.addItem(arrow)
+
+class TaskTableView(QTableView):
+    """任务表格视图"""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.init_ui()
+        
+    def init_ui(self):
+        self.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.verticalHeader().setVisible(False)
+        self.setStyleSheet("""
+            QTableView {
+                border: 1px solid #ddd;
+                alternate-background-color: #f9f9f9;
+            }
+            QHeaderView::section {
+                background-color: #f0f0f0;
+                padding: 5px;
+                border: 1px solid #ddd;
+            }
+        """)
+
+class ProjectProgressWindow(QMainWindow):
+    """项目进度主窗口"""
+    def __init__(self, project_id=None):
+        super().__init__()
+        self.project_id = project_id
+        self.session = None
+        self.init_db()
+        self.init_ui()
+        
+    def init_db(self):
+        """初始化数据库连接"""
+        engine = get_engine()
+        Session = sessionmaker(bind=engine)
+        self.session = Session()
+        
+    def init_ui(self):
+        """初始化界面"""
+        self.setWindowTitle("项目进度管理")
+        self.setMinimumSize(1000, 600)
+        
+        # 创建工具栏
+        self.create_toolbar()
+        
+        # 主内容区域
+        main_widget = QWidget()
+        main_layout = QHBoxLayout(main_widget)
+        
+        # 分割器 - 左侧任务列表和右侧甘特图
+        splitter = QSplitter(Qt.Horizontal)
+        
+        # 左侧任务列表
+        self.task_table = TaskTableView()
+        self.task_model = TaskTableModel(self.session, self.project_id)
+        self.task_table.setModel(self.task_model)
+        
+        # 设置委托
+        self.task_table.setItemDelegateForColumn(5, StatusDelegate())  # 进度列
+        
+        splitter.addWidget(self.task_table)
+        
+        # 右侧甘特图
+        self.gantt_view = GanttView()
+        splitter.addWidget(self.gantt_view)
+        
+        # 设置分割器初始比例
+        splitter.setSizes([300, 700])
+        
+        main_layout.addWidget(splitter)
+        self.setCentralWidget(main_widget)
+        
+        # 连接数据变化信号
+        self.task_model.dataChanged.connect(self.update_gantt_view)
+        
+        # 初始绘制甘特图
+        self.update_gantt_view()
+        
+    def update_gantt_view(self):
+        """更新甘特图视图"""
+        self.gantt_view.draw_tasks(self.task_model.tasks)
+        self.gantt_view.draw_dependencies(self.task_model.tasks)
+        
+
+    
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = ProjectProgressWindow()
+    window.show()
+    sys.exit(app.exec_())
+

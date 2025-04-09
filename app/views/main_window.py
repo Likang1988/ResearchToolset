@@ -52,7 +52,7 @@ class MainWindow(FluentWindow):
         )
         
         # 使用自定义SVG图标
-        funding_icon_path = os.path.join(os.path.dirname(__file__), '..', 'assets', 'logo', 'funding_tab.svg')
+        funding_icon_path = os.path.join(os.path.dirname(__file__), '..', 'assets', 'icons', 'funding_tab.svg')
         self.addSubInterface(  
             self.funding_interface,
             QIcon(funding_icon_path),
@@ -60,7 +60,7 @@ class MainWindow(FluentWindow):
         )
         
         # 添加预算编制导航项
-        budget_edit_icon_path = os.path.join(os.path.dirname(__file__), '..', 'assets', 'logo', 'budgeting_tab.svg')
+        budget_edit_icon_path = os.path.join(os.path.dirname(__file__), '..', 'assets', 'icons', 'budgeting_tab.svg')
         self.addSubInterface(
             self.budget_edit_interface,
             QIcon(budget_edit_icon_path),
@@ -84,7 +84,7 @@ class MainWindow(FluentWindow):
         )
 
         # 添加项目管理导航项
-        project_icon_path = os.path.join(os.path.dirname(__file__), '..', 'assets', 'logo', 'project_tab.svg')
+        project_icon_path = os.path.join(os.path.dirname(__file__), '..', 'assets', 'icons', 'project_tab.svg')
         self.addSubInterface(
             self.project_interface,
             QIcon(project_icon_path),
