@@ -14,7 +14,7 @@ from ...utils.db_utils import DBUtils
 from ...utils.voucher_utils import create_voucher_button, create_voucher_menu, view_voucher
 from collections import defaultdict
 
-class ExpenseListWindow(QWidget):
+class ProjectExpenseWindow(QWidget):
     # 添加信号，用于通知预算清单窗口更新数据
     expense_updated = Signal()
     

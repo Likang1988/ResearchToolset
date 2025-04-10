@@ -6,7 +6,7 @@ from qfluentwidgets import PrimaryPushButton, TitleLabel, FluentIcon, ToolButton
 from PySide6.QtCore import Qt, QSize, Signal
 from PySide6.QtGui import QIcon
 from ...components.budget_dialog import BudgetDialog, TotalBudgetDialog
-from .project_expense import ExpenseListWindow
+from .project_expense import ProjectExpenseWindow
 from ...models.database import sessionmaker, Budget, BudgetCategory, BudgetItem, Expense, Activity
 from datetime import datetime
 from sqlalchemy import func
@@ -187,7 +187,7 @@ class ProjectBudgetWindow(QWidget):
 
     def open_project_expense(self, budget):
         """打开支出清单窗口"""
-        expense_window = ExpenseListWindow(self.engine, self.project, budget)
+        expense_window = ProjectExpenseWindow(self.engine, self.project, budget)
         # 连接支出更新信号
         expense_window.expense_updated.connect(self.load_budgets)
         # 将支出清单窗口添加到当前预算清单窗口的QStackedWidget中
