@@ -5,7 +5,7 @@ from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon
 from qfluentwidgets import FluentIcon, TableWidget, TableItemDelegate, TitleLabel, RoundMenu, Action
 from ...components.project_dialog import ProjectDialog
-from .budget_list import BudgetListWindow
+from .project_budget import ProjectBudgetWindow
 from ...models.database import init_db, add_project_to_db, sessionmaker, Project, Budget, Expense, Activity
 from ...utils.ui_utils import UIUtils
 from ...utils.db_utils import DBUtils
@@ -213,7 +213,7 @@ class ProjectListWindow(QWidget):
                 budget_btn = ToolButton()
                 budget_btn.setIcon(QIcon(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'icons', 'budget.svg'))))
                 budget_btn.setToolTip("经费管理")
-                budget_btn.clicked.connect(lambda checked=False, p=project: self.open_budget_list(p))  # 传递项目对象
+                budget_btn.clicked.connect(lambda checked=False, p=project: self.open_project_budget(p))  # 传递项目对象
                 btn_layout.addWidget(budget_btn)  # 将按钮添加到布局中
                 # 按钮大小
                 budget_btn.setFixedSize(26, 26)
@@ -476,10 +476,10 @@ class ProjectListWindow(QWidget):
             finally:
                 session.close()
         
-    def open_budget_list(self, project):
+    def open_project_budget(self, project):
         """打开经费清单窗口"""
         self.project = project
-        budget_window = BudgetListWindow(self.engine, project)
+        budget_window = ProjectBudgetWindow(self.engine, project)
         
         # 连接预算更新信号
         budget_window.budget_updated.connect(self.refresh_project_table)

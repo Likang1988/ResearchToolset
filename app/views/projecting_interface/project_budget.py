@@ -6,7 +6,7 @@ from qfluentwidgets import PrimaryPushButton, TitleLabel, FluentIcon, ToolButton
 from PySide6.QtCore import Qt, QSize, Signal
 from PySide6.QtGui import QIcon
 from ...components.budget_dialog import BudgetDialog, TotalBudgetDialog
-from .expense_list import ExpenseListWindow
+from .project_expense import ExpenseListWindow
 from ...models.database import sessionmaker, Budget, BudgetCategory, BudgetItem, Expense, Activity
 from datetime import datetime
 from sqlalchemy import func
@@ -15,7 +15,7 @@ from ...utils.ui_utils import UIUtils
 from ...utils.db_utils import DBUtils
 from ...components.budget_chart_widget import BudgetChartWidget
 
-class BudgetListWindow(QWidget):
+class ProjectBudgetWindow(QWidget):
     # 添加信号用于通知项目清单窗口更新数据
     budget_updated = Signal()
     
@@ -24,7 +24,7 @@ class BudgetListWindow(QWidget):
         self.engine = engine
         self.project = project
         self.budget = None
-        self.setObjectName(f"budget_list_{project.financial_code}")
+        self.setObjectName(f"project_budget_{project.financial_code}")
         self.setup_ui()
         self.load_budgets()
         
@@ -176,7 +176,7 @@ class BudgetListWindow(QWidget):
     def back_to_project(self):
         """返回到项目清单页面"""
         # 获取父窗口（ProjectListWindow）
-        # 由于BudgetlistWindow是添加到QStackedWidget中的，
+        # 由于ProjectBudgetWindow是添加到QStackedWidget中的，
         # 需要获取QStackedWidget的父窗口才是ProjectListWindow
         stacked_widget = self.parent()
         if isinstance(stacked_widget, QStackedWidget):
@@ -185,7 +185,7 @@ class BudgetListWindow(QWidget):
                 # 切换到项目清单页面
                 stacked_widget.setCurrentWidget(project_window.project_page)
 
-    def open_expense_list(self, budget):
+    def open_project_expense(self, budget):
         """打开支出清单窗口"""
         expense_window = ExpenseListWindow(self.engine, self.project, budget)
         # 连接支出更新信号
@@ -363,7 +363,7 @@ class BudgetListWindow(QWidget):
                 expense_btn = ToolButton()
                 expense_btn.setIcon(QIcon(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'icons', 'expense.svg'))))
                 expense_btn.setToolTip("支出管理")
-                expense_btn.clicked.connect(lambda checked=False, b=budget: self.open_expense_list(b))
+                expense_btn.clicked.connect(lambda checked=False, b=budget: self.open_project_expense(b))
                 btn_layout.addWidget(expense_btn)
                 # 按钮大小 - 增加尺寸以提高用户体验
                 expense_btn.setFixedSize(28, 28)

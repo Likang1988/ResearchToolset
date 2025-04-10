@@ -14,7 +14,7 @@ class IndirectCostCalculator(QWidget):
         main_layout = QVBoxLayout()
         
         # 设置应用图标
-        icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'logo', 'calculator.svg')
+        icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'icons', 'calculator.svg')
         icon = QIcon(icon_path)
         self.setWindowIcon(icon)
 

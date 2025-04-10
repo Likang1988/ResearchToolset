@@ -2,8 +2,8 @@ from PySide6.QtWidgets import QApplication, QStackedWidget
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QIcon
 from qfluentwidgets import NavigationInterface, FluentWindow, FluentIcon, NavigationItemPosition
-from .funding_interface.project_list import ProjectListWindow
-from .funding_interface.budget_list import BudgetListWindow
+from .projecting_interface.project_list import ProjectListWindow
+from .projecting_interface.project_budget import ProjectBudgetWindow
 from .home_interface import HomeInterface
 from .help_interface import HelpInterface
 from .budgeting_interface import BudgetingInterface
@@ -18,7 +18,7 @@ class MainWindow(FluentWindow):
     def __init__(self, engine=None):
         super().__init__()
         self.engine = engine
-        self.budget_list_interface = None
+        self.project_budget_interface = None
         
         # 设置窗口标题和大小
         self.setWindowTitle("科研工具集")

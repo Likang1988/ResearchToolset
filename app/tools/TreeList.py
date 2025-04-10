@@ -44,7 +44,7 @@ class TreeListApp(QMainWindow):
         self.resize(800, 600)
         
         # 设置应用图标
-        icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'logo', 'treelist.svg')
+        icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'icons', 'treelist.svg')
         icon = QIcon(icon_path)
         self.setWindowIcon(icon)
         
