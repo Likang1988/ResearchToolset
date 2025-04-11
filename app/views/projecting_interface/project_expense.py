@@ -14,8 +14,8 @@ from ...utils.db_utils import DBUtils
 from ...utils.voucher_utils import create_voucher_button, create_voucher_menu, view_voucher
 from collections import defaultdict
 
-class ProjectExpenseWindow(QWidget):
-    # 添加信号，用于通知预算清单窗口更新数据
+class ProjectExpenseWidget(QWidget):
+    # 添加信号，用于通知预算管理窗口更新数据
     expense_updated = Signal()
     
     def __init__(self, engine, project, budget):
@@ -31,13 +31,13 @@ class ProjectExpenseWindow(QWidget):
         
     def setup_ui(self):
         """设置UI界面"""
-        self.setWindowTitle("支出清单")
+        self.setWindowTitle("支出管理")
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)  # 统一设置边距为15像素
+        main_layout.setContentsMargins(10, 10, 10, 10)  # 统一设置边距为15像素
         main_layout.setSpacing(10)  # 设置组件之间的垂直间距为10像素
         
         # 标题
-        title_layout = UIUtils.create_title_layout(f"支出清单-{self.project.financial_code}-{self.budget.year}", True, self.back_to_budget)
+        title_layout = UIUtils.create_title_layout(f"支出管理-{self.project.financial_code}-{self.budget.year}")
         main_layout.addLayout(title_layout)
         
         # 按钮栏
@@ -250,14 +250,14 @@ class ProjectExpenseWindow(QWidget):
         """)
         
     def back_to_budget(self):
-        """返回到预算清单页面"""
-        # 获取父窗口（预算清单窗口）的QStackedWidget
-        budget_window = self.parent()
-        if isinstance(budget_window, QStackedWidget):
-            # 切换到预算清单页面（第一个页面）
-            budget_window.setCurrentWidget(budget_window.widget(0))
-            # 从QStackedWidget中移除当前支出清单页面
-            budget_window.removeWidget(self)
+        """返回到预算管理页面"""
+        # 获取父窗口（预算管理窗口）的QStackedWidget
+        budget_widget = self.parent()
+        if isinstance(budget_widget, QStackedWidget):
+            # 切换到预算管理页面（第一个页面）
+            budget_widget.setCurrentWidget(budget_widget.widget(0))
+            # 从QStackedWidget中移除当前支出管理页面
+            budget_widget.removeWidget(self)
             
     def load_expenses(self):
         """加载支出数据"""
@@ -492,7 +492,7 @@ class ProjectExpenseWindow(QWidget):
             session.commit()
             self.load_expenses()
             self.load_statistics()
-            # 发送信号通知预算清单窗口更新数据
+            # 发送信号通知预算管理窗口更新数据
             self.expense_updated.emit()
             
         except Exception as e:
@@ -559,7 +559,7 @@ class ProjectExpenseWindow(QWidget):
                     session.commit()
                     self.load_expenses()
                     self.load_statistics()
-                    # 发送信号通知预算清单窗口更新数据
+                    # 发送信号通知预算管理窗口更新数据
                     self.expense_updated.emit()
                     
                     UIUtils.show_success(
@@ -675,7 +675,7 @@ class ProjectExpenseWindow(QWidget):
                         session.commit()
                         self.load_expenses()
                         self.load_statistics()
-                        # 发送信号通知预算清单窗口更新数据
+                        # 发送信号通知预算管理窗口更新数据
                         self.expense_updated.emit()
                         
                         UIUtils.show_success(
@@ -795,7 +795,7 @@ class ProjectExpenseWindow(QWidget):
                     # 刷新表格
                     self.load_expenses()
                     self.load_statistics()
-                    # 发送信号通知预算清单窗口更新数据
+                    # 发送信号通知预算管理窗口更新数据
                     self.expense_updated.emit()
                     
                     UIUtils.show_success(

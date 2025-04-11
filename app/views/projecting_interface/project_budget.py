@@ -6,7 +6,7 @@ from qfluentwidgets import PrimaryPushButton, TitleLabel, FluentIcon, ToolButton
 from PySide6.QtCore import Qt, QSize, Signal
 from PySide6.QtGui import QIcon
 from ...components.budget_dialog import BudgetDialog, TotalBudgetDialog
-from .project_expense import ProjectExpenseWindow
+from .project_expense import ProjectExpenseWidget
 from ...models.database import sessionmaker, Budget, BudgetCategory, BudgetItem, Expense, Activity
 from datetime import datetime
 from sqlalchemy import func
@@ -15,7 +15,7 @@ from ...utils.ui_utils import UIUtils
 from ...utils.db_utils import DBUtils
 from ...components.budget_chart_widget import BudgetChartWidget
 
-class ProjectBudgetWindow(QWidget):
+class ProjectBudgetWidget(QWidget):
     # 添加信号用于通知项目清单窗口更新数据
     budget_updated = Signal()
     
@@ -30,30 +30,31 @@ class ProjectBudgetWindow(QWidget):
         
     def setup_ui(self):
         """设置UI界面"""
-        self.setWindowTitle("预算清单")
+        self.setWindowTitle("预算管理")
         main_layout = QVBoxLayout(self)
         
         # 创建QStackedWidget
         self.stacked_widget = QStackedWidget()
         main_layout.addWidget(self.stacked_widget)
         
-        # 创建预算清单页面
+        # 创建预算管理页面
         self.budget_page = QWidget()
         self.setup_budget_page()
         self.stacked_widget.addWidget(self.budget_page)
         
-        # 初始显示预算清单页面
+        # 初始显示预算管理页面
         self.stacked_widget.setCurrentWidget(self.budget_page)
         
     def setup_budget_page(self):
-        """设置预算清单页面"""
+        """设置预算管理页面"""
         layout = QVBoxLayout(self.budget_page)
         layout.setContentsMargins(0, 0, 0, 0)  # 统一设置边距
         layout.setSpacing(10)  # 设置组件之间的垂直间距
         
         # 标题
-        title_layout = UIUtils.create_title_layout(f"预算清单-{self.project.financial_code}", True, self.back_to_project)
+        title_layout = UIUtils.create_title_layout(f"预算管理-{self.project.financial_code}")
         layout.addLayout(title_layout)
+        layout.addSpacing(10)  # 添加固定间距保持UI一致性
         
         # 按钮栏
         add_btn = UIUtils.create_action_button("添加预算", FluentIcon.ADD_TO)
@@ -176,7 +177,7 @@ class ProjectBudgetWindow(QWidget):
     def back_to_project(self):
         """返回到项目清单页面"""
         # 获取父窗口（ProjectListWindow）
-        # 由于ProjectBudgetWindow是添加到QStackedWidget中的，
+        # 由于ProjectBudgetWidget是添加到QStackedWidget中的，
         # 需要获取QStackedWidget的父窗口才是ProjectListWindow
         stacked_widget = self.parent()
         if isinstance(stacked_widget, QStackedWidget):
@@ -186,15 +187,23 @@ class ProjectBudgetWindow(QWidget):
                 stacked_widget.setCurrentWidget(project_window.project_page)
 
     def open_project_expense(self, budget):
-        """打开支出清单窗口"""
-        expense_window = ProjectExpenseWindow(self.engine, self.project, budget)
-        # 连接支出更新信号
-        expense_window.expense_updated.connect(self.load_budgets)
-        # 将支出清单窗口添加到当前预算清单窗口的QStackedWidget中
-        self.stacked_widget.addWidget(expense_window)
-        # 切换到支出清单页面
-        self.stacked_widget.setCurrentWidget(expense_window)
-        
+        """打开支出管理窗口"""
+        # 获取主窗口实例
+        main_window = self.window()
+        if main_window:
+            # 创建项目预算界面
+            from app.views.projecting_interface.project_expense import ProjectExpenseWidget
+            expense_widget = ProjectExpenseWidget(self.engine, self.project, budget)
+            expense_widget.setObjectName(f"projectExpenseInterface_{budget.id}")
+            # 检查是否已存在相同预算的支出窗口
+            for i in range(main_window.stackedWidget.count()):
+                widget = main_window.stackedWidget.widget(i)
+                if widget.objectName() == expense_widget.objectName():
+                    main_window.stackedWidget.setCurrentWidget(widget)
+                    return
+            # 添加新窗口并切换
+            main_window.stackedWidget.addWidget(expense_widget)
+            main_window.stackedWidget.setCurrentWidget(expense_widget)
 
         
     def load_budgets(self):

@@ -5,7 +5,7 @@ from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon
 from qfluentwidgets import FluentIcon, TableWidget, TableItemDelegate, TitleLabel, RoundMenu, Action
 from ...components.project_dialog import ProjectDialog
-from .project_budget import ProjectBudgetWindow
+from .project_budget import ProjectBudgetWidget
 from ...models.database import init_db, add_project_to_db, sessionmaker, Project, Budget, Expense, Activity
 from ...utils.ui_utils import UIUtils
 from ...utils.db_utils import DBUtils
@@ -178,7 +178,7 @@ class ProjectListWindow(QWidget):
                     btn_layout.setAlignment(Qt.AlignCenter)
                     
                     manage_btn = ToolButton()
-                    manage_btn.setIcon(FluentIcon.SETTING)
+                    manage_btn.setIcon(QIcon(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'icons', 'project.svg'))))
                     manage_btn.setToolTip("项目管理")
                     manage_btn.clicked.connect(lambda checked, p=project: self.open_project_management(p))
                     btn_layout.addWidget(manage_btn)
@@ -194,7 +194,7 @@ class ProjectListWindow(QWidget):
                     btn_layout.setAlignment(Qt.AlignCenter)
                     
                     manage_btn = ToolButton()
-                    manage_btn.setIcon(FluentIcon.SETTING)
+                    manage_btn.setIcon(QIcon(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'icons', 'project.svg'))))
                     manage_btn.setToolTip("项目管理")
                     manage_btn.clicked.connect(lambda checked, p=project: self.open_project_management(p))
                     btn_layout.addWidget(manage_btn)
@@ -476,26 +476,7 @@ class ProjectListWindow(QWidget):
             finally:
                 session.close()
         
-    def open_project_budget(self, project):
-        """打开经费清单窗口"""
-        self.project = project
-        budget_window = ProjectBudgetWindow(self.engine, project)
-        
-        # 连接预算更新信号
-        budget_window.budget_updated.connect(self.refresh_project_table)
-        
-        # 如果已存在预算清单窗口，先移除它
-        if hasattr(self, 'budget_window'):
-            self.stacked_widget.removeWidget(self.budget_window)
-            self.budget_window.deleteLater()
-        
-        # 保存新的预算清单窗口实例
-        self.budget_window = budget_window
-        self.stacked_widget.addWidget(budget_window)
-        
-        # 切换到经费清单页面
-        self.stacked_widget.setCurrentWidget(self.budget_window)
-
+    
     def open_project_management(self, project):
         """打开项目管理界面"""
         # 获取主窗口实例
@@ -509,6 +490,21 @@ class ProjectListWindow(QWidget):
             # 直接在主窗口中显示项目管理界面
             main_window.stackedWidget.addWidget(management_widget)
             main_window.stackedWidget.setCurrentWidget(management_widget)
+
+    def open_project_budget(self, project):
+        """打开预算管理界面"""
+        # 获取主窗口实例
+        main_window = self.window()
+        if main_window:
+            # 创建项目预算界面
+            from app.views.projecting_interface.project_budget import ProjectBudgetWidget
+            budget_widget = ProjectBudgetWidget(self.engine, project)
+            budget_widget.setObjectName("projectBudgetInterface")
+            # 直接在主窗口中显示项目预算界面
+            main_window.stackedWidget.addWidget(budget_widget)
+            main_window.stackedWidget.setCurrentWidget(budget_widget)
+
+            
     def add_budget(self, budget_data):
         """添加项目预算"""
         Session = sessionmaker(bind=self.engine)
@@ -526,9 +522,9 @@ class ProjectListWindow(QWidget):
             session.add(budget)
             session.commit()
             
-            # 如果预算清单窗口已打开，则刷新数据
-            if hasattr(self, 'budget_window'):
-                self.budget_window.refresh_budget_table()
+            # 如果预算管理窗口已打开，则刷新数据
+            if hasattr(self, 'budget_widget'):
+                self.budget_widget.refresh_budget_table()
                 
         except Exception as e:
             session.rollback()
@@ -820,10 +816,10 @@ class ProjectListWindow(QWidget):
                 # 刷新项目表格
                 self.refresh_project_table()
                 
-                # 如果当前有打开的支出清单窗口，刷新其数据
-                if hasattr(self, 'expense_window') and self.expense_window is not None:
-                    self.expense_window.load_expenses()
-                    self.expense_window.load_statistics()
+                # 如果当前有打开的支出管理窗口，刷新其数据
+                if hasattr(self, 'expense_widget') and self.expense_widget is not None:
+                    self.expense_widget.load_expenses()
+                    self.expense_widget.load_statistics()
                 
             except Exception as e:
                 session.rollback()

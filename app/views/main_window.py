@@ -3,7 +3,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QIcon
 from qfluentwidgets import NavigationInterface, FluentWindow, FluentIcon, NavigationItemPosition
 from .projecting_interface.project_list import ProjectListWindow
-from .projecting_interface.project_budget import ProjectBudgetWindow
+from .projecting_interface.project_budget import ProjectBudgetWidget
 from .home_interface import HomeInterface
 from .help_interface import HelpInterface
 from .budgeting_interface import BudgetingInterface
@@ -47,7 +47,7 @@ class MainWindow(FluentWindow):
         )
         
         # 使用自定义SVG图标
-        funding_icon_path = os.path.join(os.path.dirname(__file__), '..', 'assets', 'icons', 'funding_tab.svg')
+        funding_icon_path = os.path.join(os.path.dirname(__file__), '..', 'assets', 'icons', 'projecting_tab.svg')
         self.addSubInterface(  
             self.funding_interface,
             QIcon(funding_icon_path),

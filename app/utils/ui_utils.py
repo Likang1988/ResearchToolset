@@ -92,19 +92,14 @@ class UIUtils:
         header.setSectionsMovable(True)
         
     @staticmethod
-    def create_title_layout(title_text: str, with_back_button: bool = False, back_button_callback = None):
+    def create_title_layout(title_text: str):
         """创建标准的标题栏布局"""
         title_layout = QHBoxLayout()
         title_label = TitleLabel(title_text)
         title_layout.addWidget(title_label)
         title_layout.addStretch()
         
-        if with_back_button:
-            back_btn = PrimaryPushButton("返回")
-            back_btn.setIcon(FluentIcon.RETURN)
-            if back_button_callback:
-                back_btn.clicked.connect(back_button_callback)
-            title_layout.addWidget(back_btn)
+      
             
         return title_layout
     
