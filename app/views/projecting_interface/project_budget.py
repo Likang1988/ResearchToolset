@@ -24,7 +24,6 @@ class ProjectBudgetWidget(QWidget):
         self.engine = engine
         self.project = project
         self.budget = None
-        self.setObjectName(f"project_budget_{project.financial_code}")
         self.setup_ui()
         self.load_budgets()
         
@@ -32,6 +31,11 @@ class ProjectBudgetWidget(QWidget):
         """设置UI界面"""
         self.setWindowTitle("预算管理")
         main_layout = QVBoxLayout(self)
+
+
+        # 标题
+        title_layout = UIUtils.create_title_layout(f"预算管理-{self.project.financial_code}")
+        main_layout.addLayout(title_layout)
         
         # 创建QStackedWidget
         self.stacked_widget = QStackedWidget()
@@ -48,13 +52,10 @@ class ProjectBudgetWidget(QWidget):
     def setup_budget_page(self):
         """设置预算管理页面"""
         layout = QVBoxLayout(self.budget_page)
-        layout.setContentsMargins(0, 0, 0, 0)  # 统一设置边距
-        layout.setSpacing(10)  # 设置组件之间的垂直间距
         
-        # 标题
-        title_layout = UIUtils.create_title_layout(f"预算管理-{self.project.financial_code}")
-        layout.addLayout(title_layout)
-        layout.addSpacing(10)  # 添加固定间距保持UI一致性
+        
+
+
         
         # 按钮栏
         add_btn = UIUtils.create_action_button("添加预算", FluentIcon.ADD_TO)

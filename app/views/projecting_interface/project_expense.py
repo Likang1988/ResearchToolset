@@ -33,7 +33,7 @@ class ProjectExpenseWidget(QWidget):
         """设置UI界面"""
         self.setWindowTitle("支出管理")
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(10, 10, 10, 10)  # 统一设置边距为15像素
+        main_layout.setContentsMargins(18, 18, 18, 18)  # 统一设置边距为15像素
         main_layout.setSpacing(10)  # 设置组件之间的垂直间距为10像素
         
         # 标题
