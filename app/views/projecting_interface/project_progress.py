@@ -11,6 +11,7 @@ from PySide6.QtGui import QIcon, QBrush, QColor, QPen, QFont, QPainter, QPolygon
 from sqlalchemy.orm import sessionmaker
 from app.models.database import get_engine
 from app.models.project_task import ProjectTask, TaskStatus
+from ...utils.ui_utils import UIUtils
 from datetime import datetime, date
 import os
 
@@ -225,67 +226,10 @@ class TaskTableModel(QAbstractTableModel):
             # ID(0), 状态(1), 开始时间(3), 结束时间(4), 工期(5), 进度(6), 前置任务(7), 负责人(8) 居中
             # 任务名称(2), 描述(9) 左对齐
             if col_index in [0, 1, 3, 4, 5, 6, 7, 8]:
-                 return Qt.AlignCenter
+                return Qt.AlignCenter
 
         return None
-
-    def index(self, row, column, parent=QModelIndex()):
-        """创建给定行和列的模型索引"""
-        if not self.hasIndex(row, column, parent):
-            return QModelIndex()
-
-        if not parent.isValid():
-            # 顶层项
-            if 0 <= row < len(self.visible_tasks):
-                task = self.visible_tasks[row]
-                return self.createIndex(row, column, task)
-        else:
-            # 子项
-            parent_task = parent.internalPointer()
-            if parent_task:
-                child_tasks = [t for t in self.visible_tasks if t.parent_id == parent_task.id]
-                if 0 <= row < len(child_tasks):
-                    task = child_tasks[row]
-                    try:
-                        row = self.visible_tasks.index(task)
-                        return self.createIndex(row, column, task)
-                    except ValueError:
-                        pass
-        return QModelIndex()
-
-    def parent(self, index):
-        """返回给定索引的父项索引"""
-        if not index.isValid():
-            return QModelIndex()
-        
-        task = index.internalPointer()
-        if not task or task.parent_id is None:
-            return QModelIndex()
-        
-        # 在可见任务列表中查找父任务的位置
-        parent_task = self._get_task_by_id(task.parent_id)
-        if parent_task:
-            try:
-                parent_row = self.visible_tasks.index(parent_task)
-                return self.createIndex(parent_row, 0, parent_task)
-            except ValueError:
-                pass  # 父任务不在可见列表中
-        
-        return QModelIndex()
-
-    def hasChildren(self, parent=QModelIndex()):
-        """检查索引是否有子项"""
-        if not parent.isValid():
-            # 顶层项：检查是否有任何任务的 parent_id 为 None
-            return any(task.parent_id is None for task in self.tasks)
-        
-        # 获取父任务并检查是否有子项
-        parent_task = parent.internalPointer()
-        if parent_task:
-            return any(task.parent_id == parent_task.id for task in self.tasks)
-        
-        return False # 默认无子项
-
+    
     def setData(self, index, value, role=Qt.EditRole):
         """设置单元格数据"""
         if not index.isValid() or role != Qt.EditRole:
@@ -456,23 +400,22 @@ class ProjectProgressWidget(QWidget):
         
         toolbar = QToolBar()
         toolbar.setIconSize(QSize(24, 24))
-        icons_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'icons'))
 
-        self.add_action = QAction(QIcon(os.path.join(icons_dir, 'add.svg')), "添加", self)
-        self.add_sub_action = QAction(QIcon(os.path.join(icons_dir, 'add_sub.svg')), "添加子级", self)
-        self.delete_action = QAction(QIcon(os.path.join(icons_dir, 'delete.svg')), "删除", self)
-        self.undo_action = QAction(QIcon(os.path.join(icons_dir, 'undo.svg')), "撤销", self)
-        self.redo_action = QAction(QIcon(os.path.join(icons_dir, 'redo.svg')), "恢复", self)
-        self.insert_above_action = QAction(QIcon(os.path.join(icons_dir, 'insert_above.svg')), "上方插入", self)
-        self.insert_below_action = QAction(QIcon(os.path.join(icons_dir, 'insert_below.svg')), "下方插入", self)
-        self.promote_action = QAction(QIcon(os.path.join(icons_dir, 'promote.svg')), "升级", self)
-        self.demote_action = QAction(QIcon(os.path.join(icons_dir, 'demote.svg')), "降级", self)
-        self.move_up_action = QAction(QIcon(os.path.join(icons_dir, 'move_up.svg')), "上移", self)
-        self.move_down_action = QAction(QIcon(os.path.join(icons_dir, 'move_down.svg')), "下移", self)
-        self.expand_all_action = QAction(QIcon(os.path.join(icons_dir, 'expand.svg')), "全部展开", self)
-        self.collapse_all_action = QAction(QIcon(os.path.join(icons_dir, 'collapse.svg')), "全部折叠", self)
-        self.zoom_in_action = QAction(QIcon(os.path.join(icons_dir, 'zoom_in.svg')), "放大", self)
-        self.zoom_out_action = QAction(QIcon(os.path.join(icons_dir, 'zoom_out.svg')), "缩小", self)
+        self.add_action = QAction(QIcon(UIUtils.get_svg_icon_path('add')), "添加", self)
+        self.add_sub_action = QAction(QIcon(UIUtils.get_svg_icon_path('add_sub')), "添加子级", self)
+        self.delete_action = QAction(QIcon(UIUtils.get_svg_icon_path('delete')), "删除", self)
+        self.undo_action = QAction(QIcon(UIUtils.get_svg_icon_path('undo')), "撤销", self)
+        self.redo_action = QAction(QIcon(UIUtils.get_svg_icon_path('redo')), "恢复", self)
+        self.insert_above_action = QAction(QIcon(UIUtils.get_svg_icon_path('insert_above')), "上方插入", self)
+        self.insert_below_action = QAction(QIcon(UIUtils.get_svg_icon_path('insert_below')), "下方插入", self)
+        self.promote_action = QAction(QIcon(UIUtils.get_svg_icon_path('promote')), "升级", self)
+        self.demote_action = QAction(QIcon(UIUtils.get_svg_icon_path('demote')), "降级", self)
+        self.move_up_action = QAction(QIcon(UIUtils.get_svg_icon_path('move_up')), "上移", self)
+        self.move_down_action = QAction(QIcon(UIUtils.get_svg_icon_path('move_down')), "下移", self)
+        self.expand_all_action = QAction(QIcon(UIUtils.get_svg_icon_path('expand')), "全部展开", self)
+        self.collapse_all_action = QAction(QIcon(UIUtils.get_svg_icon_path('collapse')), "全部折叠", self)
+        self.zoom_in_action = QAction(QIcon(UIUtils.get_svg_icon_path('zoom_in')), "放大", self)
+        self.zoom_out_action = QAction(QIcon(UIUtils.get_svg_icon_path('zoom_out')), "缩小", self)
         
         toolbar.addAction(self.add_action)
         toolbar.addAction(self.add_sub_action)

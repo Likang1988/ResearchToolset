@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QStackedWidget
-from qfluentwidgets import SegmentedWidget, FluentIcon
+from PySide6.QtGui import QIcon
+from qfluentwidgets import SegmentedWidget
 from ...utils.ui_utils import UIUtils
 from .project_progress import ProjectProgressWidget
 from .project_document import ProjectDocumentWidget
@@ -19,23 +20,25 @@ class ProjectManagementWidget(QWidget):
         title_layout = UIUtils.create_title_layout(f"项目管理 - {self.project.name}")
         self.main_layout.addLayout(title_layout)
         
+        
+
         # 创建分段导航栏
         self.nav_widget = SegmentedWidget(self)
         self.nav_widget.addItem(
             routeKey='progress',
-            icon=FluentIcon.GAME,
+            icon=QIcon(UIUtils.get_svg_icon_path('progress')),
             text='项目进度',
             onClick=lambda: self.stack_widget.setCurrentIndex(0)
         )
         self.nav_widget.addItem(
             routeKey='document',
-            icon=FluentIcon.DOCUMENT,
+            icon=QIcon(UIUtils.get_svg_icon_path('document')),
             text='项目文档',
             onClick=lambda: self.stack_widget.setCurrentIndex(1)
         )
         self.nav_widget.addItem(
             routeKey='achievement',
-            icon=FluentIcon.GAME,
+            icon=QIcon(UIUtils.get_svg_icon_path('achievement')),
             text='项目成果',
             onClick=lambda: self.stack_widget.setCurrentIndex(2)
         )

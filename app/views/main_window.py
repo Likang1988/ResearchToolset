@@ -2,6 +2,7 @@ from PySide6.QtWidgets import QApplication, QStackedWidget
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QIcon
 from qfluentwidgets import NavigationInterface, FluentWindow, FluentIcon, NavigationItemPosition
+from ..utils.ui_utils import UIUtils
 from .projecting_interface.project_list import ProjectListWindow
 from .projecting_interface.project_budget import ProjectBudgetWidget
 from .home_interface import HomeInterface
@@ -47,18 +48,16 @@ class MainWindow(FluentWindow):
         )
         
         # 使用自定义SVG图标
-        funding_icon_path = os.path.join(os.path.dirname(__file__), '..', 'assets', 'icons', 'projecting_tab.svg')
         self.addSubInterface(  
             self.funding_interface,
-            QIcon(funding_icon_path),
+            QIcon(UIUtils.get_svg_icon_path('projecting_tab')),
             "科研项目"
         )
         
         # 添加预算编制导航项
-        budget_edit_icon_path = os.path.join(os.path.dirname(__file__), '..', 'assets', 'icons', 'budgeting_tab.svg')
         self.addSubInterface(
             self.budget_edit_interface,
-            QIcon(budget_edit_icon_path),
+            QIcon(UIUtils.get_svg_icon_path('budgeting_tab')),
             "预算编制"
         )
         
@@ -82,4 +81,3 @@ class MainWindow(FluentWindow):
         # 设置当前页面
         self.navigationInterface.setCurrentItem("主页")
         self.navigationInterface.setExpandWidth(150)
-
