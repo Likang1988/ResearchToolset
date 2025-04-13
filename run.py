@@ -17,6 +17,10 @@ def main():
     # Create Qt application
     app = QApplication(sys.argv)
     
+    # 设置默认字体
+    from PySide6.QtGui import QFont
+    app.setFont(QFont('Microsoft YaHei'))  # 使用微软雅黑作为替代字体
+    
     # 设置应用程序图标
     icon_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'app', 'assets', 'icon.ico'))
     print(f"图标路径: {icon_path}")  # 打印路径以便调试

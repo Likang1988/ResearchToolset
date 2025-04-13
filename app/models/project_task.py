@@ -6,12 +6,30 @@ import json
 
 from .database import Base
 
+# 定义状态及其对应的颜色 (十六进制)
+# 黄: 未开始, 绿: 进行中, 蓝: 已完成, 红: 已暂停, 紫: 已取消, 灰: 已关闭
+STATUS_COLORS = {
+    "NOT_STARTED": "#FFD700",  # Gold (Yellowish)
+    "IN_PROGRESS": "#32CD32",  # LimeGreen
+    "COMPLETED": "#1E90FF",    # DodgerBlue
+    "PAUSED": "#FF4500",       # OrangeRed
+    "CANCELLED": "#9370DB",    # MediumPurple
+    "CLOSED": "#A9A9A9"        # DarkGray
+}
+
 @unique
 class TaskStatus(Enum):
     NOT_STARTED = "未开始"
     IN_PROGRESS = "进行中"
     COMPLETED = "已完成"
-    DELAYED = "已延期"
+    PAUSED = "已暂停"      # 替换 DELAYED
+    CANCELLED = "已取消"
+    CLOSED = "已关闭"
+
+    @property
+    def color(self):
+        """获取状态对应的颜色"""
+        return STATUS_COLORS.get(self.name, "#FFFFFF") # 默认为白色
 
 class ProjectTask(Base):
     __tablename__ = 'project_tasks'
