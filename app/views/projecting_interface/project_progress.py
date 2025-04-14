@@ -718,8 +718,11 @@ class GanttView(QGraphicsView):
         self.start_date = QDate.currentDate()
         self.end_date = self.start_date.addDays(30)
         self.day_width = 30
-        self.row_height = 30
+        self.header_height = 24  # 表头高度
         self.zoom_factor = 1.0
+        
+        # 获取左侧任务列表的行高
+        self.row_height = self.get_task_list_row_height()
         
         self.dragging_item = None
         self.drag_start_pos = None
@@ -727,6 +730,20 @@ class GanttView(QGraphicsView):
         
         self.init_ui()
         
+    def get_task_list_row_height(self):
+        """获取左侧任务列表的行高"""
+        progress_widget = self.parent()
+        if isinstance(progress_widget, QSplitter):
+            progress_widget = progress_widget.parent()
+        if hasattr(progress_widget, 'task_table'):
+            # 获取任务表格的第一行高度
+            task_table = progress_widget.task_table
+            if task_table.model() and task_table.model().rowCount() > 0:
+                # 创建第一行的QModelIndex
+                index = task_table.model().index(0, 0)
+                return task_table.rowHeight(index)
+        return 34  # 默认行高
+    
     def init_ui(self):
         self.setStyleSheet("background-color: white;")
         self.setMouseTracking(True)
@@ -815,6 +832,8 @@ class GanttView(QGraphicsView):
     def update_view(self):
         """更新视图"""
         self.scene.clear()
+        # 更新行高
+        self.row_height = self.get_task_list_row_height()
         # 确保 start_date 和 end_date 是 QDate 对象
         if isinstance(self.start_date, date) and not isinstance(self.start_date, QDate):
              self.start_date = QDate(self.start_date.year, self.start_date.month, self.start_date.day)
@@ -822,9 +841,13 @@ class GanttView(QGraphicsView):
              self.end_date = QDate(self.end_date.year, self.end_date.month, self.end_date.day)
 
         self.draw_timeline()
-        if hasattr(self.parent(), 'task_model'):
-            self.draw_tasks(self.parent().task_model.visible_tasks)
-            self.draw_dependencies(self.parent().task_model.visible_tasks)
+        # 通过父级（ProjectProgressWidget）访问task_model
+        progress_widget = self.parent()
+        if isinstance(progress_widget, QSplitter):
+            progress_widget = progress_widget.parent()
+        if hasattr(progress_widget, 'task_model'):
+            self.draw_tasks(progress_widget.task_model.visible_tasks)
+            self.draw_dependencies(progress_widget.task_model.visible_tasks)
         
     def draw_timeline(self):
         """绘制时间轴"""
@@ -841,21 +864,34 @@ class GanttView(QGraphicsView):
         self.draw_grid_lines(total_width, days)
         
         # 动态调整场景高度
-        scene_height = 50 + len(self.parent().task_model.visible_tasks) * self.row_height + 50 # 50是表头高度，额外50是底部边距
-        self.scene.setSceneRect(0, 0, total_width + 100, max(600, scene_height)) # 最小高度600
+        # 通过父级（ProjectProgressWidget）访问task_model
+        progress_widget = self.parent()
+        if isinstance(progress_widget, QSplitter):
+            progress_widget = progress_widget.parent()
+        if hasattr(progress_widget, 'task_model'):
+            scene_height = 50 + len(progress_widget.task_model.visible_tasks) * self.row_height + 50 # 50是表头高度，额外50是底部边距
+            self.scene.setSceneRect(0, 0, total_width + 100, max(600, scene_height)) # 最小高度600
+        else:
+            self.scene.setSceneRect(0, 0, total_width + 100, 600) # 默认高度600
         
     def draw_time_ruler(self, total_width, days):
-        header_height = 25
-        total_header_height = header_height * 2
+        total_header_height = self.header_height * 2
         
-        upper_ruler = QGraphicsRectItem(0, 0, total_width, header_height)
-        upper_ruler.setBrush(QBrush(QColor(240, 240, 240)))
-        upper_ruler.setPen(QPen(Qt.NoPen))
+        # 绘制表头背景
+        header_bg = QGraphicsRectItem(0, 0, total_width, total_header_height)
+        header_bg.setBrush(QBrush(QColor(248, 249, 250)))  # 使用与左侧表头相同的颜色
+        header_bg.setPen(QPen(Qt.NoPen))
+        self.scene.addItem(header_bg)
+        
+        # 绘制上下两个标尺
+        upper_ruler = QGraphicsRectItem(0, 0, total_width, self.header_height)
+        upper_ruler.setBrush(QBrush(Qt.transparent))
+        upper_ruler.setPen(QPen(QColor(220, 220, 220)))  # 与左侧表头边框颜色一致
         self.scene.addItem(upper_ruler)
         
-        lower_ruler = QGraphicsRectItem(0, header_height, total_width, header_height)
-        lower_ruler.setBrush(QBrush(QColor(245, 245, 245)))
-        lower_ruler.setPen(QPen(Qt.NoPen))
+        lower_ruler = QGraphicsRectItem(0, self.header_height, total_width, self.header_height)
+        lower_ruler.setBrush(QBrush(Qt.transparent))
+        lower_ruler.setPen(QPen(QColor(220, 220, 220)))
         self.scene.addItem(lower_ruler)
         
         font = QFont("Arial", 8)
@@ -895,25 +931,36 @@ class GanttView(QGraphicsView):
             if lower_label_text:
                 text = QGraphicsTextItem(lower_label_text)
                 text.setFont(font)
-                text.setPos(x + 2, header_height + 5)
+                text.setPos(x + 2, self.header_height + 5)
                 self.scene.addItem(text)
             
             current_date = current_date.addDays(1)
             
     def draw_grid_lines(self, total_width, days):
-        header_height = 50
-        grid_height = max(600, 50 + len(self.parent().task_model.visible_tasks) * self.row_height + 50) # 使用动态高度
+        header_height = self.header_height * 2  # 两个表头的总高度
+        # 通过父级（ProjectProgressWidget）访问task_model
+        progress_widget = self.parent()
+        if isinstance(progress_widget, QSplitter):
+            progress_widget = progress_widget.parent()
+        if hasattr(progress_widget, 'task_model'):
+            grid_height = max(600, header_height + len(progress_widget.task_model.visible_tasks) * self.row_height + 20)  # 使用动态高度
+            task_count = len(progress_widget.task_model.visible_tasks)
+        else:
+            grid_height = 600
+            task_count = 0
 
+        # 绘制垂直网格线
         for i in range(days + 1):
             x = i * self.day_width * self.zoom_factor
             line = QGraphicsLineItem(x, header_height, x, grid_height)
-            line.setPen(QPen(QColor(230, 230, 230)))
+            line.setPen(QPen(QColor(240, 240, 240)))  # 使用与左侧表格相同的网格线颜色
             self.scene.addItem(line)
             
-        for i in range(len(self.parent().task_model.visible_tasks) + 1): # 根据任务数量绘制
+        # 绘制水平网格线
+        for i in range(task_count + 1):
             y = header_height + i * self.row_height
             line = QGraphicsLineItem(0, y, total_width, y)
-            line.setPen(QPen(QColor(230, 230, 230)))
+            line.setPen(QPen(QColor(240, 240, 240)))
             self.scene.addItem(line)
             
     def draw_tasks(self, tasks):
