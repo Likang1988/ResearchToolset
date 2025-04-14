@@ -120,8 +120,7 @@ class ProjectExpenseWidget(QWidget):
         self.expense_table.setSelectionBehavior(TableWidget.SelectRows) # 允许扩展选择整行
     
         
-        # 设置表格样式
-        UIUtils.set_table_style(self.expense_table)
+        
         
         top_layout.addWidget(self.expense_table) # 添加到布局中
         
@@ -225,29 +224,19 @@ class ProjectExpenseWidget(QWidget):
         self.stats_table.setSelectionBehavior(TableWidget.SelectRows)  
         self.stats_table.setSelectionMode(TableWidget.SingleSelection)  
         
-        # 设置表格样式
-        UIUtils.set_table_style(self.stats_table)
+        
         
         bottom_layout.addWidget(self.stats_table)
         splitter.addWidget(bottom_widget)
         
         # 设置初始比例和可调整性
-        splitter.setStretchFactor(0, 5)  # 上部占4/5
+        splitter.setStretchFactor(0, 6)  # 上部占4/5
         splitter.setStretchFactor(1, 2)  # 下部占1/5
         splitter.setChildrenCollapsible(False)  # 防止完全折叠
         
         main_layout.addWidget(splitter)
         
-        # 设置整体样式
-        self.setStyleSheet("""     
-            QSplitter::handle {   // 分割条样式
-                background-color: rgba(0, 0, 0, 0.1);
-                margin: 2px 0px;  // 上下边距
-            }
-            QLabel {
-                color: #333333;   // 文本颜色
-            }
-        """)
+
         
     def back_to_budget(self):
         """返回到预算管理页面"""

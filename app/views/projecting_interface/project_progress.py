@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QSplitter, QWidget,
                             QTreeView, QHeaderView, QAbstractItemView,
                             QStyledItemDelegate, QComboBox, QGraphicsView,
                             QGraphicsScene, QGraphicsRectItem, QGraphicsTextItem,
-                            QGraphicsLineItem, QGraphicsPolygonItem)
+                            QGraphicsLineItem, QGraphicsPolygonItem, QGraphicsItemGroup)
 from PySide6.QtCore import Qt, QSize, QDate, QAbstractTableModel, QModelIndex, QRectF, QPointF
 from PySide6.QtGui import QIcon, QBrush, QColor, QPen, QFont, QPainter, QPolygonF, QAction
 from sqlalchemy.orm import sessionmaker
@@ -17,6 +17,8 @@ import os
 
 # 确保从正确的相对路径导入
 from ...components.status_color_delegate import StatusColorDelegate
+from PySide6.QtWidgets import QGraphicsProxyWidget, QWidget
+from PySide6.QtWidgets import QGraphicsItem, QGraphicsItemGroup
 
 class TaskTableModel(QAbstractTableModel):
     """任务表格数据模型"""
@@ -713,6 +715,20 @@ class GanttView(QGraphicsView):
         self.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.setAlignment(Qt.AlignLeft | Qt.AlignTop)  # 设置对齐方式
+        
+        # 连接滚动条信号
+        self.verticalScrollBar().valueChanged.connect(self.sync_task_list_scroll)
+        self.task_list_scrolling = False  # 防止循环同步
+        
+        # 获取任务列表引用
+        progress_widget = self.parent()
+        if isinstance(progress_widget, QSplitter):
+            progress_widget = progress_widget.parent()
+        if hasattr(progress_widget, 'task_table'):
+            self.task_table = progress_widget.task_table
+            # 连接任务列表的滚动信号
+            self.task_table.verticalScrollBar().valueChanged.connect(self.sync_gantt_scroll)
         
         self.time_scale = "day"
         self.start_date = QDate.currentDate()
@@ -816,6 +832,46 @@ class GanttView(QGraphicsView):
             event.accept()
         else:
             super().wheelEvent(event)
+            # 更新表头位置
+            self.update_header_position()
+            
+    def scrollContentsBy(self, dx, dy):
+        super().scrollContentsBy(dx, dy)
+        # 在滚动时更新表头位置
+        self.update_header_position()
+        
+    def update_header_position(self):
+        if hasattr(self, '_header_group'):
+            # 获取当前视口的位置和变换
+            viewport_rect = self.viewport().rect()
+            scene_pos = self.mapToScene(viewport_rect.topLeft())
+            transform = self.viewportTransform()
+            
+            # 计算表头在视图坐标系中的位置
+            header_pos = transform.map(QPointF(scene_pos.x(), 0))
+            
+            # 更新表头组的位置，使其始终保持在视口顶部
+            self._header_group.setPos(scene_pos.x(), header_pos.y())
+            
+            # 确保表头始终可见
+            self._header_group.setVisible(True)
+            
+            # 强制更新视图
+            self.viewport().update()
+    
+    def sync_task_list_scroll(self, value):
+        """同步任务列表的滚动位置"""
+        if not self.task_list_scrolling and hasattr(self, 'task_table'):
+            self.task_list_scrolling = True
+            self.task_table.verticalScrollBar().setValue(value)
+            self.task_list_scrolling = False
+    
+    def sync_gantt_scroll(self, value):
+        """同步甘特图的滚动位置"""
+        if not self.task_list_scrolling:
+            self.task_list_scrolling = True
+            self.verticalScrollBar().setValue(value)
+            self.task_list_scrolling = False
             
     def zoom_in(self):
         self.zoom_factor *= 1.2
@@ -834,25 +890,39 @@ class GanttView(QGraphicsView):
         self.scene.clear()
         # 更新行高
         self.row_height = self.get_task_list_row_height()
-        # 确保 start_date 和 end_date 是 QDate 对象
-        if isinstance(self.start_date, date) and not isinstance(self.start_date, QDate):
-             self.start_date = QDate(self.start_date.year, self.start_date.month, self.start_date.day)
-        if isinstance(self.end_date, date) and not isinstance(self.end_date, QDate):
-             self.end_date = QDate(self.end_date.year, self.end_date.month, self.end_date.day)
-
-        self.draw_timeline()
-        # 通过父级（ProjectProgressWidget）访问task_model
+        
+        # 获取任务列表并更新时间范围
         progress_widget = self.parent()
         if isinstance(progress_widget, QSplitter):
             progress_widget = progress_widget.parent()
+        if hasattr(progress_widget, 'task_model'):
+            tasks = progress_widget.task_model.visible_tasks
+            if tasks:
+                # 找出所有任务的最早开始时间和最晚结束时间
+                min_date = min((t.start_date for t in tasks if t.start_date), default=QDate.currentDate())
+                max_date = max((t.end_date for t in tasks if t.end_date), default=QDate.currentDate().addDays(30))
+                
+                # 确保日期是QDate对象
+                if isinstance(min_date, date) and not isinstance(min_date, QDate):
+                    min_date = QDate(min_date.year, min_date.month, min_date.day)
+                if isinstance(max_date, date) and not isinstance(max_date, QDate):
+                    max_date = QDate(max_date.year, max_date.month, max_date.day)
+                
+                # 更新视图的时间范围，添加一定的边距
+                self.start_date = min_date.addDays(-5)
+                self.end_date = max_date.addDays(5)
+            
+            # 确保时间范围至少有30天
+            if self.start_date.daysTo(self.end_date) < 30:
+                self.end_date = self.start_date.addDays(30)
+
+        self.draw_timeline()
         if hasattr(progress_widget, 'task_model'):
             self.draw_tasks(progress_widget.task_model.visible_tasks)
             self.draw_dependencies(progress_widget.task_model.visible_tasks)
         
     def draw_timeline(self):
         """绘制时间轴"""
-        # self.scene.clear() # 在 update_view 中已清除
-        
         days = self.start_date.daysTo(self.end_date) + 1
         total_width = days * self.day_width * self.zoom_factor
         
@@ -860,8 +930,54 @@ class GanttView(QGraphicsView):
         elif self.zoom_factor <= 1.0: self.time_scale = "week"
         else: self.time_scale = "day"
         
-        self.draw_time_ruler(total_width, days)
-        self.draw_grid_lines(total_width, days)
+        # 创建表头组，用于固定表头
+        self._header_group = QGraphicsItemGroup()
+        self.scene.addItem(self._header_group)
+        self._header_group.setZValue(1000)  # 确保表头始终在最上层
+        
+        # 创建表头视图项
+        header_view = QGraphicsProxyWidget()
+        header_widget = QWidget()
+        header_widget.setFixedSize(total_width, self.header_height)
+        header_widget.setStyleSheet("background-color: rgb(240, 240, 240);")
+        header_view.setWidget(header_widget)
+        self._header_group.addToGroup(header_view)
+        
+        # 设置表头组为固定位置
+        self._header_group.setFlag(QGraphicsItem.ItemIgnoresTransformations)
+        self._header_group.setFlag(QGraphicsItem.ItemSendsGeometryChanges)
+        
+        # 绘制时间刻度
+        current_date = self.start_date
+        x = 0
+        while current_date <= self.end_date:
+            # 绘制日期文本
+            if self.time_scale == "day":
+                date_text = current_date.toString("MM-dd")
+            elif self.time_scale == "week":
+                date_text = f"第{current_date.weekNumber()[0]}周"
+            else:  # month
+                date_text = current_date.toString("yyyy-MM")
+            
+            text_item = QGraphicsTextItem(date_text)
+            text_item.setDefaultTextColor(QColor(80, 80, 80))
+            text_width = text_item.boundingRect().width()
+            text_item.setPos(x + (self.day_width * self.zoom_factor - text_width) / 2, 2)
+            self._header_group.addToGroup(text_item)
+            
+            # 绘制分隔线
+            line = QGraphicsLineItem(x, self.header_height, x, self.header_height + total_width)
+            line.setPen(QPen(QColor(200, 200, 200)))
+            self.scene.addItem(line)
+            
+            # 更新位置和日期
+            x += self.day_width * self.zoom_factor
+            if self.time_scale == "day":
+                current_date = current_date.addDays(1)
+            elif self.time_scale == "week":
+                current_date = current_date.addDays(7)
+            else:  # month
+                current_date = current_date.addMonths(1)
         
         # 动态调整场景高度
         # 通过父级（ProjectProgressWidget）访问task_model
@@ -873,20 +989,35 @@ class GanttView(QGraphicsView):
             self.scene.setSceneRect(0, 0, total_width + 100, max(600, scene_height)) # 最小高度600
         else:
             self.scene.setSceneRect(0, 0, total_width + 100, 600) # 默认高度600
+            
+        # 先绘制网格线，确保在底层
+        self.draw_grid_lines(total_width, days)
+        # 最后绘制时间轴，确保在顶层
+        self.draw_time_ruler(total_width, days)
         
     def draw_time_ruler(self, total_width, days):
         total_header_height = self.header_height * 2
         
+        # 创建表头组，用于固定在视图顶部
+        header_group = QGraphicsItemGroup()
+        header_group.setZValue(1000)  # 确保表头始终在最上层
+        
         # 绘制表头背景
         header_bg = QGraphicsRectItem(0, 0, total_width, total_header_height)
-        header_bg.setBrush(QBrush(QColor(248, 249, 250)))  # 使用与左侧表头相同的颜色
+        header_bg.setBrush(QBrush(QColor(248, 249, 250)))
         header_bg.setPen(QPen(Qt.NoPen))
-        self.scene.addItem(header_bg)
+        header_group.addToGroup(header_bg)
+        
+        # 将表头组添加到场景
+        self.scene.addItem(header_group)
+        
+        # 保存表头组的引用，用于滚动时更新位置
+        self._header_group = header_group
         
         # 绘制上下两个标尺
         upper_ruler = QGraphicsRectItem(0, 0, total_width, self.header_height)
         upper_ruler.setBrush(QBrush(Qt.transparent))
-        upper_ruler.setPen(QPen(QColor(220, 220, 220)))  # 与左侧表头边框颜色一致
+        upper_ruler.setPen(QPen(QColor(220, 220, 220)))
         self.scene.addItem(upper_ruler)
         
         lower_ruler = QGraphicsRectItem(0, self.header_height, total_width, self.header_height)
@@ -894,44 +1025,103 @@ class GanttView(QGraphicsView):
         lower_ruler.setPen(QPen(QColor(220, 220, 220)))
         self.scene.addItem(lower_ruler)
         
-        font = QFont("Arial", 8)
+        font = QFont("Microsoft YaHei", 8)
         current_date = self.start_date
         last_upper_label = ""
+        
+        # 根据缩放比例自动调整时间刻度
+        if self.zoom_factor <= 0.3:
+            self.time_scale = "year"
+        elif self.zoom_factor <= 0.6:
+            self.time_scale = "half_year"
+        elif self.zoom_factor <= 0.9:
+            self.time_scale = "quarter"
+        elif self.zoom_factor <= 1.2:
+            self.time_scale = "month"
+        elif self.zoom_factor <= 1.5:
+            self.time_scale = "week"
+        else:
+            self.time_scale = "day"
         
         for i in range(days):
             x = i * self.day_width * self.zoom_factor
             
-            line = QGraphicsLineItem(x, 0, x, total_header_height)
-            line.setPen(QPen(QColor(200, 200, 200)))
-            self.scene.addItem(line)
-            
-            upper_label = ""
-            if self.time_scale == "month":
-                if current_date.day() == 1: upper_label = current_date.toString("yyyy年MM月")
+            # 绘制垂直分隔线
+            draw_line = False
+            if self.time_scale == "year":
+                draw_line = current_date.day() == 1 and current_date.month() == 1
+            elif self.time_scale == "half_year":
+                draw_line = current_date.day() == 1 and current_date.month() in [1, 7]
+            elif self.time_scale == "quarter":
+                draw_line = current_date.day() == 1 and current_date.month() in [1, 4, 7, 10]
+            elif self.time_scale == "month":
+                draw_line = current_date.day() == 1
             elif self.time_scale == "week":
-                if current_date.dayOfWeek() == 1: upper_label = f"{current_date.year()}年第{current_date.weekNumber()[0]}周"
-            else: # day
-                if current_date.day() == 1: upper_label = current_date.toString("yyyy年MM月")
+                draw_line = current_date.dayOfWeek() == 1
+            else:  # day
+                draw_line = True
+            
+            if draw_line:
+                line = QGraphicsLineItem(x, 0, x, total_header_height)
+                line.setPen(QPen(QColor(200, 200, 200)))
+                self.scene.addItem(line)
+            
+            # 绘制上层标签
+            upper_label = ""
+            if self.time_scale == "year":
+                if current_date.month() == 1 and current_date.day() == 1:
+                    upper_label = current_date.toString("yyyy年")
+            elif self.time_scale == "half_year":
+                if current_date.day() == 1 and current_date.month() in [1, 7]:
+                    half = "上半年" if current_date.month() == 1 else "下半年"
+                    upper_label = f"{current_date.year()}年{half}"
+            elif self.time_scale == "quarter":
+                if current_date.day() == 1 and current_date.month() in [1, 4, 7, 10]:
+                    quarter = (current_date.month() - 1) // 3 + 1
+                    upper_label = f"{current_date.year()}年第{quarter}季度"
+            elif self.time_scale == "month":
+                if current_date.day() == 1:
+                    upper_label = current_date.toString("yyyy年MM月")
+            elif self.time_scale == "week":
+                if current_date.dayOfWeek() == 1:
+                    upper_label = f"{current_date.year()}年第{current_date.weekNumber()[0]}周"
+            else:  # day
+                if current_date.day() == 1:
+                    upper_label = current_date.toString("yyyy年MM月")
             
             if upper_label and upper_label != last_upper_label:
                 text = QGraphicsTextItem(upper_label)
                 text.setFont(font)
-                text.setPos(x + 2, 5)
+                text_width = text.boundingRect().width()
+                text.setPos(x + (self.day_width * self.zoom_factor - text_width) / 2, 2)
                 self.scene.addItem(text)
                 last_upper_label = upper_label
             
-            lower_label_text = ""
-            if self.time_scale == "month":
-                if current_date.day() == 1: lower_label_text = current_date.toString("MM月")
+            # 绘制下层标签
+            lower_label = ""
+            if self.time_scale == "year":
+                if current_date.month() == 1 and current_date.day() == 1:
+                    lower_label = current_date.toString("yyyy")
+            elif self.time_scale == "half_year":
+                if current_date.day() == 1 and current_date.month() in [1, 7]:
+                    lower_label = current_date.toString("MM月")
+            elif self.time_scale == "quarter":
+                if current_date.day() == 1 and current_date.month() in [1, 4, 7, 10]:
+                    lower_label = current_date.toString("MM月")
+            elif self.time_scale == "month":
+                if current_date.day() == 1:
+                    lower_label = current_date.toString("MM月")
             elif self.time_scale == "week":
-                if current_date.dayOfWeek() == 1: lower_label_text = current_date.toString("MM-dd")
-            else: # day
-                lower_label_text = current_date.toString("dd")
-
-            if lower_label_text:
-                text = QGraphicsTextItem(lower_label_text)
+                if current_date.dayOfWeek() == 1:
+                    lower_label = current_date.toString("MM-dd")
+            else:  # day
+                lower_label = current_date.toString("dd")
+            
+            if lower_label:
+                text = QGraphicsTextItem(lower_label)
                 text.setFont(font)
-                text.setPos(x + 2, self.header_height + 5)
+                text_width = text.boundingRect().width()
+                text.setPos(x + (self.day_width * self.zoom_factor - text_width) / 2, self.header_height + 2)
                 self.scene.addItem(text)
             
             current_date = current_date.addDays(1)

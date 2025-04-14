@@ -1,12 +1,29 @@
 import sys
 import os
 from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import QFont, QIcon  # 将QFont导入提前
 from app.views.main_window import MainWindow
 from app.models.database import init_db, migrate_db, Base
 import logging
 import matplotlib as mpl
 
 def main():
+    # 添加平台检测
+    import platform
+    is_mac = platform.system() == 'Darwin'
+    is_windows = platform.system() == 'Windows'
+    
+    # Create Qt application
+    app = QApplication(sys.argv)
+    
+    # 设置字体
+    font = QFont('Microsoft YaHei')
+    if is_mac:
+        font.setPixelSize(12)  # macOS下使用稍大的字号
+    elif is_windows:
+        font.setPixelSize(12)  # Windows下使用正常字号
+    app.setFont(font)
+    
     # 设置日志
     logging.basicConfig(level=logging.DEBUG)
     
@@ -14,18 +31,11 @@ def main():
     mpl.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'Arial']
     mpl.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
     
-    # Create Qt application
-    app = QApplication(sys.argv)
-    
-    # 设置默认字体
-    from PySide6.QtGui import QFont
-    app.setFont(QFont('Microsoft YaHei'))  # 使用微软雅黑作为替代字体
-    
+    # 删除重复的QApplication创建和QFont导入
     # 设置应用程序图标
     icon_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'app', 'assets', 'icon.ico'))
     print(f"图标路径: {icon_path}")  # 打印路径以便调试
     if os.path.exists(icon_path):
-        from PySide6.QtGui import QIcon
         app.setWindowIcon(QIcon(icon_path))
     else:
         print(f"图标文件不存在: {icon_path}")

@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTreeWidget, QTreeWidgetItem,
                              QLabel, QPushButton, QMessageBox, QSpinBox, QLineEdit, QHeaderView)
-from qfluentwidgets import PrimaryPushButton, TitleLabel, BodyLabel, FluentIcon, ToolButton, InfoBar, TableItemDelegate, Dialog
+from qfluentwidgets import PrimaryPushButton, TitleLabel, BodyLabel, FluentIcon, TreeWidget, InfoBar, TableItemDelegate, Dialog
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon
 from ..models.database import sessionmaker, BudgetCategory, BudgetPlan, BudgetPlanItem
@@ -143,7 +143,7 @@ class BudgetingInterface(QWidget):
         layout.addLayout(button_layout)
         
         # 树形列表
-        self.budget_tree = QTreeWidget()
+        self.budget_tree = TreeWidget()
         self.budget_tree.setColumnCount(6)
         self.budget_tree.setHeaderLabels([
             "课题名称/预算名称", "型号规格/简要内容",
@@ -151,41 +151,8 @@ class BudgetingInterface(QWidget):
         ])
         
         # 设置树形列表样式
-        self.budget_tree.setStyleSheet("""
-            QTreeWidget {
-                background-color: transparent;
-                border: 1px solid rgba(0, 0, 0, 0.1);
-                border-radius: 8px;
-                selection-background-color: rgba(0, 120, 212, 0.1);
-                selection-color: black;
-            }
-            QTreeWidget::item {
-                height: 36px;
-                padding: 2px;
-            }
-            QTreeWidget::item:hover {
-                background-color: rgba(0, 0, 0, 0.05);
-            }
-            QTreeWidget::item:selected {
-                background-color: rgba(0, 120, 212, 0.1);
-                color: black;
-            }
-            QTreeWidget::item:selected:active {
-                background-color: rgba(0, 120, 212, 0.15);
-                color: black;
-            }
-            QTreeWidget QHeaderView::section {
-                background-color: #f3f3f3;
-                color: #333333;
-                font-weight: 500;
-                padding: 8px;
-                border: none;
-                border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-            }
-            QHeaderView::section:hover {
-                background-color: #e5e5e5;
-            }
-        """)
+        #UIUtils.set_tree_style(self.budget_tree)
+        
         
         # 设置编辑触发器为单击和双击
         self.budget_tree.setEditTriggers(QTreeWidget.SelectedClicked | QTreeWidget.DoubleClicked | QTreeWidget.EditKeyPressed)

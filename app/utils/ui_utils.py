@@ -16,7 +16,7 @@ class UIUtils:
                 background-color: transparent;
                 border: 1px solid rgba(0, 0, 0, 0.1);
                 border-radius: 8px;
-                selection-background-color: rgba(0, 120, 212, 0.1);
+                selection-background-color: rgba(0, 0, 0, 0.05);
                 selection-color: black;
             }
             QTableWidget::item {
@@ -25,10 +25,10 @@ class UIUtils:
                 height: 32px;
             }
             QTableWidget::item:hover {
-                background-color: rgba(0, 0, 0, 0.05);
+                background-color: rgba(0, 0, 0, 0.03);
             }
             QHeaderView::section {
-                background-color: #f3f3f3;  
+                background-color: transparent;  
                 color: #333333;
                 font-weight: 500;
                 padding: 8px;
@@ -36,7 +36,7 @@ class UIUtils:
                 border-bottom: 1px solid rgba(0, 0, 0, 0.1);
             }
             QHeaderView::section:hover {
-                background-color: #e5e5e5;
+                background-color: #f2f2f2;
             }
         """)
         
@@ -91,6 +91,10 @@ class UIUtils:
         header.setSortIndicatorShown(True)
         header.setSectionsMovable(True)
         
+        # 设置选择模式
+        tree.setSelectionBehavior(QTreeWidget.SelectRows)
+        tree.setSelectionMode(QTreeWidget.ExtendedSelection)
+
     @staticmethod
     def create_title_layout(title_text: str):
         """创建标准的标题栏布局"""

@@ -1,8 +1,9 @@
 import os
+import sys
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTreeWidget, QSplitter, 
                                  QLabel, QPushButton, QMessageBox, QSpinBox, QTableWidget, QTableWidgetItem,
                                  QStackedWidget, QTreeWidgetItem)
-from qfluentwidgets import PrimaryPushButton, TitleLabel, FluentIcon, ToolButton, InfoBar, Dialog
+from qfluentwidgets import PrimaryPushButton, TreeWidget, FluentIcon, ToolButton, InfoBar, Dialog
 from PySide6.QtCore import Qt, QSize, Signal
 from PySide6.QtGui import QIcon
 from ...components.budget_dialog import BudgetDialog, TotalBudgetDialog
@@ -94,7 +95,7 @@ class ProjectBudgetWidget(QWidget):
         left_layout.setContentsMargins(0, 0, 10, 0)
         
         # 预算树形表格
-        self.budget_tree = QTreeWidget()
+        self.budget_tree = TreeWidget()
         self.budget_tree.setColumnCount(6)
         
         # 获取表头并设置居中对齐
@@ -102,10 +103,10 @@ class ProjectBudgetWidget(QWidget):
         header.setDefaultAlignment(Qt.AlignCenter)
         
         # 设置列宽
-        self.budget_tree.setColumnWidth(0, 130)  # 预算年度
-        self.budget_tree.setColumnWidth(1, 80)  # 预算额
-        self.budget_tree.setColumnWidth(2, 80)  # 支出额
-        self.budget_tree.setColumnWidth(3, 80)  # 结余额
+        self.budget_tree.setColumnWidth(0, 136)  # 预算年度
+        self.budget_tree.setColumnWidth(1, 78)  # 预算额
+        self.budget_tree.setColumnWidth(2, 78)  # 支出额
+        self.budget_tree.setColumnWidth(3, 78)  # 结余额
         self.budget_tree.setColumnWidth(4, 90)  # 执行率
         self.budget_tree.setColumnWidth(5, 60)  # 操作
         
@@ -115,41 +116,15 @@ class ProjectBudgetWidget(QWidget):
             "支出额\n(万元)", "结余额\n(万元)", "执行率", "支出管理"
         ])
         
-        self.budget_tree.setAlternatingRowColors(True)  # 启用交替行颜色
+        self.budget_tree.setAlternatingRowColors(False)  # 启用交替行颜色
         
         # 为执行率列设置进度条代理
         self.progress_delegate = ProgressBarDelegate(self.budget_tree)
         self.budget_tree.setItemDelegateForColumn(4, self.progress_delegate)
         
         # 设置树形表格样式
-        self.budget_tree.setStyleSheet("""
-            QTreeWidget::item {
-                height: 36px;
-                padding: 2px;
-            }
-            QTreeWidget {
-                background-color: transparent;
-                border: 1px solid rgba(0, 0, 0, 0.1);
-                border-radius: 8px;
-                selection-background-color: rgba(0, 120, 212, 0.1);
-                selection-color: black;
-            }
-            QTreeWidget::item:hover {
-                background-color: rgba(0, 0, 0, 0.05);
-            }
-            QTreeWidget QHeaderView::section {
-                background-color: #f3f3f3;
-                color: #333333;
-                font-weight: 500;
-                padding: 8px;
-                border: none;
-                border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-            }
-            QHeaderView::section:hover {
-                background-color: #e5e5e5;
-            }
-        """)
-        
+        #UIUtils.set_tree_style(self.budget_tree)
+
         # 连接选择信号
         self.budget_tree.itemSelectionChanged.connect(self.on_budget_selection_changed)
         
@@ -261,6 +236,13 @@ class ProjectBudgetWidget(QWidget):
             
             # 设置总预算行的字体为加粗和行高
             font = total_item.font(0)
+            
+            # 根据平台调整字号
+            if sys.platform == 'darwin':  # macOS
+                font.setPointSize(font.pointSize() + 1)  # 在macOS上增大1号
+            else:  # Windows/Linux
+                font.setPointSize(font.pointSize())  # 保持默认
+            
             font.setBold(True)
             for i in range(6):  # 设置所有列的字体为加粗
                 total_item.setFont(i, font)
