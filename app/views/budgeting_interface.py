@@ -151,7 +151,7 @@ class BudgetingInterface(QWidget):
         ])
         
         # 设置树形列表样式
-        #UIUtils.set_tree_style(self.budget_tree)
+        UIUtils.set_tree_style(self.budget_tree)
         
         
         # 设置编辑触发器为单击和双击

@@ -123,7 +123,7 @@ class ProjectBudgetWidget(QWidget):
         self.budget_tree.setItemDelegateForColumn(4, self.progress_delegate)
         
         # 设置树形表格样式
-        #UIUtils.set_tree_style(self.budget_tree)
+        UIUtils.set_tree_style(self.budget_tree)
 
         # 连接选择信号
         self.budget_tree.itemSelectionChanged.connect(self.on_budget_selection_changed)

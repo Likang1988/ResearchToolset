@@ -1,7 +1,7 @@
-from PySide6.QtWidgets import (QWidget, QTableWidget, QHeaderView, QVBoxLayout,
+from PySide6.QtWidgets import (QWidget, QTableWidget, QTreeWidget, QHeaderView, QVBoxLayout,
                              QHBoxLayout, QLabel)
 from PySide6.QtCore import Qt
-from qfluentwidgets import TitleLabel, PrimaryPushButton, FluentIcon, InfoBar
+from qfluentwidgets import TitleLabel, PrimaryPushButton, FluentIcon, InfoBar, TableWidget
 import os
 
 class UIUtils:
@@ -9,7 +9,7 @@ class UIUtils:
     DEFAULT_INFOBAR_DURATION = 5000
   
     @staticmethod
-    def set_table_style(table: QTableWidget):
+    def set_table_style(table: TableWidget):
         """设置表格通用样式"""
         table.setStyleSheet("""
             QTableWidget {
@@ -29,14 +29,14 @@ class UIUtils:
             }
             QHeaderView::section {
                 background-color: transparent;  
-                color: #333333;
+                color: #555555;
                 font-weight: 500;
                 padding: 8px;
                 border: none;
                 border-bottom: 1px solid rgba(0, 0, 0, 0.1);
             }
             QHeaderView::section:hover {
-                background-color: #f2f2f2;
+                background-color: #f5f5f5;
             }
         """)
         
@@ -46,8 +46,8 @@ class UIUtils:
         # 设置表头属性
         header = table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.Interactive)
-        header.setSortIndicatorShown(True)
-        header.setSectionsMovable(True)
+    #    header.setSortIndicatorShown(True)
+    #    header.setSectionsMovable(True)
         
         # 设置选择模式
         table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -61,7 +61,7 @@ class UIUtils:
                 background-color: transparent;
                 border: 1px solid rgba(0, 0, 0, 0.1);
                 border-radius: 8px;
-                selection-background-color: rgba(0, 120, 212, 0.1);
+                selection-background-color: rgba(0, 0, 0, 0.05);
                 selection-color: black;
             }
             QTreeWidget::item {
@@ -70,26 +70,28 @@ class UIUtils:
                 height: 32px;
             }
             QTreeWidget::item:hover {
-                background-color: rgba(0, 0, 0, 0.05);
+                background-color: rgba(0, 0, 0, 0.001);
             }
             QHeaderView::section {
-                background-color: #f3f3f3;  
+                background-color: rgba(0, 0, 0, 0.01);  
                 color: #333333;
                 font-weight: 500;
                 padding: 8px;
+                height: 28px;
                 border: none;
+                border-right: 1px solid rgba(0, 0, 0, 0.1);
                 border-bottom: 1px solid rgba(0, 0, 0, 0.1);
             }
             QHeaderView::section:hover {
-                background-color: #e5e5e5;
+                background-color: rgba(0, 0, 0, 0.001);
             }
         """)
         
         # 设置表头属性
         header = tree.header()
         header.setSectionResizeMode(QHeaderView.Interactive)
-        header.setSortIndicatorShown(True)
-        header.setSectionsMovable(True)
+    #    header.setSortIndicatorShown(True)
+    #    header.setSectionsMovable(True)
         
         # 设置选择模式
         tree.setSelectionBehavior(QTreeWidget.SelectRows)
