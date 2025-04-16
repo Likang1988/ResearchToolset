@@ -2,9 +2,11 @@ from PySide6.QtWidgets import QApplication, QStackedWidget
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QIcon
 from qfluentwidgets import NavigationInterface, FluentWindow, FluentIcon, NavigationItemPosition
+from qframelesswindow import FramelessWindow, StandardTitleBar
 from ..utils.ui_utils import UIUtils
 from .projecting_interface.project_list import ProjectListWindow
 from .projecting_interface.project_budget import ProjectBudgetWidget
+from .projecting_interface.project_progress import ProjectProgressWidget
 from .home_interface import HomeInterface
 from .help_interface import HelpInterface
 from .budgeting_interface import BudgetingInterface
@@ -68,6 +70,15 @@ class MainWindow(FluentWindow):
             position=NavigationItemPosition.BOTTOM
         )
 
+        # 添加项目进度界面
+        self.progress_interface = ProjectProgressWidget(self.engine)
+        self.progress_interface.setObjectName("progressInterface")
+        self.addSubInterface(
+            self.progress_interface,
+            QIcon(UIUtils.get_svg_icon_path('progress')),
+            "项目进度"
+        )
+
         # 添加工具界面
         self.tools_interface = ToolsInterface()
         self.tools_interface.setObjectName("toolsInterface")
@@ -77,6 +88,9 @@ class MainWindow(FluentWindow):
             "小工具"
         )
 
+        
+        # 启用云母特效
+        self.setMicaEffectEnabled(True)
         
         # 设置当前页面
         self.navigationInterface.setCurrentItem("主页")

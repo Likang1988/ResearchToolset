@@ -12,8 +12,8 @@
   <link rel=stylesheet href="ganttPrint.css" type="text/css" media="print">
   <link rel=stylesheet href="libs/jquery/valueSlider/mb.slider.css" type="text/css" media="print">
 
-  <script src="http://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
-  <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+  <script src="libs/jquery/jquery.min.js"></script>
+  <script src="libs/jquery/jquery-ui.min.js"></script>
 
   <script src="libs/jquery/jquery.livequery.1.1.1.min.js"></script>
   <script src="libs/jquery/jquery.timers.js"></script>
@@ -46,9 +46,6 @@
 <body style="background-color: #fff;">
 
 
-<div id="ndo" style="position:absolute;right:5px;top:5px;width:378px;padding:5px;background-color: #FFF5E6; border:1px solid #F9A22F; font-size:12px" class="noprint">
-  This Gantt editor is free thanks to <a href="http://twproject.com" target="_blank">Twproject</a> where it can be used on a complete and flexible project management solution.<br> Get your projects done! Give <a href="http://twproject.com" target="_blank">Twproject a try now</a>.
-</div>
 <div id="workSpace" style="padding:0px; overflow-y:auto; overflow-x:hidden;border:1px solid #e5e5e5;position:relative;margin:0 5px"></div>
 
 <style>
@@ -104,7 +101,7 @@ $(function() {
   ge.loadProject(project);
   ge.checkpoint(); //empty the undo stack
 
-  initializeHistoryManagement(ge.tasks[0].id);
+  // initializeHistoryManagement(ge.tasks[0].id); // Commented out as contextPath is not defined in local environment
 });
 
 
@@ -502,7 +499,6 @@ function showBaselineInfo (event,element){
   <!--
   <div class="ganttButtonBar noprint">
     <div class="buttons">
-      <a href="https://gantt.twproject.com/"><img src="res/twGanttLogo.png" alt="Twproject" align="absmiddle" style="max-width: 136px; padding-right: 15px"></a>
 
       <button onclick="$('#workSpace').trigger('undo.gantt');return false;" class="button textual icon requireCanWrite" title="undo"><span class="teamworkIcon">&#39;</span></button>
       <button onclick="$('#workSpace').trigger('redo.gantt');return false;" class="button textual icon requireCanWrite" title="redo"><span class="teamworkIcon">&middot;</span></button>
