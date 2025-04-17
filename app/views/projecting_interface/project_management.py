@@ -7,10 +7,11 @@ from .project_document import ProjectDocumentWidget
 from .project_achievement import ProjectAchievementWidget
 
 class ProjectManagementWidget(QWidget):
-    def __init__(self, project, parent=None):
+    # Modify __init__ to accept engine
+    def __init__(self, project, engine=None, parent=None):
         super().__init__(parent=parent)
         self.project = project
-        self.engine = None
+        self.engine = engine # Store the passed engine
         self.setup_ui()
 
     def setup_ui(self):
@@ -48,12 +49,17 @@ class ProjectManagementWidget(QWidget):
         self.stack_widget = QStackedWidget(self)
         
         # 添加各个管理页面
-        self.progress_widget = ProjectProgressWidget(self.project)
-        self.progress_widget.engine = self.engine
+        # 确保 ProjectProgressWidget 接收 engine
+        self.progress_widget = ProjectProgressWidget(self.project, engine=self.engine)
+
+        # 移除传递 engine 给其他 widget，除非它们确实需要
         self.document_widget = ProjectDocumentWidget(self.project)
-        self.document_widget.engine = self.engine
+        # 如果 ProjectDocumentWidget 之后需要 engine，则应修改其 __init__ 并在此处传递
+        # self.document_widget.engine = self.engine # 或者在这里单独设置（如果它需要）
+
         self.achievement_widget = ProjectAchievementWidget(self.project)
-        self.achievement_widget.engine = self.engine
+        # 如果 ProjectAchievementWidget 之后需要 engine，则应修改其 __init__ 并在此处传递
+        # self.achievement_widget.engine = self.engine # 或者在这里单独设置（如果它需要）
         
         self.stack_widget.addWidget(self.progress_widget)
         self.stack_widget.addWidget(self.document_widget)

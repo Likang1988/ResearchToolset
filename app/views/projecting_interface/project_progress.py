@@ -1,91 +1,393 @@
+import json
+from datetime import datetime, timezone
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtCore import QUrl, Signal
+from PySide6.QtWebChannel import QWebChannel
+from PySide6.QtCore import QUrl, Signal, QObject, Slot, QCoreApplication
 from PySide6.QtGui import QIcon
-from qfluentwidgets import NavigationInterface, NavigationItemPosition
+from qfluentwidgets import NavigationInterface, NavigationItemPosition, InfoBar, InfoBarPosition
 from qframelesswindow.webengine import FramelessWindow, FramelessWebEngineView
 from app.utils.ui_utils import UIUtils
+from app.models.database import sessionmaker, GanttTask, GanttDependency, Project
 import os
+
+# --- GanttBridge Class for Python-JS Communication ---
+class GanttBridge(QObject):
+    """用于在Python和JavaScript之间通过QWebChannel通信的桥梁类"""
+    data_saved = Signal(bool, str) # 信号：保存是否成功，消息
+
+    def __init__(self, engine, project, parent=None):
+        super().__init__(parent)
+        self.engine = engine
+        self.project = project
+        self.Session = sessionmaker(bind=self.engine)
+
+    @Slot(result=str) # 返回JSON字符串
+    def load_gantt_data(self):
+        """从数据库加载指定项目的甘特图数据"""
+        session = self.Session()
+        try:
+            tasks_db = session.query(GanttTask).filter(GanttTask.project_id == self.project.id).order_by(GanttTask.id).all()
+            dependencies_db = session.query(GanttDependency).filter(GanttDependency.project_id == self.project.id).all()
+
+            tasks_json = []
+            for task in tasks_db:
+                # 将数据库时间转换为毫秒时间戳 (jQueryGantt需要)
+                # 确保时间是aware的，假设数据库存储的是UTC
+                start_ms = int(task.start_date.replace(tzinfo=timezone.utc).timestamp() * 1000) if task.start_date else None
+                end_ms = int(task.end_date.replace(tzinfo=timezone.utc).timestamp() * 1000) if task.end_date else None
+
+                tasks_json.append({
+                    "id": task.gantt_id, # 使用存储的gantt_id
+                    "name": task.name,
+                    "progress": task.progress,
+                    "progressByWorklog": task.progress_by_worklog,
+                    "relevance": 0, # 示例值，根据需要调整
+                    "type": "", # 示例值
+                    "typeId": "", # 示例值
+                    "description": task.description,
+                    "code": task.code,
+                    "level": task.level,
+                    "status": task.status,
+                    "depends": self._get_task_dependencies(task.gantt_id, dependencies_db),
+                    "canWrite": True, # 假设可写
+                    "start": start_ms,
+                    "duration": task.duration,
+                    "end": end_ms,
+                    "startIsMilestone": task.start_is_milestone,
+                    "endIsMilestone": task.end_is_milestone,
+                    "collapsed": task.collapsed,
+                    "assigs": [], # 假设没有分配资源
+                    "hasChild": task.has_child
+                })
+
+            # 构建jQueryGantt期望的完整项目结构
+            project_data = {
+                "tasks": tasks_json,
+                "selectedRow": 0 if tasks_json else -1, # 选中第一行或不选
+                "deletedTaskIds": [], # 初始为空
+                "resources": [], # 暂不处理资源
+                "roles": [], # 暂不处理角色
+                "canWrite": True,
+                "canDelete": True,
+                "canWriteOnParent": True,
+                "canAdd": True
+            }
+            print(f"Loaded {len(tasks_json)} tasks for project {self.project.id}")
+            return json.dumps(project_data, default=str) # 使用default=str处理日期等
+
+        except Exception as e:
+            print(f"Error loading Gantt data: {e}")
+            session.rollback()
+            # 返回一个空的或默认的项目结构，防止JS出错
+            return json.dumps({
+                "tasks": [], "selectedRow": -1, "deletedTaskIds": [],
+                "resources": [], "roles": [], "canWrite": True, "canDelete": True,
+                "canWriteOnParent": True, "canAdd": True
+            })
+        finally:
+            session.close()
+
+    def _get_task_dependencies(self, task_gantt_id, all_dependencies):
+        """获取指定任务的依赖字符串"""
+        deps = []
+        for dep in all_dependencies:
+            if dep.successor_gantt_id == task_gantt_id:
+                # jQueryGantt 依赖格式通常是 "前置任务ID[:类型]"，这里简化为仅ID
+                deps.append(str(dep.predecessor_gantt_id))
+        return ",".join(deps)
+
+    @Slot(str, result=bool) # 接收JSON字符串，返回布尔值
+    def save_gantt_data(self, project_json_str):
+        """将甘特图数据保存到数据库"""
+        session = self.Session()
+        try:
+            project_data = json.loads(project_json_str)
+            tasks_data = project_data.get("tasks", [])
+            deleted_task_ids = project_data.get("deletedTaskIds", [])
+
+            # 1. 处理删除的任务
+            if deleted_task_ids:
+                # 先删除依赖这些任务的记录
+                session.query(GanttDependency).filter(
+                    GanttDependency.project_id == self.project.id,
+                    (GanttDependency.predecessor_gantt_id.in_(deleted_task_ids)) |
+                    (GanttDependency.successor_gantt_id.in_(deleted_task_ids))
+                ).delete(synchronize_session=False)
+                # 再删除任务本身
+                session.query(GanttTask).filter(
+                    GanttTask.project_id == self.project.id,
+                    GanttTask.gantt_id.in_(deleted_task_ids)
+                ).delete(synchronize_session=False)
+                print(f"Deleted tasks: {deleted_task_ids}")
+
+            # 2. 处理现有任务和新任务
+            existing_tasks_db = session.query(GanttTask).filter(GanttTask.project_id == self.project.id).all()
+            existing_task_map = {task.gantt_id: task for task in existing_tasks_db}
+            new_task_id_map = {} # 存储临时ID到新数据库ID的映射
+            processed_gantt_ids = set() # 存储处理过的持久化ID
+
+            all_dependencies_to_save = []
+
+            for task_data in tasks_data:
+                gantt_id = str(task_data["id"]) # 确保是字符串
+                depends_str = task_data.get("depends", "")
+
+                # 转换时间戳回datetime (确保是UTC)
+                start_dt = datetime.fromtimestamp(task_data["start"] / 1000, tz=timezone.utc) if task_data.get("start") is not None else None
+                end_dt = datetime.fromtimestamp(task_data["end"] / 1000, tz=timezone.utc) if task_data.get("end") is not None else None
+
+                task_obj_data = {
+                    "project_id": self.project.id,
+                    "name": task_data["name"],
+                    "code": task_data.get("code"),
+                    "level": task_data.get("level", 0),
+                    "status": task_data.get("status"),
+                    "start_date": start_dt,
+                    "duration": task_data.get("duration"),
+                    "end_date": end_dt,
+                    "start_is_milestone": task_data.get("startIsMilestone", False),
+                    "end_is_milestone": task_data.get("endIsMilestone", False),
+                    "progress": task_data.get("progress", 0),
+                    "progress_by_worklog": task_data.get("progressByWorklog", False),
+                    "description": task_data.get("description"),
+                    "collapsed": task_data.get("collapsed", False),
+                    "has_child": task_data.get("hasChild", False)
+                }
+
+                current_gantt_id = None # 用于依赖关系处理
+
+                if gantt_id.startswith("tmp_"):
+                    # 新任务：插入数据库
+                    new_task = GanttTask(**task_obj_data)
+                    # 先添加获取ID
+                    session.add(new_task)
+                    session.flush() # 获取新任务的数据库ID
+                    new_gantt_id = str(new_task.id) # 使用数据库ID作为持久化ID
+                    new_task.gantt_id = new_gantt_id # 更新gantt_id
+                    session.merge(new_task) # 合并更新
+                    new_task_id_map[gantt_id] = new_gantt_id # 记录临时ID到新ID的映射
+                    print(f"Added new task: {gantt_id} -> {new_gantt_id}")
+                    current_gantt_id = new_gantt_id
+                    processed_gantt_ids.add(current_gantt_id)
+                elif gantt_id in existing_task_map:
+                    # 现有任务：更新数据库
+                    existing_task = existing_task_map[gantt_id]
+                    for key, value in task_obj_data.items():
+                        setattr(existing_task, key, value)
+                    existing_task.gantt_id = gantt_id # 确保gantt_id不变
+                    session.merge(existing_task)
+                    print(f"Updated task: {gantt_id}")
+                    current_gantt_id = gantt_id
+                    processed_gantt_ids.add(current_gantt_id)
+                else:
+                    # 可能是从其他地方导入的持久化ID，但不在当前数据库中
+                    # 尝试作为新任务插入，但使用提供的ID
+                    print(f"Task with persistent id {gantt_id} not found in DB, attempting to insert.")
+                    new_task = GanttTask(gantt_id=gantt_id, **task_obj_data)
+                    try:
+                        session.add(new_task)
+                        session.flush()
+                        print(f"Inserted task with provided persistent id: {gantt_id}")
+                        current_gantt_id = gantt_id
+                        processed_gantt_ids.add(current_gantt_id)
+                    except Exception as insert_err:
+                        print(f"Failed to insert task with id {gantt_id}: {insert_err}")
+                        session.rollback() # 回滚单条插入错误，继续处理其他任务
+                        continue # 跳过此任务的依赖处理
+
+                # 处理依赖关系 (需要在此任务处理完后进行，以确保ID已更新)
+                if current_gantt_id and depends_str:
+                    predecessor_ids = depends_str.split(',')
+                    for pred_id_raw in predecessor_ids:
+                        pred_id = pred_id_raw.strip()
+                        if pred_id: # 确保ID不为空
+                            all_dependencies_to_save.append({
+                                "predecessor": pred_id,
+                                "successor": current_gantt_id # 使用当前任务的持久化ID
+                            })
+
+            # 3. 处理依赖关系 (在所有任务处理完之后)
+            # 先删除该项目的所有旧依赖
+            session.query(GanttDependency).filter(GanttDependency.project_id == self.project.id).delete(synchronize_session=False)
+            print("Cleared old dependencies.")
+
+            # 添加新的依赖关系
+            added_deps_count = 0
+            for dep_data in all_dependencies_to_save:
+                pred_id = dep_data["predecessor"]
+                succ_id = dep_data["successor"] # 这个ID应该是持久化的
+
+                # 如果前置任务是新创建的，使用映射后的新ID
+                final_pred_id = new_task_id_map.get(pred_id, pred_id)
+
+                # 检查ID是否存在于已处理的任务集合中，防止无效依赖
+                if final_pred_id in processed_gantt_ids and succ_id in processed_gantt_ids:
+                    # 检查是否已存在相同的依赖（理论上不会，因为先清空了）
+                    existing_dep = session.query(GanttDependency).filter_by(
+                        project_id=self.project.id,
+                        predecessor_gantt_id=final_pred_id,
+                        successor_gantt_id=succ_id
+                    ).first()
+                    if not existing_dep:
+                        new_dependency = GanttDependency(
+                            project_id=self.project.id,
+                            predecessor_gantt_id=final_pred_id,
+                            successor_gantt_id=succ_id,
+                            type="FS" # 假设默认为 FS 类型
+                        )
+                        session.add(new_dependency)
+                        added_deps_count += 1
+                else:
+                     print(f"Skipping dependency: Pred '{final_pred_id}' or Succ '{succ_id}' not found in processed tasks.")
+
+
+            session.commit()
+            print(f"Saved {len(processed_gantt_ids)} tasks and {added_deps_count} dependencies.")
+            self.data_saved.emit(True, "甘特图数据保存成功！")
+            return True
+
+        except Exception as e:
+            session.rollback()
+            print(f"Error saving Gantt data: {e}")
+            self.data_saved.emit(False, f"保存失败: {e}")
+            return False
+        finally:
+            session.close()
+
 
 class ProjectProgressWidget(QWidget):
     """项目进度管理组件，集成jQueryGantt甘特图"""
-    
+
     # 定义信号
     progress_updated = Signal()
-    """项目进度管理组件，集成jQueryGantt甘特图"""
-    
-    def __init__(self, engine=None, parent=None):
+
+    def __init__(self, project, engine=None, parent=None): # 接收 project 对象
         super().__init__(parent)
+        self.project = project # 保存 project 对象
         self.engine = engine
         self.setObjectName("projectProgressWidget")
         self.setup_ui()
-        
+
     def setup_ui(self):
         """初始化界面"""
         self.setStyleSheet("background: transparent;")
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
-        
+
         # 创建WebEngineView并设置样式
         self.web_view = FramelessWebEngineView(self)
-        
         self.layout.addWidget(self.web_view)
-        
+
+        # --- 设置 QWebChannel ---
+        self.channel = QWebChannel(self.web_view.page())
+        self.gantt_bridge = GanttBridge(self.engine, self.project, self) # 创建桥接对象
+        self.channel.registerObject("ganttBridge", self.gantt_bridge) # 注册对象，JS端将通过 'ganttBridge' 访问
+        self.web_view.page().setWebChannel(self.channel)
+        # 连接保存信号到信息提示
+        self.gantt_bridge.data_saved.connect(self.show_save_status)
+        # -----------------------
+
         # 加载本地甘特图资源
         self.load_gantt()
-    
+
     def load_gantt(self):
         """加载本地jQueryGantt资源"""
         try:
             # 获取绝对路径并确保路径存在
             gantt_dir = os.path.dirname(os.path.abspath(__file__))
             gantt_path = os.path.join(gantt_dir, "jQueryGantt", "gantt.html")
-            
+            libs_dir = os.path.join(gantt_dir, "jQueryGantt", "libs") # 获取libs目录
+            self.qwebchannel_js_path = os.path.join(libs_dir, "qwebchannel.js") # qwebchannel.js 的路径
+
             if not os.path.exists(gantt_path):
                 raise FileNotFoundError(f"Gantt file not found at {gantt_path}")
-            
+            if not os.path.exists(self.qwebchannel_js_path):
+                 # 尝试从标准位置复制（如果需要）
+                 # 或者提示用户手动放置
+                 print(f"Warning: qwebchannel.js not found at {self.qwebchannel_js_path}. QWebChannel might not work.")
+                 # raise FileNotFoundError(f"qwebchannel.js not found at {self.qwebchannel_js_path}")
+
+
             # 转换为file:// URL格式并设置基础URL
             gantt_url = QUrl.fromLocalFile(gantt_path)
             self.web_view.setUrl(gantt_url)
-            
+
             # 设置页面加载完成后的回调
             self.web_view.loadFinished.connect(self.on_gantt_loaded)
         except Exception as e:
             print(f"Error loading Gantt: {str(e)}")
-    
+
     def on_gantt_loaded(self, success):
         """甘特图加载完成回调"""
         if success:
-            print("jQueryGantt loaded successfully")
-            # 初始化甘特图数据
-            self.init_gantt_data()
-        else:
-            print("Failed to load jQueryGantt")
-    
-    def init_gantt_data(self):
-        """初始化甘特图数据"""
-        # 初始化已在 gantt.html 中完成 (ge = new GanttMaster(); ge.init(...))
-        # 如果需要加载初始数据，可以在这里调用 update_progress_data
-        # 例如，加载示例数据:
-        # demo_data = self.get_demo_project_data() # 需要实现获取示例数据的方法
-        # self.update_progress_data(demo_data)
-        print("Gantt initialized via HTML. Ready to load data.")
-        pass # 无需在此执行额外的JS初始化
+            print("jQueryGantt HTML loaded successfully. Initializing QWebChannel...")
+            # 注入 qwebchannel.js 并初始化连接
+            try:
+                with open(self.qwebchannel_js_path, 'r', encoding='utf-8') as f:
+                    qwebchannel_js = f.read()
 
-    def update_progress_data(self, data):
-        """更新甘特图数据"""
-        # 确保传入的 data 是符合 jQueryGantt (GanttMaster) 期望的 project JSON 格式
-        # 格式类似于 gantt.html 中的 getDemoProject() 返回的结构
-        # 主要包含 'tasks', 'resources', 'roles', 'canWrite' 等键
-        update_script = f"""
-        // 使用 ge 对象加载项目数据
-        var projectData = {data};
-        if (typeof ge !== 'undefined' && ge.loadProject) {{
-            ge.loadProject(projectData);
-            ge.redraw(); // 可选：强制重绘
-            console.log("Project data loaded via Python.");
-        }} else {{
-            console.error("Gantt object 'ge' not found or loadProject method missing.");
-        }}
-        """
-        self.web_view.page().runJavaScript(update_script)
+                init_script = f"""
+                {qwebchannel_js}
+
+                var ganttBridge;
+                new QWebChannel(qt.webChannelTransport, function (channel) {{
+                    window.ganttBridge = channel.objects.ganttBridge;
+                    console.log("QWebChannel connected, ganttBridge object available.");
+
+                    // 连接成功后，立即尝试加载数据
+                    if (window.ganttBridge && window.ganttBridge.load_gantt_data) {{
+                        window.ganttBridge.load_gantt_data(function(jsonData) {{
+                            if (jsonData) {{
+                                try {{
+                                    var projectData = JSON.parse(jsonData);
+                                    if (typeof ge !== 'undefined' && ge.loadProject) {{
+                                        ge.loadProject(projectData);
+                                        ge.redraw();
+                                        console.log("Initial Gantt data loaded from Python.");
+                                    }} else {{
+                                        console.error("Gantt object 'ge' not found or loadProject method missing.");
+                                    }}
+                                }} catch (e) {{
+                                    console.error("Error parsing or loading initial Gantt data:", e, jsonData);
+                                }}
+                            }} else {{
+                                console.warn("Received empty data from load_gantt_data.");
+                            }}
+                        }});
+                    }} else {{
+                         console.error("ganttBridge or load_gantt_data function not available after QWebChannel setup.");
+                    }}
+                }});
+                console.log("QWebChannel setup initiated.");
+                """
+                self.web_view.page().runJavaScript(init_script)
+            except Exception as e:
+                 print(f"Error injecting qwebchannel.js or initializing: {e}")
+
+        else:
+            print("Failed to load jQueryGantt HTML")
+
+    # 移除旧的 init_gantt_data 和 update_progress_data 方法
+    # def init_gantt_data(self): ...
+    # def update_progress_data(self, data): ...
+
+    @Slot(bool, str)
+    def show_save_status(self, success, message):
+        """显示保存状态的信息提示"""
+        if success:
+            InfoBar.success(
+                title='成功',
+                content=message,
+                duration=2000,
+                position=InfoBarPosition.TOP,
+                parent=self
+            )
+        else:
+            InfoBar.error(
+                title='错误',
+                content=message,
+                duration=5000, # 错误信息显示时间长一点
+                position=InfoBarPosition.TOP,
+                parent=self
+            )

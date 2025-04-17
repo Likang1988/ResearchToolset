@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey, Date, DateTime, Enum as SQLEnum, UniqueConstraint, func, text
+from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey, Date, DateTime, Enum as SQLEnum, UniqueConstraint, func, text, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker, backref
 from enum import Enum
@@ -34,7 +34,6 @@ class Project(Base):
     end_date = Column(Date)
     total_budget = Column(Float, default=0.00)
     budgets = relationship("Budget", back_populates="project", cascade="all, delete-orphan")
-    tasks = relationship("ProjectTask", back_populates="project", cascade="all, delete-orphan")
 
 class Budget(Base):
     """预算"""
@@ -158,6 +157,54 @@ class Expense(Base):
     
 
 
+# --- Gantt Chart Models Start ---
+
+class GanttTask(Base):
+    """甘特图任务"""
+    __tablename__ = 'gantt_tasks'
+
+    id = Column(Integer, primary_key=True)  # 使用数据库自增ID作为主键
+    project_id = Column(Integer, ForeignKey('projects.id'), nullable=False) # 关联到项目
+    gantt_id = Column(String(50), nullable=False, index=True) # jQueryGantt中的任务ID (可能是临时ID或持久化后的ID)
+    name = Column(String(255), nullable=False)
+    code = Column(String(50))
+    level = Column(Integer, default=0)
+    status = Column(String(50)) # e.g., STATUS_ACTIVE, STATUS_SUSPENDED
+    start_date = Column(DateTime) # 存储为DateTime对象
+    duration = Column(Integer) # 持续时间（天）
+    end_date = Column(DateTime) # 存储为DateTime对象
+    start_is_milestone = Column(Boolean, default=False)
+    end_is_milestone = Column(Boolean, default=False)
+    progress = Column(Integer, default=0) # 进度百分比
+    progress_by_worklog = Column(Boolean, default=False)
+    description = Column(String(500))
+    collapsed = Column(Boolean, default=False)
+    has_child = Column(Boolean, default=False) # 标记是否有子任务
+
+    project = relationship("Project", backref="gantt_tasks")
+    # 注意：依赖关系通过 GanttDependency 表处理
+
+    # 唯一约束：同一个项目下的 gantt_id 应该是唯一的
+    __table_args__ = (UniqueConstraint('project_id', 'gantt_id', name='uix_project_gantt_id'),)
+
+class GanttDependency(Base):
+    """甘特图任务依赖关系"""
+    __tablename__ = 'gantt_dependencies'
+
+    id = Column(Integer, primary_key=True)
+    project_id = Column(Integer, ForeignKey('projects.id'), nullable=False) # 关联到项目
+    predecessor_gantt_id = Column(String(50), nullable=False) # 前置任务的 gantt_id
+    successor_gantt_id = Column(String(50), nullable=False) # 后置任务的 gantt_id
+    type = Column(String(10)) # 依赖类型，例如 'FS' (Finish-to-Start)
+
+    project = relationship("Project", backref="gantt_dependencies")
+
+    # 唯一约束：同一个项目下的依赖关系应该是唯一的
+    __table_args__ = (UniqueConstraint('project_id', 'predecessor_gantt_id', 'successor_gantt_id', name='uix_project_dependency'),)
+
+# --- Gantt Chart Models End ---
+
+
 def get_budget_usage(session, project_id, budget_id=None):
     """获取预算使用情况
     
@@ -218,13 +265,13 @@ def get_budget_usage(session, project_id, budget_id=None):
 def migrate_db(engine):
     """迁移数据库"""
     from sqlalchemy import text
-    from .project_task import migrate_project_tasks
+    # from .project_task import migrate_project_tasks # Removed import
     
     connection = engine.connect()
     transaction = connection.begin()
     
     # 执行项目任务表迁移
-    migrate_project_tasks(engine)
+    # migrate_project_tasks(engine) # Removed function call
     
     # 检查project_achievements表是否存在submit_date列
     result = connection.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='project_achievements'"))
@@ -429,5 +476,8 @@ if __name__ == "__main__":
     # 初始化数据库
     db_path = "database/database.db"
     engine = create_engine(f'sqlite:///{db_path}')
-    migrate_db(engine)
-    print("数据库迁移完成")
+    # 创建新表
+    Base.metadata.create_all(engine)
+    # 运行迁移脚本（如果需要更复杂的迁移）
+    # migrate_db(engine)
+    print("数据库初始化或迁移完成")

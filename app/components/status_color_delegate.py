@@ -3,7 +3,32 @@ from PySide6.QtWidgets import (QStyledItemDelegate, QWidget, QPushButton, QHBoxL
 # 将 QModelIndex 和 QAbstractTableModel 移到 QtCore 的导入
 from PySide6.QtCore import Qt, QSize, Signal, QEvent, QPoint, QRect, QAbstractTableModel, QModelIndex
 from PySide6.QtGui import QPainter, QColor, QBrush, QPen
-from app.models.project_task import TaskStatus, STATUS_COLORS
+from enum import Enum, unique
+
+# 定义状态及其对应的颜色 (十六进制)
+# 黄: 未开始, 绿: 进行中, 蓝: 已完成, 红: 已暂停, 紫: 已取消, 灰: 已关闭
+STATUS_COLORS = {
+    "NOT_STARTED": "#FFD700",  # Gold (Yellowish)
+    "IN_PROGRESS": "#32CD32",  # LimeGreen
+    "COMPLETED": "#1E90FF",    # DodgerBlue
+    "PAUSED": "#FF4500",       # OrangeRed
+    "CANCELLED": "#9370DB",    # MediumPurple
+    "CLOSED": "#A9A9A9"        # DarkGray
+}
+
+@unique
+class TaskStatus(Enum):
+    NOT_STARTED = "未开始"
+    IN_PROGRESS = "进行中"
+    COMPLETED = "已完成"
+    PAUSED = "已暂停"      # 替换 DELAYED
+    CANCELLED = "已取消"
+    CLOSED = "已关闭"
+
+    @property
+    def color(self):
+        """获取状态对应的颜色"""
+        return STATUS_COLORS.get(self.name, "#FFFFFF") # 默认为白色
 
 class StatusColorButton(QPushButton):
     """自定义按钮，用于显示和选择颜色"""

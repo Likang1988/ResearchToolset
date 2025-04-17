@@ -91,7 +91,7 @@ class MainWindow(FluentWindow):
 
         
         # 移除在 __init__ 中启用云母特效的代码
-        # self.setMicaEffectEnabled(True) # 将在 run.py 的 show() 后调用
+        self.setMicaEffectEnabled(False) # 将在 run.py 的 show() 后调用
 
         # 设置当前页面
         self.navigationInterface.setCurrentItem("主页")

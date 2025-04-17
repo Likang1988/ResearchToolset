@@ -484,11 +484,12 @@ class ProjectListWindow(QWidget):
         # 获取主窗口实例
         main_window = self.window()
         if main_window:
-            # 创建项目管理界面
+            # 创建项目管理界面并传递 engine
             from app.views.projecting_interface.project_management import ProjectManagementWidget
-            management_widget = ProjectManagementWidget(project)
+            # Pass self.engine during instantiation
+            management_widget = ProjectManagementWidget(project, engine=self.engine)
             management_widget.setObjectName("projectManagementInterface")
-            management_widget.engine = self.engine
+            # management_widget.engine = self.engine # No longer needed as it's passed in __init__
             # 直接在主窗口中显示项目管理界面
             main_window.stackedWidget.addWidget(management_widget)
             main_window.stackedWidget.setCurrentWidget(management_widget)

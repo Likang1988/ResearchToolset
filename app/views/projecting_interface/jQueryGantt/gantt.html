@@ -77,31 +77,46 @@
 
 <script type="text/javascript">
 
-var ge;
-$(function() {
-  var canWrite=true; //this is the default for test purposes
+var ge; // GanttMaster instance
+// QWebChannel bridge object, will be initialized after page load
+// var ganttBridge; // Declared in the script injected by Python
 
-  // here starts gantt initialization
+$(function() {
+  var canWrite=true; // Assuming write permissions initially
+
+  // Initialize GanttMaster
   ge = new GanttMaster();
   ge.set100OnClose=true;
-
   ge.shrinkParent=true;
-
   ge.init($("#workSpace"));
-  loadI18n(); //overwrite with localized ones
+  loadI18n(); // Load localization
 
-  //in order to force compute the best-fitting zoom level
+  // Best-fitting zoom level will be computed automatically if needed
   delete ge.gantt.zoom;
 
-  var project=loadFromLocalStorage();
+  // Initial data loading is now triggered by Python via QWebChannel
+  // after the page and QWebChannel are fully loaded.
+  // We don't call ge.loadProject here anymore.
+  console.log("Gantt initialized. Waiting for QWebChannel connection and data load from Python...");
 
-  if (!project.canWrite)
-    $(".ganttButtonBar button.requireWrite").attr("disabled","true");
+  // Example: Add a save button if it doesn't exist in the templates
+  // This depends on how your buttons are structured. Assuming a div with class 'ganttButtonBar'
+  if ($(".ganttButtonBar").find("#saveButton").length === 0) {
+      var saveButton = $("<button id='saveButton' class='button textual icon requireWrite' title='保存'><span class='teamworkIcon'>&#x4f;</span></button>");
+      // Append it to a suitable location, e.g., next to other buttons
+      // $(".ganttButtonBar .buttons").append(saveButton); // Adjust selector as needed
+      // Or find an existing save button and re-bind its click event
+  }
 
-  ge.loadProject(project);
-  ge.checkpoint(); //empty the undo stack
+  // Bind the save function to the save button's click event
+  // Ensure this runs *after* QWebChannel is likely initialized, or use event delegation
+  $(document).on('click', '#saveButton, #saveGanttButton', function() { // Bind to existing or new button
+      saveGanttData();
+  });
 
-  // initializeHistoryManagement(ge.tasks[0].id); // Commented out as contextPath is not defined in local environment
+
+  // Comment out or remove original history management if not used or needs rework with QWebChannel
+  // initializeHistoryManagement(ge.tasks[0].id);
 });
 
 
@@ -142,36 +157,12 @@ ret= {"tasks":    [
 
 
 
+// This function is no longer needed as loading is handled by Python via QWebChannel
+/*
 function loadGanttFromServer(taskId, callback) {
-
-  //this is a simulation: load data from the local storage if you have already played with the demo or a textarea with starting demo data
-  var ret=loadFromLocalStorage();
-
-  //this is the real implementation
-  /*
-  //var taskId = $("#taskSelector").val();
-  var prof = new Profiler("loadServerSide");
-  prof.reset();
-
-  $.getJSON("ganttAjaxController.jsp", {CM:"LOADPROJECT",taskId:taskId}, function(response) {
-    //console.debug(response);
-    if (response.ok) {
-      prof.stop();
-
-      ge.loadProject(response.project);
-      ge.checkpoint(); //empty the undo stack
-
-      if (typeof(callback)=="function") {
-        callback(response);
-      }
-    } else {
-      jsonErrorHandling(response);
-    }
-  });
-  */
-
-  return ret;
+  // ... (old code) ...
 }
+*/
 
 function upload(uploadedFile) {
   var fileread = new FileReader();
@@ -189,58 +180,52 @@ function upload(uploadedFile) {
   fileread.readAsText(uploadedFile);
 }
 
-function saveGanttOnServer() {
-
-  //this is a simulation: save data to the local storage or to the textarea
-  //saveInLocalStorage();
-
-  var prj = ge.saveProject();
-
-  download(JSON.stringify(prj, null, '\t'), "MyProject.json", "application/json");
-
-  /*
-
-  delete prj.resources;
-  delete prj.roles;
-
-  var prof = new Profiler("saveServerSide");
-  prof.reset();
-
-  if (ge.deletedTaskIds.length>0) {
-    if (!confirm("TASK_THAT_WILL_BE_REMOVED\n"+ge.deletedTaskIds.length)) {
+// Renamed function to avoid conflict if original button still exists
+function saveGanttData() {
+  console.log("Attempting to save Gantt data via QWebChannel...");
+  if (typeof ge === 'undefined') {
+      console.error("GanttMaster 'ge' is not initialized.");
+      alert("错误：甘特图未初始化！");
       return;
-    }
   }
 
-  $.ajax("ganttAjaxController.jsp", {
-    dataType:"json",
-    data: {CM:"SVPROJECT",prj:JSON.stringify(prj)},
-    type:"POST",
-
-    success: function(response) {
-      if (response.ok) {
-        prof.stop();
-        if (response.project) {
-          ge.loadProject(response.project); //must reload as "tmp_" ids are now the good ones
-        } else {
-          ge.reset();
-        }
-      } else {
-        var errMsg="Errors saving project\n";
-        if (response.message) {
-          errMsg=errMsg+response.message+"\n";
-        }
-
-        if (response.errorMessages.length) {
-          errMsg += response.errorMessages.join("\n");
-        }
-
-        alert(errMsg);
+  if (typeof window.ganttBridge === 'undefined' || typeof window.ganttBridge.save_gantt_data === 'undefined') {
+      console.error("QWebChannel object 'ganttBridge' or 'save_gantt_data' function is not available.");
+      // Attempt to re-initialize? Or just inform the user.
+      alert("错误：无法连接到后端保存服务！请确保QWebChannel已正确加载。");
+      // Try to initialize QWebChannel again (might indicate a loading order issue)
+      // This is a fallback, ideally it should be ready.
+      if (typeof QWebChannel !== 'undefined' && typeof qt !== 'undefined' && typeof qt.webChannelTransport !== 'undefined') {
+          new QWebChannel(qt.webChannelTransport, function (channel) {
+              window.ganttBridge = channel.objects.ganttBridge;
+              console.log("Re-initialized QWebChannel. Please try saving again.");
+              alert("已尝试重新连接后端，请再次尝试保存。");
+          });
       }
-    }
+      return;
+  }
 
+  var prj = ge.saveProject();
+  var prjString = JSON.stringify(prj); // Stringify the project data
+
+  console.log("Sending data to Python:", prjString);
+
+  // Call the Python backend function via QWebChannel
+  window.ganttBridge.save_gantt_data(prjString, function(success) {
+      // This callback receives the boolean result from the Python Slot
+      console.log("Save operation returned:", success);
+      if (success) {
+          // Optional: Reload data from server to get persistent IDs if needed
+          // window.ganttBridge.load_gantt_data(function(jsonData) { ... });
+          // Or just rely on the InfoBar shown by Python
+          console.log("Data saved successfully (according to Python).");
+          ge.checkpoint(); // Clear undo stack after successful save
+      } else {
+          // Error message is shown by Python's InfoBar
+          console.error("Data saving failed (according to Python).");
+          // alert("保存失败，请查看日志或联系管理员。"); // Redundant if InfoBar works
+      }
   });
-  */
 }
 
 // Function to download data to a file
@@ -282,28 +267,28 @@ function getFile() {
 }
 
 
+// These functions are no longer used for primary load/save
+/*
 function loadFromLocalStorage() {
-  var ret;
-  if (localStorage) {
-    if (localStorage.getObject("teamworkGantDemo")) {
-      ret = localStorage.getObject("teamworkGantDemo");
-    }
-  }
-
-  //if not found create a new example task
-  if (!ret || !ret.tasks || ret.tasks.length == 0){
-    ret=getDemoProject();
-  }
-  return ret;
+  // ... (old code) ...
 }
 
-
 function saveInLocalStorage() {
-  var prj = ge.saveProject();
+  // ... (old code) ...
+}
+*/
 
-  if (localStorage) {
-    localStorage.setObject("teamworkGantDemo", prj);
-  }
+// Ensure getDemoProject is removed or not called during initialization
+/*
+function getDemoProject(){
+ // ... (old code) ...
+}
+*/
+
+// Compatibility function: Redirect calls from old save function name to the new one
+function saveGanttOnServer() {
+  console.warn("Deprecated saveGanttOnServer() called. Redirecting to saveGanttData().");
+  saveGanttData();
 }
 
 
@@ -499,7 +484,14 @@ function showBaselineInfo (event,element){
   <!--
   <div class="ganttButtonBar noprint">
     <div class="buttons">
-
+      <button onclick="saveGanttOnServer();" class="button first big requireWrite" title="保存">保存</button>
+      <input type="file" name="load-file" id="load-file" style="display: none;">
+      <label for="load-file" class="button big">加载</label>
+      <button onclick='newProject();' class='button requireWrite newproject'><em>清空项目</em></button>
+      <button class="button login" title="登录/注册" onclick="loginEnroll($(this));" style="display:none;">登录/注册</button>
+      <button class="button opt collab" title="Start with Twproject" onclick="collaborate($(this));" style="display:none;"><em>协作</em></button>
+      &nbsp; &nbsp; &nbsp; &nbsp;
+      <span class="ganttButtonSeparator"></span>
       <button onclick="$('#workSpace').trigger('undo.gantt');return false;" class="button textual icon requireCanWrite" title="撤销"><span class="teamworkIcon">&#39;</span></button>
       <button onclick="$('#workSpace').trigger('redo.gantt');return false;" class="button textual icon requireCanWrite" title="重做"><span class="teamworkIcon">&middot;</span></button>
       <span class="ganttButtonSeparator requireCanWrite requireCanAdd"></span>
@@ -537,12 +529,7 @@ function showBaselineInfo (event,element){
     </div>
 
     <div>
-      <button onclick="saveGanttOnServer();" class="button first big requireWrite" title="保存">保存</button>
-      <input type="file" name="load-file" id="load-file">
-      <label for="load-file">加载</label>
-      <button onclick='newProject();' class='button requireWrite newproject'><em>清空项目</em></button>
-      <button class="button login" title="登录/注册" onclick="loginEnroll($(this));" style="display:none;">登录/注册</button>
-      <button class="button opt collab" title="Start with Twproject" onclick="collaborate($(this));" style="display:none;"><em>协作</em></button>
+      
     </div>
   </div>
   -->
