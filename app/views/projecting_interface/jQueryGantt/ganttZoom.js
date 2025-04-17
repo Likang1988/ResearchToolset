@@ -51,14 +51,16 @@
     row1:        function (date, ctxHead) {
       var start = new Date(date.getTime());
       date.setDate(date.getDate() + 6);
-      self.createHeadCell(1,this,ctxHead,start.format("MMMM d") + " - " + date.format("MMMM d yyyy")+ " ("+start.format("w")+")",7,"", start,date);
+      // Format: "YYYY年MMMMd日 - MMMMd日 (第w周)" e.g., "2025年4月17日 - 4月23日 (第16周)"
+      self.createHeadCell(1,this,ctxHead,start.format("yyyy年M月d日") + " - " + date.format("M月d日") + " (第" + start.format("w") + GanttMaster.messages["GANTT_WEEK_SHORT"] + ")", 7, "", start, date);
       date.setDate(date.getDate() + 1);
     },
     row2:        function (date, ctxHead, ctxBody) {
       var start = new Date(date.getTime());
       date.setDate(date.getDate() + 1);
       var holyClass = isHoliday(start) ? "holy" : "";
-      self.createHeadCell(2,this,ctxHead,start.format("EEE d"), 1, "headSmall "+holyClass, start,date);
+      // Format: "周X d日" e.g., "周四 17日"
+      self.createHeadCell(2,this,ctxHead,start.format("EEE d日"), 1, "headSmall "+holyClass, start,date);
       self.createBodyCell(this,ctxBody,1, start.getDay() % 7 == (self.master.firstDayOfWeek + 6) % 7, holyClass);
     }
   });
@@ -77,14 +79,16 @@
     row1:        function (date, ctxHead) {
       var start = new Date(date.getTime());
       date.setDate(date.getDate() + 6);
-      self.createHeadCell(1,this,ctxHead,start.format("MMM d") + " - " + date.format("MMM d 'yy")+" (" + GanttMaster.messages["GANTT_WEEK_SHORT"]+date.format("w")+")", 7,"",start,date);
+      // Format: "YYYY年M月d日 - M月d日 (第w周)" e.g., "2025年4月14日 - 4月20日 (第16周)"
+      self.createHeadCell(1,this,ctxHead,start.format("yyyy年M月d日") + " - " + date.format("M月d日") + " (第" + date.format("w") + GanttMaster.messages["GANTT_WEEK_SHORT"]  + ")", 7, "", start, date);
       date.setDate(date.getDate() + 1);
     },
     row2:        function (date, ctxHead, ctxBody) {
       var start = new Date(date.getTime());
       date.setDate(date.getDate() + 1);
       var holyClass = isHoliday(start) ? "holy" : "";
-      self.createHeadCell(2,this,ctxHead,start.format("EEEE").substr(0, 1)+" ("+start.format("dd")+")", 1, "headSmall "+holyClass, start,date);
+      // Format: "周X (d日)" e.g., "周一 (14日)"
+      self.createHeadCell(2,this,ctxHead,start.format("EEE (d日)"), 1, "headSmall "+holyClass, start,date);
       self.createBodyCell(this,ctxBody,1, start.getDay() % 7 == (self.master.firstDayOfWeek + 6) % 7, holyClass);
     }
   });
@@ -101,14 +105,16 @@
     row1:        function (date, tr1) {
       var start = new Date(date.getTime());
       date.setDate(date.getDate() + 6);
-      self.createHeadCell(1,this,tr1,start.format("MMM d") + " - " + date.format("MMM d 'yy")+" (" + GanttMaster.messages["GANTT_WEEK_SHORT"]+date.format("w")+")", 7,"",start,date);
+      // Format: "YYYY年M月d日 - M月d日 (第w周)" e.g., "2025年4月14日 - 4月20日 (第16周)"
+      self.createHeadCell(1,this,tr1,start.format("yyyy年M月d日") + " - " + date.format("M月d日") + " (第" + date.format("w") + GanttMaster.messages["GANTT_WEEK_SHORT"] + ")", 7, "", start, date);
       date.setDate(date.getDate() + 1);
     },
     row2:        function (date, tr2, trBody) {
      var start = new Date(date.getTime());
       date.setDate(date.getDate() + 1);
       var holyClass = isHoliday(start) ? "holy" : "";
-      self.createHeadCell(2,this,tr2,start.format("EEEE").substr(0, 1), 1, "headSmall "+holyClass, start,date);
+      // Format: "周X" e.g., "周一"
+      self.createHeadCell(2,this,tr2,start.format("EEE"), 1, "headSmall "+holyClass, start,date);
       self.createBodyCell(this,trBody,1, start.getDay() % 7 == (self.master.firstDayOfWeek + 6) % 7, holyClass);
     }
   });
@@ -130,13 +136,15 @@
       date.setDate(date.getDate() - 1);
       var inc=date.getDate()-start.getDate()+1;
       date.setDate(date.getDate() + 1);
-      self.createHeadCell(1,this,tr1,start.format("MMMM yyyy"), inc,"",start,date); //spans mumber of dayn in the month
+      // Format: "YYYY年M月" e.g., "2025年4月"
+      self.createHeadCell(1,this,tr1,start.format("yyyy年M月"), inc,"",start,date); //spans mumber of dayn in the month
     },
     row2:        function (date, tr2, trBody) {
       var start = new Date(date.getTime());
       date.setDate(date.getDate() + 1);
       var holyClass = isHoliday(start) ? "holy" : "";
-      self.createHeadCell(2,this,tr2,start.format("d"), 1, "headSmall "+holyClass, start,date);
+      // Format: "d日" e.g., "17日"
+      self.createHeadCell(2,this,tr2,start.format("d日"), 1, "headSmall "+holyClass, start,date);
       var nd = new Date(start.getTime());
       nd.setDate(start.getDate() + 1);
       self.createBodyCell(this,trBody,1, nd.getDate() == 1, holyClass);
@@ -160,12 +168,14 @@
         var inc=(date.getMonth()-start.getMonth());
         inc=inc>0?inc:1;
         var q = (Math.floor(start.getMonth() / 3) + 1);
-        self.createHeadCell(1,this,tr1,GanttMaster.messages["GANTT_QUARTER"]+" "+q+" "+start.format("yyyy"), inc,"",start,date);
+        // Format: "YYYY年 第q季度" e.g., "2025年 第2季度"
+        self.createHeadCell(1,this,tr1,start.format("yyyy年") + " 第" + q + GanttMaster.messages["GANTT_QUARTER"], inc, "", start, date);
       },
       row2:        function (date, tr2, trBody) {
         var start = new Date(date.getTime());
         date.setMonth(date.getMonth() + 1);
-        self.createHeadCell(2,this,tr2,start.format("MMMM"), 1, "headSmall", start,date);
+        // Format: "M月" e.g., "4月"
+        self.createHeadCell(2,this,tr2,start.format("M月"), 1, "headSmall", start,date);
         self.createBodyCell(this,trBody,1, start.getMonth() % 3 == 2);
       }
     });
@@ -184,12 +194,14 @@
       var start = new Date(date.getTime());
       date.setMonth(date.getMonth() + 3);
       var q = (Math.floor(start.getMonth() / 3) + 1);
-      self.createHeadCell(1,this,tr1,GanttMaster.messages["GANTT_QUARTER"]+" "+q+" "+start.format("yyyy"), 3,"",start,date);
+      // Format: "YYYY年 第q季度" e.g., "2025年 第2季度"
+      self.createHeadCell(1,this,tr1,start.format("yyyy年") + " 第" + q + GanttMaster.messages["GANTT_QUARTER"], 3, "", start, date);
     },
     row2:        function (date, tr2, trBody) {
       var start = new Date(date.getTime());
       date.setMonth(date.getMonth() + 1);
-      var lbl = start.format("MMMM");
+      // Format: "M月" e.g., "4月"
+      var lbl = start.format("M月");
       self.createHeadCell(2,this,tr2,lbl, 1, "headSmall", start,date);
       self.createBodyCell(this,trBody,1, start.getMonth() % 3 == 2);
     }
@@ -209,12 +221,14 @@
       var start = new Date(date.getTime());
       date.setMonth(date.getMonth() + 6);
       var sem = (Math.floor(start.getMonth() / 6) + 1);
-      self.createHeadCell(1,this,tr1,GanttMaster.messages["GANTT_SEMESTER"]+" "+sem+"-"+start.format("yyyy") , 6,"",start,date);
+      // Format: "YYYY年 上半年/下半年" e.g., "2025年 上半年"
+      self.createHeadCell(1,this,tr1,start.format("yyyy年") + " " + (sem == 1 ? "上半年" : "下半年"), 6, "", start, date);
     },
     row2:        function (date, tr2, trBody) {
       var start = new Date(date.getTime());
       date.setMonth(date.getMonth() + 1);
-      self.createHeadCell(2,this,tr2,start.format("MMM"), 1, "headSmall", start,date);
+      // Format: "MMMM" e.g., "四月"
+      self.createHeadCell(2,this,tr2,start.format("MMMM"), 1, "headSmall", start,date);
       self.createBodyCell(this,trBody,1, (start.getMonth() + 1) % 6 == 0);
     }
   });
@@ -232,13 +246,15 @@
       var start = new Date(date.getTime());
       var inc=12-start.getMonth();
       date.setMonth(date.getMonth() + inc);
-      self.createHeadCell(1,this,tr1,start.format("yyyy"), inc/6,"",start,date);
+      // Format: "YYYY年" e.g., "2025年"
+      self.createHeadCell(1,this,tr1,start.format("yyyy年"), inc/6,"",start,date);
     },
     row2:        function (date, tr2, trBody) {
       var start = new Date(date.getTime());
       date.setMonth(date.getMonth() + 6);
       var sem = (Math.floor(start.getMonth() / 6) + 1);
-      self.createHeadCell(2,this,tr2,GanttMaster.messages["GANTT_SEMESTER"] +" "+ sem, 1, "headSmall", start,date);
+      // Format: "上半年/下半年" e.g., "上半年"
+      self.createHeadCell(2,this,tr2,(sem == 1 ? "上半年" : "下半年"), 1, "headSmall", start,date);
       self.createBodyCell(this,trBody,1, sem == 2);
     }
   });

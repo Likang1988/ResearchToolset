@@ -500,49 +500,49 @@ function showBaselineInfo (event,element){
   <div class="ganttButtonBar noprint">
     <div class="buttons">
 
-      <button onclick="$('#workSpace').trigger('undo.gantt');return false;" class="button textual icon requireCanWrite" title="undo"><span class="teamworkIcon">&#39;</span></button>
-      <button onclick="$('#workSpace').trigger('redo.gantt');return false;" class="button textual icon requireCanWrite" title="redo"><span class="teamworkIcon">&middot;</span></button>
+      <button onclick="$('#workSpace').trigger('undo.gantt');return false;" class="button textual icon requireCanWrite" title="撤销"><span class="teamworkIcon">&#39;</span></button>
+      <button onclick="$('#workSpace').trigger('redo.gantt');return false;" class="button textual icon requireCanWrite" title="重做"><span class="teamworkIcon">&middot;</span></button>
       <span class="ganttButtonSeparator requireCanWrite requireCanAdd"></span>
-      <button onclick="$('#workSpace').trigger('addAboveCurrentTask.gantt');return false;" class="button textual icon requireCanWrite requireCanAdd" title="insert above"><span class="teamworkIcon">l</span></button>
-      <button onclick="$('#workSpace').trigger('addBelowCurrentTask.gantt');return false;" class="button textual icon requireCanWrite requireCanAdd" title="insert below"><span class="teamworkIcon">X</span></button>
+      <button onclick="$('#workSpace').trigger('addAboveCurrentTask.gantt');return false;" class="button textual icon requireCanWrite requireCanAdd" title="在上方插入"><span class="teamworkIcon">l</span></button>
+      <button onclick="$('#workSpace').trigger('addBelowCurrentTask.gantt');return false;" class="button textual icon requireCanWrite requireCanAdd" title="在下方插入"><span class="teamworkIcon">X</span></button>
       <span class="ganttButtonSeparator requireCanWrite requireCanInOutdent"></span>
-      <button onclick="$('#workSpace').trigger('outdentCurrentTask.gantt');return false;" class="button textual icon requireCanWrite requireCanInOutdent" title="un-indent task"><span class="teamworkIcon">.</span></button>
-      <button onclick="$('#workSpace').trigger('indentCurrentTask.gantt');return false;" class="button textual icon requireCanWrite requireCanInOutdent" title="indent task"><span class="teamworkIcon">:</span></button>
+      <button onclick="$('#workSpace').trigger('outdentCurrentTask.gantt');return false;" class="button textual icon requireCanWrite requireCanInOutdent" title="升级"><span class="teamworkIcon">.</span></button>
+      <button onclick="$('#workSpace').trigger('indentCurrentTask.gantt');return false;" class="button textual icon requireCanWrite requireCanInOutdent" title="降级"><span class="teamworkIcon">:</span></button>
       <span class="ganttButtonSeparator requireCanWrite requireCanMoveUpDown"></span>
-      <button onclick="$('#workSpace').trigger('moveUpCurrentTask.gantt');return false;" class="button textual icon requireCanWrite requireCanMoveUpDown" title="move up"><span class="teamworkIcon">k</span></button>
-      <button onclick="$('#workSpace').trigger('moveDownCurrentTask.gantt');return false;" class="button textual icon requireCanWrite requireCanMoveUpDown" title="move down"><span class="teamworkIcon">j</span></button>
+      <button onclick="$('#workSpace').trigger('moveUpCurrentTask.gantt');return false;" class="button textual icon requireCanWrite requireCanMoveUpDown" title="上移"><span class="teamworkIcon">k</span></button>
+      <button onclick="$('#workSpace').trigger('moveDownCurrentTask.gantt');return false;" class="button textual icon requireCanWrite requireCanMoveUpDown" title="下移"><span class="teamworkIcon">j</span></button>
       <span class="ganttButtonSeparator requireCanWrite requireCanDelete"></span>
-      <button onclick="$('#workSpace').trigger('deleteFocused.gantt');return false;" class="button textual icon delete requireCanWrite" title="Elimina"><span class="teamworkIcon">&cent;</span></button>
+      <button onclick="$('#workSpace').trigger('deleteFocused.gantt');return false;" class="button textual icon delete requireCanWrite" title="删除"><span class="teamworkIcon">&cent;</span></button>
       <span class="ganttButtonSeparator"></span>
-      <button onclick="$('#workSpace').trigger('expandAll.gantt');return false;" class="button textual icon " title="EXPAND_ALL"><span class="teamworkIcon">6</span></button>
-      <button onclick="$('#workSpace').trigger('collapseAll.gantt'); return false;" class="button textual icon " title="COLLAPSE_ALL"><span class="teamworkIcon">5</span></button>
+      <button onclick="$('#workSpace').trigger('expandAll.gantt');return false;" class="button textual icon " title="全部展开"><span class="teamworkIcon">6</span></button>
+      <button onclick="$('#workSpace').trigger('collapseAll.gantt'); return false;" class="button textual icon " title="全部折叠"><span class="teamworkIcon">5</span></button>
 
     <span class="ganttButtonSeparator"></span>
-      <button onclick="$('#workSpace').trigger('zoomMinus.gantt'); return false;" class="button textual icon " title="zoom out"><span class="teamworkIcon">)</span></button>
-      <button onclick="$('#workSpace').trigger('zoomPlus.gantt');return false;" class="button textual icon " title="zoom in"><span class="teamworkIcon">(</span></button>
+      <button onclick="$('#workSpace').trigger('zoomMinus.gantt'); return false;" class="button textual icon " title="缩小"><span class="teamworkIcon">)</span></button>
+      <button onclick="$('#workSpace').trigger('zoomPlus.gantt');return false;" class="button textual icon " title="放大"><span class="teamworkIcon">(</span></button>
     <span class="ganttButtonSeparator"></span>
-      <button onclick="$('#workSpace').trigger('print.gantt');return false;" class="button textual icon " title="Print"><span class="teamworkIcon">p</span></button>
+      <button onclick="$('#workSpace').trigger('print.gantt');return false;" class="button textual icon " title="打印"><span class="teamworkIcon">p</span></button>
     <span class="ganttButtonSeparator"></span>
-      <button onclick="ge.gantt.showCriticalPath=!ge.gantt.showCriticalPath; ge.redraw();return false;" class="button textual icon requireCanSeeCriticalPath" title="CRITICAL_PATH"><span class="teamworkIcon">&pound;</span></button>
+      <button onclick="ge.gantt.showCriticalPath=!ge.gantt.showCriticalPath; ge.redraw();return false;" class="button textual icon requireCanSeeCriticalPath" title="关键路径"><span class="teamworkIcon">&pound;</span></button>
     <span class="ganttButtonSeparator requireCanSeeCriticalPath"></span>
       <button onclick="ge.splitter.resize(.1);return false;" class="button textual icon" ><span class="teamworkIcon">F</span></button>
       <button onclick="ge.splitter.resize(50);return false;" class="button textual icon" ><span class="teamworkIcon">O</span></button>
       <button onclick="ge.splitter.resize(100);return false;" class="button textual icon"><span class="teamworkIcon">R</span></button>
       <span class="ganttButtonSeparator"></span>
-      <button onclick="$('#workSpace').trigger('fullScreen.gantt');return false;" class="button textual icon" title="FULLSCREEN" id="fullscrbtn"><span class="teamworkIcon">@</span></button>
+      <button onclick="$('#workSpace').trigger('fullScreen.gantt');return false;" class="button textual icon" title="全屏" id="fullscrbtn"><span class="teamworkIcon">@</span></button>
       <button onclick="ge.element.toggleClass('colorByStatus' );return false;" class="button textual icon"><span class="teamworkIcon">&sect;</span></button>
 
-    <button onclick="editResources();" class="button textual requireWrite" title="edit resources"><span class="teamworkIcon">M</span></button>
+    <button onclick="editResources();" class="button textual requireWrite" title="编辑资源"><span class="teamworkIcon">M</span></button>
       &nbsp; &nbsp; &nbsp; &nbsp;
     </div>
 
     <div>
-      <button onclick="saveGanttOnServer();" class="button first big requireWrite" title="Save">Save</button>
+      <button onclick="saveGanttOnServer();" class="button first big requireWrite" title="保存">保存</button>
       <input type="file" name="load-file" id="load-file">
-      <label for="load-file">Load</label>
-      <button onclick='newProject();' class='button requireWrite newproject'><em>clear project</em></button>
-      <button class="button login" title="login/enroll" onclick="loginEnroll($(this));" style="display:none;">login/enroll</button>
-      <button class="button opt collab" title="Start with Twproject" onclick="collaborate($(this));" style="display:none;"><em>collaborate</em></button>
+      <label for="load-file">加载</label>
+      <button onclick='newProject();' class='button requireWrite newproject'><em>清空项目</em></button>
+      <button class="button login" title="登录/注册" onclick="loginEnroll($(this));" style="display:none;">登录/注册</button>
+      <button class="button opt collab" title="Start with Twproject" onclick="collaborate($(this));" style="display:none;"><em>协作</em></button>
     </div>
   </div>
   -->
@@ -554,16 +554,16 @@ function showBaselineInfo (event,element){
     <tr style="height:40px">
       <th class="gdfColHeader" style="width:35px; border-right: none"></th>
       <th class="gdfColHeader" style="width:25px;"></th>
-      <th class="gdfColHeader gdfResizable" style="width:100px;">code/short name</th>
-      <th class="gdfColHeader gdfResizable" style="width:300px;">name</th>
-      <th class="gdfColHeader"  align="center" style="width:17px;" title="Start date is a milestone."><span class="teamworkIcon" style="font-size: 8px;">^</span></th>
-      <th class="gdfColHeader gdfResizable" style="width:80px;">start</th>
-      <th class="gdfColHeader"  align="center" style="width:17px;" title="End date is a milestone."><span class="teamworkIcon" style="font-size: 8px;">^</span></th>
-      <th class="gdfColHeader gdfResizable" style="width:80px;">End</th>
-      <th class="gdfColHeader gdfResizable" style="width:50px;">dur.</th>
-      <th class="gdfColHeader gdfResizable" style="width:20px;">%</th>
-      <th class="gdfColHeader gdfResizable requireCanSeeDep" style="width:50px;">depe.</th>
-      <th class="gdfColHeader gdfResizable" style="width:1000px; text-align: left; padding-left: 10px;">assignees</th>
+      <th class="gdfColHeader gdfResizable" style="width:100px;">代码/简称</th>
+      <th class="gdfColHeader gdfResizable" style="width:300px;">名称</th>
+      <th class="gdfColHeader"  align="center" style="width:17px;" title="开始日期是里程碑。"><span class="teamworkIcon" style="font-size: 8px;">^</span></th>
+      <th class="gdfColHeader gdfResizable" style="width:80px;">开始日期</th>
+      <th class="gdfColHeader"  align="center" style="width:17px;" title="结束日期是里程碑。"><span class="teamworkIcon" style="font-size: 8px;">^</span></th>
+      <th class="gdfColHeader gdfResizable" style="width:80px;">结束日期</th>
+      <th class="gdfColHeader gdfResizable" style="width:50px;">工期</th>
+      <th class="gdfColHeader gdfResizable" style="width:20px;">进度</th>
+      <th class="gdfColHeader gdfResizable requireCanSeeDep" style="width:50px;">依赖</th>
+      <th class="gdfColHeader gdfResizable" style="width:1000px; text-align: left; padding-left: 10px;">负责人</th>
     </tr>
     </thead>
   </table>
@@ -573,10 +573,10 @@ function showBaselineInfo (event,element){
   <tr id="tid_(#=obj.id#)" taskId="(#=obj.id#)" class="taskEditRow (#=obj.isParent()?'isParent':''#) (#=obj.collapsed?'collapsed':''#)" level="(#=level#)">
     <th class="gdfCell edit" align="right" style="cursor:pointer;"><span class="taskRowIndex">(#=obj.getRow()+1#)</span> <span class="teamworkIcon" style="font-size:12px;" >e</span></th>
     <td class="gdfCell noClip" align="center"><div class="taskStatus cvcColorSquare" status="(#=obj.status#)"></div></td>
-    <td class="gdfCell"><input type="text" name="code" value="(#=obj.code?obj.code:''#)" placeholder="code/short name"></td>
+    <td class="gdfCell"><input type="text" name="code" value="(#=obj.code?obj.code:''#)" placeholder="代码/简称"></td>
     <td class="gdfCell indentCell" style="padding-left:(#=obj.level*10+18#)px;">
       <div class="exp-controller" align="center"></div>
-      <input type="text" name="name" value="(#=obj.name#)" placeholder="name">
+      <input type="text" name="name" value="(#=obj.name#)" placeholder="名称">
     </td>
     <td class="gdfCell" align="center"><input type="checkbox" name="startIsMilestone"></td>
     <td class="gdfCell"><input type="text" name="start"  value="" class="date"></td>
@@ -622,12 +622,12 @@ function showBaselineInfo (event,element){
 
 <div class="__template__" type="CHANGE_STATUS"><!--
     <div class="taskStatusBox">
-    <div class="taskStatus cvcColorSquare" status="STATUS_ACTIVE" title="Active"></div>
-    <div class="taskStatus cvcColorSquare" status="STATUS_DONE" title="Completed"></div>
-    <div class="taskStatus cvcColorSquare" status="STATUS_FAILED" title="Failed"></div>
-    <div class="taskStatus cvcColorSquare" status="STATUS_SUSPENDED" title="Suspended"></div>
-    <div class="taskStatus cvcColorSquare" status="STATUS_WAITING" title="Waiting" style="display: none;"></div>
-    <div class="taskStatus cvcColorSquare" status="STATUS_UNDEFINED" title="Undefined"></div>
+    <div class="taskStatus cvcColorSquare" status="STATUS_ACTIVE" title="进行中"></div>
+    <div class="taskStatus cvcColorSquare" status="STATUS_DONE" title="已完成"></div>
+    <div class="taskStatus cvcColorSquare" status="STATUS_FAILED" title="已失败"></div>
+    <div class="taskStatus cvcColorSquare" status="STATUS_SUSPENDED" title="已暂停"></div>
+    <div class="taskStatus cvcColorSquare" status="STATUS_WAITING" title="等待中" style="display: none;"></div>
+    <div class="taskStatus cvcColorSquare" status="STATUS_UNDEFINED" title="未定义"></div>
     </div>
   --></div>
 
@@ -636,52 +636,52 @@ function showBaselineInfo (event,element){
 
 <div class="__template__" type="TASK_EDITOR"><!--
   <div class="ganttTaskEditor">
-    <h2 class="taskData">Task editor</h2>
+    <h2 class="taskData">任务编辑器</h2>
     <table  cellspacing="1" cellpadding="5" width="100%" class="taskData table" border="0">
           <tr>
         <td width="200" style="height: 80px"  valign="top">
-          <label for="code">code/short name</label><br>
+          <label for="code">代码/简称</label><br>
           <input type="text" name="code" id="code" value="" size=15 class="formElements" autocomplete='off' maxlength=255 style='width:100%' oldvalue="1">
         </td>
-        <td colspan="3" valign="top"><label for="name" class="required">name</label><br><input type="text" name="name" id="name"class="formElements" autocomplete='off' maxlength=255 style='width:100%' value="" required="true" oldvalue="1"></td>
+        <td colspan="3" valign="top"><label for="name" class="required">名称</label><br><input type="text" name="name" id="name"class="formElements" autocomplete='off' maxlength=255 style='width:100%' value="" required="true" oldvalue="1"></td>
           </tr>
 
 
       <tr class="dateRow">
         <td nowrap="">
           <div style="position:relative">
-            <label for="start">start</label>&nbsp;&nbsp;&nbsp;&nbsp;
-            <input type="checkbox" id="startIsMilestone" name="startIsMilestone" value="yes"> &nbsp;<label for="startIsMilestone">is milestone</label>&nbsp;
+            <label for="start">开始日期</label>&nbsp;&nbsp;&nbsp;&nbsp;
+            <input type="checkbox" id="startIsMilestone" name="startIsMilestone" value="yes"> &nbsp;<label for="startIsMilestone">里程碑</label>&nbsp;
             <br><input type="text" name="start" id="start" size="8" class="formElements dateField validated date" autocomplete="off" maxlength="255" value="" oldvalue="1" entrytype="DATE">
-            <span title="calendar" id="starts_inputDate" class="teamworkIcon openCalendar" onclick="$(this).dateField({inputField:$(this).prevAll(':input:first'),isSearchField:false});">m</span>          </div>
+            <span title="日历" id="starts_inputDate" class="teamworkIcon openCalendar" onclick="$(this).dateField({inputField:$(this).prevAll(':input:first'),isSearchField:false});">m</span>          </div>
         </td>
         <td nowrap="">
-          <label for="end">End</label>&nbsp;&nbsp;&nbsp;&nbsp;
-          <input type="checkbox" id="endIsMilestone" name="endIsMilestone" value="yes"> &nbsp;<label for="endIsMilestone">is milestone</label>&nbsp;
+          <label for="end">结束日期</label>&nbsp;&nbsp;&nbsp;&nbsp;
+          <input type="checkbox" id="endIsMilestone" name="endIsMilestone" value="yes"> &nbsp;<label for="endIsMilestone">里程碑</label>&nbsp;
           <br><input type="text" name="end" id="end" size="8" class="formElements dateField validated date" autocomplete="off" maxlength="255" value="" oldvalue="1" entrytype="DATE">
-          <span title="calendar" id="ends_inputDate" class="teamworkIcon openCalendar" onclick="$(this).dateField({inputField:$(this).prevAll(':input:first'),isSearchField:false});">m</span>
+          <span title="日历" id="ends_inputDate" class="teamworkIcon openCalendar" onclick="$(this).dateField({inputField:$(this).prevAll(':input:first'),isSearchField:false});">m</span>
         </td>
         <td nowrap="" >
-          <label for="duration" class=" ">Days</label><br>
-          <input type="text" name="duration" id="duration" size="4" class="formElements validated durationdays" title="Duration is in working days." autocomplete="off" maxlength="255" value="" oldvalue="1" entrytype="DURATIONDAYS">&nbsp;
+          <label for="duration" class=" ">天数</label><br>
+          <input type="text" name="duration" id="duration" size="4" class="formElements validated durationdays" title="工期以工作日计算。" autocomplete="off" maxlength="255" value="" oldvalue="1" entrytype="DURATIONDAYS">&nbsp;
         </td>
       </tr>
 
       <tr>
         <td  colspan="2">
-          <label for="status" class=" ">status</label><br>
+          <label for="status" class=" ">状态</label><br>
           <select id="status" name="status" class="taskStatus" status="(#=obj.status#)"  onchange="$(this).attr('STATUS',$(this).val());">
-            <option value="STATUS_ACTIVE" class="taskStatus" status="STATUS_ACTIVE" >active</option>
-            <option value="STATUS_WAITING" class="taskStatus" status="STATUS_WAITING" >suspended</option>
-            <option value="STATUS_SUSPENDED" class="taskStatus" status="STATUS_SUSPENDED" >suspended</option>
-            <option value="STATUS_DONE" class="taskStatus" status="STATUS_DONE" >completed</option>
-            <option value="STATUS_FAILED" class="taskStatus" status="STATUS_FAILED" >failed</option>
-            <option value="STATUS_UNDEFINED" class="taskStatus" status="STATUS_UNDEFINED" >undefined</option>
+            <option value="STATUS_ACTIVE" class="taskStatus" status="STATUS_ACTIVE" >进行中</option>
+            <option value="STATUS_WAITING" class="taskStatus" status="STATUS_WAITING" >等待中</option> <!-- Corrected translation based on value -->
+            <option value="STATUS_SUSPENDED" class="taskStatus" status="STATUS_SUSPENDED" >已暂停</option>
+            <option value="STATUS_DONE" class="taskStatus" status="STATUS_DONE" >已完成</option>
+            <option value="STATUS_FAILED" class="taskStatus" status="STATUS_FAILED" >已失败</option>
+            <option value="STATUS_UNDEFINED" class="taskStatus" status="STATUS_UNDEFINED" >未定义</option>
           </select>
         </td>
 
         <td valign="top" nowrap>
-          <label>progress</label><br>
+          <label>进度</label><br>
           <input type="text" name="progress" id="progress" size="7" class="formElements validated percentile" autocomplete="off" maxlength="255" value="" oldvalue="1" entrytype="PERCENTILE">
         </td>
       </tr>
@@ -689,24 +689,24 @@ function showBaselineInfo (event,element){
           </tr>
           <tr>
             <td colspan="4">
-              <label for="description">Description</label><br>
+              <label for="description">描述</label><br>
               <textarea rows="3" cols="30" id="description" name="description" class="formElements" style="width:100%"></textarea>
             </td>
           </tr>
         </table>
 
-    <h2>Assignments</h2>
+    <h2>分配</h2>
   <table  cellspacing="1" cellpadding="0" width="100%" id="assigsTable">
     <tr>
-      <th style="width:100px;">name</th>
-      <th style="width:70px;">Role</th>
-      <th style="width:30px;">est.wklg.</th>
+      <th style="width:100px;">名称</th>
+      <th style="width:70px;">角色</th>
+      <th style="width:30px;">估算工时</th>
       <th style="width:30px;" id="addAssig"><span class="teamworkIcon" style="cursor: pointer">+</span></th>
     </tr>
   </table>
 
   <div style="text-align: right; padding-top: 20px">
-    <span id="saveButton" class="button first" onClick="$(this).trigger('saveFullEditor.gantt');">Save</span>
+    <span id="saveButton" class="button first" onClick="$(this).trigger('saveFullEditor.gantt');">保存</span>
   </div>
 
   </div>
@@ -728,15 +728,15 @@ function showBaselineInfo (event,element){
 <div class="__template__" type="RESOURCE_EDITOR"><!--
   <div class="resourceEditor" style="padding: 5px;">
 
-    <h2>Project team</h2>
+    <h2>项目团队</h2>
     <table  cellspacing="1" cellpadding="0" width="100%" id="resourcesTable">
       <tr>
-        <th style="width:100px;">name</th>
+        <th style="width:100px;">名称</th>
         <th style="width:30px;" id="addResource"><span class="teamworkIcon" style="cursor: pointer">+</span></th>
       </tr>
     </table>
 
-    <div style="text-align: right; padding-top: 20px"><button id="resSaveButton" class="button big">Save</button></div>
+    <div style="text-align: right; padding-top: 20px"><button id="resSaveButton" class="button big">保存</button></div>
   </div>
   --></div>
 
@@ -789,29 +789,29 @@ function showBaselineInfo (event,element){
 
   function loadI18n(){
     GanttMaster.messages = {
-      "CANNOT_WRITE":"No permission to change the following task:",
-      "CHANGE_OUT_OF_SCOPE":"Project update not possible as you lack rights for updating a parent project.",
-      "START_IS_MILESTONE":"Start date is a milestone.",
-      "END_IS_MILESTONE":"End date is a milestone.",
-      "TASK_HAS_CONSTRAINTS":"Task has constraints.",
-      "GANTT_ERROR_DEPENDS_ON_OPEN_TASK":"Error: there is a dependency on an open task.",
-      "GANTT_ERROR_DESCENDANT_OF_CLOSED_TASK":"Error: due to a descendant of a closed task.",
-      "TASK_HAS_EXTERNAL_DEPS":"This task has external dependencies.",
-      "GANNT_ERROR_LOADING_DATA_TASK_REMOVED":"GANNT_ERROR_LOADING_DATA_TASK_REMOVED",
-      "CIRCULAR_REFERENCE":"Circular reference.",
-      "CANNOT_DEPENDS_ON_ANCESTORS":"Cannot depend on ancestors.",
-      "INVALID_DATE_FORMAT":"The data inserted are invalid for the field format.",
-      "GANTT_ERROR_LOADING_DATA_TASK_REMOVED":"An error has occurred while loading the data. A task has been trashed.",
-      "CANNOT_CLOSE_TASK_IF_OPEN_ISSUE":"Cannot close a task with open issues",
-      "TASK_MOVE_INCONSISTENT_LEVEL":"You cannot exchange tasks of different depth.",
-      "CANNOT_MOVE_TASK":"CANNOT_MOVE_TASK",
-      "PLEASE_SAVE_PROJECT":"PLEASE_SAVE_PROJECT",
-      "GANTT_SEMESTER":"Semester",
-      "GANTT_SEMESTER_SHORT":"s.",
-      "GANTT_QUARTER":"Quarter",
-      "GANTT_QUARTER_SHORT":"q.",
-      "GANTT_WEEK":"Week",
-      "GANTT_WEEK_SHORT":"w."
+      "CANNOT_WRITE":"无权限修改以下任务：",
+      "CHANGE_OUT_OF_SCOPE":"无法更新项目，因为您没有更新父项目的权限。",
+      "START_IS_MILESTONE":"开始日期是里程碑。",
+      "END_IS_MILESTONE":"结束日期是里程碑。",
+      "TASK_HAS_CONSTRAINTS":"任务存在约束。",
+      "GANTT_ERROR_DEPENDS_ON_OPEN_TASK":"错误：存在对未关闭任务的依赖。",
+      "GANTT_ERROR_DESCENDANT_OF_CLOSED_TASK":"错误：存在已关闭任务的子任务。",
+      "TASK_HAS_EXTERNAL_DEPS":"此任务存在外部依赖。",
+      "GANNT_ERROR_LOADING_DATA_TASK_REMOVED":"加载数据时出错。任务已被删除。", // Using the more descriptive message
+      "CIRCULAR_REFERENCE":"循环引用。",
+      "CANNOT_DEPENDS_ON_ANCESTORS":"不能依赖于父任务。",
+      "INVALID_DATE_FORMAT":"输入的数据格式无效。",
+      "GANTT_ERROR_LOADING_DATA_TASK_REMOVED":"加载数据时出错。任务已被删除。", // Duplicate key, ensure consistency or remove if truly duplicate
+      "CANNOT_CLOSE_TASK_IF_OPEN_ISSUE":"无法关闭存在未解决问题的任务。",
+      "TASK_MOVE_INCONSISTENT_LEVEL":"无法交换不同层级的任务。",
+      "CANNOT_MOVE_TASK":"无法移动任务",
+      "PLEASE_SAVE_PROJECT":"请保存项目",
+      "GANTT_SEMESTER":"半年", // Using 上半年/下半年 might be too long for header, using 半年
+      "GANTT_SEMESTER_SHORT":"半年",
+      "GANTT_QUARTER":"季度",
+      "GANTT_QUARTER_SHORT":"季",
+      "GANTT_WEEK":"周",
+      "GANTT_WEEK_SHORT":"周" // Keep '周' for short week as well
     };
   }
 

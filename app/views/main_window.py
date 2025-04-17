@@ -27,12 +27,13 @@ class MainWindow(FluentWindow):
         self.setWindowTitle("科研工具集")
         self.setMinimumSize(1200, 800)
         
+        
         # 创建界面实例
         self.home_interface = HomeInterface(self.engine)
         self.home_interface.setObjectName("homeInterface")
         
-        self.funding_interface = ProjectListWindow(self.engine)
-        self.funding_interface.setObjectName("fundingInterface")
+        self.projecting_interface = ProjectListWindow(self.engine)
+        self.projecting_interface.setObjectName("projectingInterface")
         
         # 创建预算编制界面实例
         self.budget_edit_interface = BudgetingInterface(self.engine)
@@ -51,7 +52,7 @@ class MainWindow(FluentWindow):
         
         # 使用自定义SVG图标
         self.addSubInterface(  
-            self.funding_interface,
+            self.projecting_interface,
             QIcon(UIUtils.get_svg_icon_path('projecting_tab')),
             "科研项目"
         )
@@ -71,13 +72,13 @@ class MainWindow(FluentWindow):
         )
 
         # 添加项目进度界面
-        self.progress_interface = ProjectProgressWidget(self.engine)
-        self.progress_interface.setObjectName("progressInterface")
-        self.addSubInterface(
-            self.progress_interface,
-            QIcon(UIUtils.get_svg_icon_path('progress')),
-            "项目进度"
-        )
+        #self.progress_interface = ProjectProgressWidget(self.engine)
+       # self.progress_interface.setObjectName("progressInterface")
+       # self.addSubInterface(
+        #    self.progress_interface,
+        #    QIcon(UIUtils.get_svg_icon_path('progress')),
+        #    "项目进度"
+       # )
 
         # 添加工具界面
         self.tools_interface = ToolsInterface()
@@ -89,9 +90,23 @@ class MainWindow(FluentWindow):
         )
 
         
-        # 启用云母特效
-        self.setMicaEffectEnabled(True)
-        
+        # 移除在 __init__ 中启用云母特效的代码
+        # self.setMicaEffectEnabled(True) # 将在 run.py 的 show() 后调用
+
         # 设置当前页面
         self.navigationInterface.setCurrentItem("主页")
         self.navigationInterface.setExpandWidth(150)
+
+        # 移除信号连接和处理函数
+        # if hasattr(self, 'stackedWidget'):
+        #      self.stackedWidget.currentChanged.connect(self._on_current_interface_changed)
+        # else:
+        #      print("Warning: Could not find stackedWidget attribute in MainWindow.")
+
+    # 移除信号处理函数
+    # def _on_current_interface_changed(self, index):
+    #     """ 导航项切换时的处理 (由 stackedWidget.currentChanged 触发) """
+    #     widget = self.stackedWidget.widget(index)
+    #     if widget and widget.objectName() == "progressInterface":
+    #         print("Switching to progressInterface, re-enabling Mica effect...")
+    #         self.setMicaEffectEnabled(True)

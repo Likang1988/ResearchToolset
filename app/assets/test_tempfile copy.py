@@ -1,9 +1,8 @@
 from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout)
-from PySide6.QtCore import QUrl, QFileInfo
+from PySide6.QtCore import QUrl
 from qfluentwidgets import FluentWindow, FluentIcon
 from qframelesswindow.webengine import FramelessWebEngineView
 import sys
-import os
 
 
 class Widget(QWidget):
@@ -14,22 +13,7 @@ class Widget(QWidget):
 
         # 1. 将 QWebEngineView 替换成 FramelessWebEngineView
         self.webView = FramelessWebEngineView(self)
-        # Construct the absolute path to gantt.html
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        gantt_path = os.path.join(current_dir, '..', 'views', 'projecting_interface', 'jQueryGantt', 'gantt.html')
-        gantt_path = os.path.normpath(gantt_path)
-        
-        # Read HTML content and set base URL
-        gantt_file_info = QFileInfo(gantt_path)
-        gantt_dir = gantt_file_info.absolutePath()
-        try:
-            with open(gantt_path, 'r', encoding='utf-8') as f:
-                html_content = f.read()
-            self.webView.setHtml(html_content, baseUrl=QUrl.fromLocalFile(gantt_dir + '/'))
-        except Exception as e:
-            print(f"Error loading gantt.html: {e}")
-            # Fallback or error handling
-            self.webView.load(QUrl("https://example.com/error")) # Load an error page or similar
+        self.webView.load(QUrl("https://www.baidu.com/"))
 
         self.vBoxLayout = QVBoxLayout(self)
         self.vBoxLayout.setContentsMargins(0, 48, 0, 0)
@@ -44,10 +28,9 @@ class Window(FluentWindow):
         # 创建并添加子界面
         self.homeInterface = Widget(self)
         self.addSubInterface(self.homeInterface, FluentIcon.HOME, "Home")
-        
 
         # 初始化窗口
-        self.resize(1500, 900)
+        self.resize(900, 700)
         #self.setWindowIcon(QIcon(':/qfluentwidgets/images/logo.png'))
         self.setWindowTitle('PyQt-Fluent-Widgets')
 
