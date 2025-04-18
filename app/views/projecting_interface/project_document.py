@@ -1,10 +1,9 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QComboBox, QLineEdit, QFileDialog, QDialog
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QComboBox, QLineEdit, QFileDialog, QDialog, QLabel # Added QLabel
 from PySide6.QtCore import Qt
 from qfluentwidgets import TitleLabel, PrimaryPushButton, FluentIcon, InfoBar, Dialog
 from ...utils.ui_utils import UIUtils
-from ...models.database import Project, Base, get_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum as SQLEnum, DateTime
+from ...models.database import Project, Base, get_engine, sessionmaker # Added sessionmaker import
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum as SQLEnum, DateTime, Engine # Added Engine type hint
 from enum import Enum
 from datetime import datetime
 import os
@@ -107,15 +106,30 @@ class DocumentDialog(QDialog):
         self.file_path_edit.setText(self.document.file_path)
 
 class ProjectDocumentWidget(QWidget):
-    def __init__(self, project, parent=None):
+    # Modify __init__ to accept engine and remove project
+    def __init__(self, engine: Engine, parent=None):
         super().__init__(parent=parent)
-        self.project = project
+        # self.project = project # Removed
+        self.engine = engine # Store engine
+        self.current_project = None # Track selected project
         self.setup_ui()
-        self.load_documents()
+        # self.load_documents() # Don't load initially, wait for selection
     
     def setup_ui(self):
         self.main_layout = QVBoxLayout(self)
-        
+        self.main_layout.setContentsMargins(18, 18, 18, 18) # Add some margins
+        # --- Add Project Selector ---
+        selector_layout = QHBoxLayout()        
+        selector_label = TitleLabel("项目文档:", self)
+        self.project_selector = UIUtils.create_project_selector(self.engine, self)
+        selector_layout.addWidget(selector_label)
+        selector_layout.addWidget(self.project_selector)
+        selector_layout.addStretch()
+        self.main_layout.addLayout(selector_layout)
+        # Connect signal after UI setup
+        self.project_selector.currentIndexChanged.connect(self._on_project_selected)
+        # --- Project Selector End ---
+
         # 按钮栏
         add_btn = UIUtils.create_action_button("上传文档", FluentIcon.ADD)
         edit_btn = UIUtils.create_action_button("编辑文档", FluentIcon.EDIT)
@@ -154,15 +168,35 @@ class ProjectDocumentWidget(QWidget):
         
         self.main_layout.addLayout(search_layout)
     
+    def _on_project_selected(self, index):
+        """Handles project selection change."""
+        selected_project = self.project_selector.itemData(index)
+        if selected_project and isinstance(selected_project, Project):
+            self.current_project = selected_project
+            print(f"DocumentWidget: Project selected - {self.current_project.name}")
+            self.load_documents() # Load documents for the selected project
+        else:
+            self.current_project = None
+            self.document_table.setRowCount(0) # Clear table if no project selected
+            print("DocumentWidget: No valid project selected.")
+
     def load_documents(self):
-        Session = sessionmaker(bind=get_engine())
+        """Loads documents for the currently selected project."""
+        self.document_table.setRowCount(0) # Clear table first
+        if not self.current_project:
+            print("DocumentWidget: No project selected, cannot load documents.")
+            return
+
+        # Use the stored engine
+        Session = sessionmaker(bind=self.engine)
         session = Session()
-        
+
         try:
+            print(f"DocumentWidget: Loading documents for project ID: {self.current_project.id}")
             documents = session.query(ProjectDocument).filter(
-                ProjectDocument.project_id == self.project.id
-            ).all()
-            
+                ProjectDocument.project_id == self.current_project.id
+            ).order_by(ProjectDocument.upload_time.desc()).all() # Order by upload time
+
             self.document_table.setRowCount(len(documents))
             for row, doc in enumerate(documents):
                 self.document_table.setItem(row, 0, QTableWidgetItem(doc.name))
@@ -201,6 +235,10 @@ class ProjectDocumentWidget(QWidget):
             self.document_table.setRowHidden(row, not show_row)
     
     def add_document(self):
+        if not self.current_project:
+            UIUtils.show_warning(self, "警告", "请先选择一个项目")
+            return
+
         dialog = DocumentDialog(self)
         if dialog.exec():
             file_path = dialog.file_path_edit.text()
@@ -209,18 +247,19 @@ class ProjectDocumentWidget(QWidget):
                 return
             
             # 复制文件到项目文档目录
-            project_doc_dir = os.path.join("documents", str(self.project.id))
+            project_doc_dir = os.path.join("documents", str(self.current_project.id))
             os.makedirs(project_doc_dir, exist_ok=True)
             
             new_file_path = os.path.join(project_doc_dir, os.path.basename(file_path))
             shutil.copy2(file_path, new_file_path)
             
-            Session = sessionmaker(bind=get_engine())
+            # Use the stored engine
+            Session = sessionmaker(bind=self.engine)
             session = Session()
-            
+
             try:
                 document = ProjectDocument(
-                    project_id=self.project.id,
+                    project_id=self.current_project.id, # Use current_project.id
                     name=dialog.name_edit.text(),
                     doc_type=DocumentType(dialog.type_combo.currentText()),
                     version=dialog.version_edit.text(),
@@ -237,6 +276,9 @@ class ProjectDocumentWidget(QWidget):
                 session.close()
     
     def edit_document(self):
+        if not self.current_project:
+            UIUtils.show_warning(self, "警告", "请先选择一个项目")
+            return
         selected_items = self.document_table.selectedItems()
         if not selected_items:
             UIUtils.show_warning(self, "警告", "请先选择要编辑的文档")
@@ -245,15 +287,16 @@ class ProjectDocumentWidget(QWidget):
         row = selected_items[0].row()
         doc_name = self.document_table.item(row, 0).text()
         
-        Session = sessionmaker(bind=get_engine())
+        # Use the stored engine
+        Session = sessionmaker(bind=self.engine)
         session = Session()
-        
+
         try:
             document = session.query(ProjectDocument).filter(
-                ProjectDocument.project_id == self.project.id,
+                ProjectDocument.project_id == self.current_project.id, # Use current_project.id
                 ProjectDocument.name == doc_name
             ).first()
-            
+
             if document:
                 dialog = DocumentDialog(self, document)
                 if dialog.exec():
@@ -266,7 +309,7 @@ class ProjectDocumentWidget(QWidget):
                     
                     new_file_path = dialog.file_path_edit.text()
                     if new_file_path and new_file_path != document.file_path:
-                        project_doc_dir = os.path.join("documents", str(self.project.id))
+                        project_doc_dir = os.path.join("documents", str(self.current_project.id)) # Use current_project.id
                         os.makedirs(project_doc_dir, exist_ok=True)
                         
                         new_file_path = os.path.join(project_doc_dir, os.path.basename(new_file_path))
@@ -280,6 +323,9 @@ class ProjectDocumentWidget(QWidget):
             session.close()
     
     def delete_document(self):
+        if not self.current_project:
+            UIUtils.show_warning(self, "警告", "请先选择一个项目")
+            return
         selected_items = self.document_table.selectedItems()
         if not selected_items:
             UIUtils.show_warning(self, "警告", "请先选择要删除的文档")
@@ -288,15 +334,16 @@ class ProjectDocumentWidget(QWidget):
         row = selected_items[0].row()
         doc_name = self.document_table.item(row, 0).text()
         
-        Session = sessionmaker(bind=get_engine())
+        # Use the stored engine
+        Session = sessionmaker(bind=self.engine)
         session = Session()
-        
+
         try:
             document = session.query(ProjectDocument).filter(
-                ProjectDocument.project_id == self.project.id,
+                ProjectDocument.project_id == self.current_project.id, # Use current_project.id
                 ProjectDocument.name == doc_name
             ).first()
-            
+
             if document:
                 # 删除文件
                 if os.path.exists(document.file_path):
@@ -310,6 +357,9 @@ class ProjectDocumentWidget(QWidget):
             session.close()
     
     def download_document(self):
+        if not self.current_project:
+            UIUtils.show_warning(self, "警告", "请先选择一个项目")
+            return
         selected_items = self.document_table.selectedItems()
         if not selected_items:
             UIUtils.show_warning(self, "警告", "请先选择要下载的文档")

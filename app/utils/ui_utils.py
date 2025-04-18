@@ -1,7 +1,9 @@
 from PySide6.QtWidgets import (QWidget, QTableWidget, QTreeWidget, QHeaderView, QVBoxLayout,
                              QHBoxLayout, QLabel)
 from PySide6.QtCore import Qt
-from qfluentwidgets import TitleLabel, PrimaryPushButton, FluentIcon, InfoBar, TableWidget
+from qfluentwidgets import TitleLabel, PrimaryPushButton, FluentIcon, InfoBar, TableWidget, ComboBox
+from ..models.database import Project, sessionmaker # Import Project model and sessionmaker
+from sqlalchemy import Engine # Import Engine type hint
 import os
 
 class UIUtils:
@@ -168,3 +170,40 @@ class UIUtils:
             raise FileNotFoundError(f"SVG图标文件不存在: {icon_path}")
             
         return icon_path
+
+    @staticmethod
+    def create_project_selector(engine: Engine, parent=None) -> ComboBox:
+        """
+        创建并填充一个包含所有项目的 ComboBox。
+
+        Args:
+            engine: SQLAlchemy 数据库引擎实例。
+            parent: 父控件。
+
+        Returns:
+            填充了项目列表的 ComboBox 实例。
+        """
+        combo_box = ComboBox(parent)
+        combo_box.setPlaceholderText("请选择项目...")
+        combo_box.setMinimumWidth(200) # 设置最小宽度
+
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        try:
+            projects = session.query(Project).order_by(Project.name).all()
+            if not projects:
+                combo_box.addItem("没有找到项目", userData=None)
+                combo_box.setEnabled(False)
+            else:
+                combo_box.addItem("请选择项目...", userData=None) # 添加默认提示项
+                for project in projects:
+                    # 显示项目名称，将整个 project 对象存储在 userData 中
+                    combo_box.addItem(f"{project.name} ({project.id})", userData=project)
+        except Exception as e:
+            print(f"Error loading projects for ComboBox: {e}")
+            combo_box.addItem("加载项目出错", userData=None)
+            combo_box.setEnabled(False)
+        finally:
+            session.close()
+
+        return combo_box

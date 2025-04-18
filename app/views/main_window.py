@@ -7,6 +7,8 @@ from ..utils.ui_utils import UIUtils
 from .projecting_interface.project_list import ProjectListWindow
 from .projecting_interface.project_budget import ProjectBudgetWidget
 from .projecting_interface.project_progress import ProjectProgressWidget
+from .projecting_interface.project_document import ProjectDocumentWidget # Import Document Widget
+from .projecting_interface.project_achievement import ProjectAchievementWidget # Import Achievement Widget
 from .home_interface import HomeInterface
 from .help_interface import HelpInterface
 from .budgeting_interface import BudgetingInterface
@@ -54,14 +56,17 @@ class MainWindow(FluentWindow):
         self.addSubInterface(  
             self.projecting_interface,
             QIcon(UIUtils.get_svg_icon_path('projecting_tab')),
-            "科研项目"
+            "项目清单"
         )
         
-        # 添加预算编制导航项
+        
+        # 添加项目经费界面 (新的顶级导航项)
+        self.project_budget_interface = ProjectBudgetWidget(self.engine) # Pass engine
+        self.project_budget_interface.setObjectName("projectBudgetInterface")
         self.addSubInterface(
-            self.budget_edit_interface,
-            QIcon(UIUtils.get_svg_icon_path('budgeting_tab')),
-            "预算编制"
+            self.project_budget_interface,
+            QIcon(UIUtils.get_svg_icon_path('budgeting_tab')), # Reuse icon or create new one
+            "项目经费"
         )
         
         self.addSubInterface(
@@ -71,14 +76,41 @@ class MainWindow(FluentWindow):
             position=NavigationItemPosition.BOTTOM
         )
 
-        # 添加项目进度界面
-        #self.progress_interface = ProjectProgressWidget(self.engine)
-       # self.progress_interface.setObjectName("progressInterface")
-       # self.addSubInterface(
-        #    self.progress_interface,
-        #    QIcon(UIUtils.get_svg_icon_path('progress')),
-        #    "项目进度"
-       # )
+        # 添加项目进度界面 (现在作为顶级导航项)
+        self.progress_interface = ProjectProgressWidget(self.engine) # Pass engine
+        self.progress_interface.setObjectName("progressInterface")
+        self.addSubInterface(
+            self.progress_interface,
+            QIcon(UIUtils.get_svg_icon_path('progress')), # Use existing icon
+            "项目进度"
+        )
+
+        # 添加项目文档界面
+        self.document_interface = ProjectDocumentWidget(self.engine) # Pass engine
+        self.document_interface.setObjectName("documentInterface")
+        self.addSubInterface(
+            self.document_interface,
+            QIcon(UIUtils.get_svg_icon_path('document')), # Use existing icon
+            "项目文档"
+        )
+
+        # 添加项目成果界面
+        self.achievement_interface = ProjectAchievementWidget(self.engine) # Pass engine
+        self.achievement_interface.setObjectName("achievementInterface")
+        self.addSubInterface(
+            self.achievement_interface,
+            QIcon(UIUtils.get_svg_icon_path('achievement')), # Use existing icon
+            "项目成果"
+        )
+
+        # # 添加预算编制导航项
+        self.addSubInterface(
+            self.budget_edit_interface,
+            QIcon(UIUtils.get_svg_icon_path('budgeting_interface')),
+            "预算编制"
+        )
+
+
 
         # 添加工具界面
         self.tools_interface = ToolsInterface()

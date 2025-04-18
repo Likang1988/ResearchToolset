@@ -242,7 +242,28 @@ class BudgetChartWidget(QWidget):
         # 连接信号
         self.category_btn.clicked.connect(self.show_category_chart)
         self.time_btn.clicked.connect(self.show_time_chart)
-    
+
+    def clear_charts(self):
+        """清除图表，显示“暂无数据”"""
+        # Create an empty chart using the base class method or similar logic
+        empty_chart = self.create_empty_chart("请选择项目以查看图表") # Use the method from base or reimplement
+        self.chart_view.setChart(empty_chart)
+        self.chart_handler = None # Reset the handler
+
+    def create_empty_chart(self, title):
+        """创建空的饼图 (Helper method, potentially redundant if base class is used directly)"""
+        chart = QChart()
+        chart.setTitle(title)
+        chart.setAnimationOptions(QChart.SeriesAnimations)
+        chart.legend().setVisible(False)  # 隐藏图例标签
+
+        series = QPieSeries()
+        empty_slice = QPieSlice("暂无数据", 1)
+        empty_slice.setLabelVisible(True)
+        series.append(empty_slice)
+        chart.addSeries(series)
+        return chart
+
     def update_charts(self, budget_items=None, expenses=None):
         """更新图表数据
         

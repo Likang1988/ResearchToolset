@@ -1,10 +1,10 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QComboBox, QLineEdit, QDialog, QDateEdit
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QComboBox, QLineEdit, QDialog, QDateEdit, QLabel # Added QLabel
 from PySide6.QtCore import Qt
 from qfluentwidgets import TitleLabel, PrimaryPushButton, FluentIcon, InfoBar
 from ...utils.ui_utils import UIUtils
-from ...models.database import Project, Base, get_engine
+from ...models.database import Project, Base, get_engine, sessionmaker # Added sessionmaker import
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum as SQLEnum, Engine # Added Engine type hint
 from enum import Enum
 from datetime import datetime
 
@@ -118,15 +118,30 @@ class AchievementDialog(QDialog):
         self.remarks_edit.setText(self.achievement.remarks)
 
 class ProjectAchievementWidget(QWidget):
-    def __init__(self, project, parent=None):
+    # Modify __init__ to accept engine and remove project
+    def __init__(self, engine: Engine, parent=None):
         super().__init__(parent=parent)
-        self.project = project
+        # self.project = project # Removed
+        self.engine = engine # Store engine
+        self.current_project = None # Track selected project
         self.setup_ui()
-        self.load_achievements()
+        # self.load_achievements() # Don't load initially, wait for selection
     
     def setup_ui(self):
         self.main_layout = QVBoxLayout(self)
-        
+        self.main_layout.setContentsMargins(18, 18, 18, 18) # Add some margins
+        # --- Add Project Selector ---
+        selector_layout = QHBoxLayout()
+        selector_label = TitleLabel("项目成果:", self)        
+        self.project_selector = UIUtils.create_project_selector(self.engine, self)
+        selector_layout.addWidget(selector_label)
+        selector_layout.addWidget(self.project_selector)
+        selector_layout.addStretch()
+        self.main_layout.addLayout(selector_layout)
+        # Connect signal after UI setup
+        self.project_selector.currentIndexChanged.connect(self._on_project_selected)
+        # --- Project Selector End ---
+
         # 按钮栏
         add_btn = UIUtils.create_action_button("新增成果", FluentIcon.ADD)
         edit_btn = UIUtils.create_action_button("编辑成果", FluentIcon.EDIT)
@@ -170,15 +185,35 @@ class ProjectAchievementWidget(QWidget):
         
         self.main_layout.addLayout(search_layout)
     
+    def _on_project_selected(self, index):
+        """Handles project selection change."""
+        selected_project = self.project_selector.itemData(index)
+        if selected_project and isinstance(selected_project, Project):
+            self.current_project = selected_project
+            print(f"AchievementWidget: Project selected - {self.current_project.name}")
+            self.load_achievements() # Load achievements for the selected project
+        else:
+            self.current_project = None
+            self.achievement_table.setRowCount(0) # Clear table if no project selected
+            print("AchievementWidget: No valid project selected.")
+
     def load_achievements(self):
-        Session = sessionmaker(bind=get_engine())
+        """Loads achievements for the currently selected project."""
+        self.achievement_table.setRowCount(0) # Clear table first
+        if not self.current_project:
+            print("AchievementWidget: No project selected, cannot load achievements.")
+            return
+
+        # Use the stored engine
+        Session = sessionmaker(bind=self.engine)
         session = Session()
-        
+
         try:
+            print(f"AchievementWidget: Loading achievements for project ID: {self.current_project.id}")
             achievements = session.query(ProjectAchievement).filter(
-                ProjectAchievement.project_id == self.project.id
-            ).all()
-            
+                ProjectAchievement.project_id == self.current_project.id
+            ).order_by(ProjectAchievement.publish_date.desc()).all() # Order by publish date
+
             self.achievement_table.setRowCount(len(achievements))
             for row, achievement in enumerate(achievements):
                 self.achievement_table.setItem(row, 0, QTableWidgetItem(achievement.name))
@@ -224,14 +259,19 @@ class ProjectAchievementWidget(QWidget):
             self.achievement_table.setRowHidden(row, not show_row)
     
     def add_achievement(self):
-        dialog = AchievementDialog(self, project=self.project)
+        if not self.current_project:
+            UIUtils.show_warning(self, "警告", "请先选择一个项目")
+            return
+
+        dialog = AchievementDialog(self, project=self.current_project) # Pass current project if needed by dialog
         if dialog.exec():
-            Session = sessionmaker(bind=get_engine())
+            # Use the stored engine
+            Session = sessionmaker(bind=self.engine)
             session = Session()
-            
+
             try:
                 achievement = ProjectAchievement(
-                    project_id=self.project.id,
+                    project_id=self.current_project.id, # Use current_project.id
                     name=dialog.name_edit.text(),
                     type=AchievementType(dialog.type_combo.currentText()),
                     status=AchievementStatus(dialog.status_combo.currentText()),
@@ -250,6 +290,9 @@ class ProjectAchievementWidget(QWidget):
                 session.close()
     
     def edit_achievement(self):
+        if not self.current_project:
+            UIUtils.show_warning(self, "警告", "请先选择一个项目")
+            return
         selected_items = self.achievement_table.selectedItems()
         if not selected_items:
             UIUtils.show_warning(self, "警告", "请先选择要编辑的成果")
@@ -258,17 +301,18 @@ class ProjectAchievementWidget(QWidget):
         row = selected_items[0].row()
         achievement_name = self.achievement_table.item(row, 0).text()
         
-        Session = sessionmaker(bind=get_engine())
+        # Use the stored engine
+        Session = sessionmaker(bind=self.engine)
         session = Session()
-        
+
         try:
             achievement = session.query(ProjectAchievement).filter(
-                ProjectAchievement.project_id == self.project_combo.currentData(),
+                ProjectAchievement.project_id == self.current_project.id, # Use current_project.id
                 ProjectAchievement.name == achievement_name
             ).first()
-            
+
             if achievement:
-                dialog = AchievementDialog(self, achievement)
+                dialog = AchievementDialog(self, achievement, project=self.current_project) # Pass current project if needed
                 if dialog.exec():
                     achievement.name = dialog.name_edit.text()
                     achievement.type = AchievementType(dialog.type_combo.currentText())
@@ -287,6 +331,9 @@ class ProjectAchievementWidget(QWidget):
             session.close()
     
     def delete_achievement(self):
+        if not self.current_project:
+            UIUtils.show_warning(self, "警告", "请先选择一个项目")
+            return
         selected_items = self.achievement_table.selectedItems()
         if not selected_items:
             UIUtils.show_warning(self, "警告", "请先选择要删除的成果")
@@ -295,15 +342,16 @@ class ProjectAchievementWidget(QWidget):
         row = selected_items[0].row()
         achievement_name = self.achievement_table.item(row, 0).text()
         
-        Session = sessionmaker(bind=get_engine())
+        # Use the stored engine
+        Session = sessionmaker(bind=self.engine)
         session = Session()
-        
+
         try:
             achievement = session.query(ProjectAchievement).filter(
-                ProjectAchievement.project_id == self.project_combo.currentData(),
+                ProjectAchievement.project_id == self.current_project.id, # Use current_project.id
                 ProjectAchievement.name == achievement_name
             ).first()
-            
+
             if achievement:
                 session.delete(achievement)
                 session.commit()

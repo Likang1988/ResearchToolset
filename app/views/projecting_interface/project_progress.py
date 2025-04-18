@@ -1,11 +1,11 @@
 import json
 from datetime import datetime, timezone
-from PySide6.QtWidgets import QWidget, QVBoxLayout
-from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel # Added QHBoxLayout, QLabel
+# from PySide6.QtWebEngineWidgets import QWebEngineView # Already commented out/replaced
 from PySide6.QtWebChannel import QWebChannel
-from PySide6.QtCore import QUrl, Signal, QObject, Slot, QCoreApplication
+from PySide6.QtCore import QUrl, Signal, QObject, Slot, QCoreApplication, Qt # Ensure Qt is imported
 from PySide6.QtGui import QIcon
-from qfluentwidgets import NavigationInterface, NavigationItemPosition, InfoBar, InfoBarPosition
+from qfluentwidgets import NavigationInterface, TitleLabel, InfoBar, InfoBarPosition, ComboBox # Added ComboBox
 from qframelesswindow.webengine import FramelessWindow, FramelessWebEngineView
 from app.utils.ui_utils import UIUtils
 from app.models.database import sessionmaker, GanttTask, GanttDependency, Project
@@ -16,17 +16,33 @@ class GanttBridge(QObject):
     """用于在Python和JavaScript之间通过QWebChannel通信的桥梁类"""
     data_saved = Signal(bool, str) # 信号：保存是否成功，消息
 
-    def __init__(self, engine, project, parent=None):
+    # Modify __init__ to remove project argument
+    def __init__(self, engine, parent=None):
         super().__init__(parent)
         self.engine = engine
-        self.project = project
+        self.project = None # Project will be set later
         self.Session = sessionmaker(bind=self.engine)
+
+    def set_project(self, project):
+        """Sets the current project for the bridge."""
+        self.project = project
+        print(f"GanttBridge project set to: {project.name if project else 'None'}")
 
     @Slot(result=str) # 返回JSON字符串
     def load_gantt_data(self):
         """从数据库加载指定项目的甘特图数据"""
+        if not self.project:
+            print("GanttBridge: No project selected, returning empty data.")
+            # Return empty structure if no project is selected
+            return json.dumps({
+                "tasks": [], "selectedRow": -1, "deletedTaskIds": [],
+                "resources": [], "roles": [], "canWrite": False, "canDelete": False,
+                "canWriteOnParent": False, "canAdd": False
+            })
+
         session = self.Session()
         try:
+            print(f"GanttBridge: Loading data for project ID: {self.project.id}")
             tasks_db = session.query(GanttTask).filter(GanttTask.project_id == self.project.id).order_by(GanttTask.id).all()
             dependencies_db = session.query(GanttDependency).filter(GanttDependency.project_id == self.project.id).all()
 
@@ -105,9 +121,16 @@ class GanttBridge(QObject):
         成功时返回包含临时ID到持久化ID映射的JSON字符串。
         失败时返回包含错误信息的JSON字符串。
         """
+        if not self.project:
+            print("GanttBridge: No project selected, cannot save data.")
+            error_message = "未选择项目，无法保存数据。"
+            self.data_saved.emit(False, error_message)
+            return json.dumps({"success": False, "error": error_message})
+
         session = self.Session()
         new_task_id_map = {} # 存储临时ID到新数据库ID的映射
         try:
+            print(f"GanttBridge: Saving data for project ID: {self.project.id}")
             project_data = json.loads(project_json_str)
             tasks_data = project_data.get("tasks", [])
             deleted_task_ids = project_data.get("deletedTaskIds", [])
@@ -318,26 +341,43 @@ class ProjectProgressWidget(QWidget):
     # 定义信号
     progress_updated = Signal()
 
-    def __init__(self, project, engine=None, parent=None): # 接收 project 对象
+    # Modify __init__ to remove project argument
+    def __init__(self, engine=None, parent=None):
         super().__init__(parent)
-        self.project = project # 保存 project 对象
+        # self.project = project # No longer needed here
         self.engine = engine
         self.setObjectName("projectProgressWidget")
+        self.current_project = None # Track the currently selected project in the widget
         self.setup_ui()
 
     def setup_ui(self):
         """初始化界面"""
         self.setStyleSheet("background: transparent;")
         self.layout = QVBoxLayout(self)
-        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setContentsMargins(18, 18, 18, 18) # Add some margins
+
+        # --- Add Project Selector ---
+        selector_layout = QHBoxLayout()
+        selector_label = TitleLabel("项目进度:", self)
+        self.project_selector = UIUtils.create_project_selector(self.engine, self)
+        selector_layout.addWidget(selector_label)
+        selector_layout.addWidget(self.project_selector)
+        selector_layout.addStretch()
+        self.layout.addLayout(selector_layout)
+        # --- Project Selector End ---
 
         # 创建WebEngineView并设置样式
-        self.web_view = QWebEngineView(self)
-        self.layout.addWidget(self.web_view)
+        # Use FramelessWebEngineView
+        self.web_view = FramelessWebEngineView(self)
+        # Ensure background is transparent (might be redundant but safe)
+        self.web_view.setAttribute(Qt.WA_TranslucentBackground)
+        self.web_view.setStyleSheet("background: transparent;")
+        self.layout.addWidget(self.web_view) # Add web_view *after* selector
 
         # --- 设置 QWebChannel ---
         self.channel = QWebChannel(self.web_view.page())
-        self.gantt_bridge = GanttBridge(self.engine, self.project, self) # 创建桥接对象
+        # Initialize GanttBridge without a project initially
+        self.gantt_bridge = GanttBridge(self.engine, parent=self)
         self.channel.registerObject("ganttBridge", self.gantt_bridge) # 注册对象，JS端将通过 'ganttBridge' 访问
         self.web_view.page().setWebChannel(self.channel)
         # 连接保存信号到信息提示
@@ -346,6 +386,27 @@ class ProjectProgressWidget(QWidget):
 
         # 加载本地甘特图资源
         self.load_gantt()
+
+        # Connect project selector signal
+        self.project_selector.currentIndexChanged.connect(self._on_project_selected)
+
+    def _on_project_selected(self, index):
+        """Handles project selection change."""
+        selected_project = self.project_selector.itemData(index)
+        if selected_project and isinstance(selected_project, Project):
+            self.current_project = selected_project
+            print(f"Project selected in widget: {self.current_project.name}")
+            self.gantt_bridge.set_project(self.current_project)
+            # Trigger data loading in JavaScript
+            self.web_view.page().runJavaScript("loadInitialData();")
+        else:
+            # Handle "请选择项目..." or error case
+            self.current_project = None
+            self.gantt_bridge.set_project(None)
+            # Optionally clear the Gantt chart in JS
+            self.web_view.page().runJavaScript("clearGantt();")
+            print("No valid project selected.")
+
 
     def load_gantt(self):
         """加载本地jQueryGantt资源"""
@@ -383,6 +444,7 @@ class ProjectProgressWidget(QWidget):
                 with open(self.qwebchannel_js_path, 'r', encoding='utf-8') as f:
                     qwebchannel_js = f.read()
 
+                # Use triple quotes and escape JS braces for f-string compatibility
                 init_script = f"""
                 {qwebchannel_js}
 
@@ -391,29 +453,46 @@ class ProjectProgressWidget(QWidget):
                     window.ganttBridge = channel.objects.ganttBridge;
                     console.log("QWebChannel connected, ganttBridge object available.");
 
-                    // 连接成功后，立即尝试加载数据
-                    if (window.ganttBridge && window.ganttBridge.load_gantt_data) {{
-                        window.ganttBridge.load_gantt_data(function(jsonData) {{
-                            if (jsonData) {{
-                                try {{
-                                    var projectData = JSON.parse(jsonData);
-                                    if (typeof ge !== 'undefined' && ge.loadProject) {{
-                                        ge.loadProject(projectData);
-                                        ge.redraw();
-                                        console.log("Initial Gantt data loaded from Python.");
-                                    }} else {{
-                                        console.error("Gantt object 'ge' not found or loadProject method missing.");
-                                    }}
-                                }} catch (e) {{
-                                    console.error("Error parsing or loading initial Gantt data:", e, jsonData);
-                                }}
-                            }} else {{
-                                console.warn("Received empty data from load_gantt_data.");
-                            }}
-                        }});
-                    }} else {{
-                         console.error("ganttBridge or load_gantt_data function not available after QWebChannel setup.");
-                    }}
+                    // Define functions to load/clear data, called by Python later
+                    window.loadInitialData = function() {{ // Escape braces
+                        console.log("loadInitialData called by Python.");
+                        if (window.ganttBridge && window.ganttBridge.load_gantt_data) {{ // Escape braces
+                            window.ganttBridge.load_gantt_data(function(jsonData) {{ // Escape braces
+                                if (jsonData) {{ // Escape braces
+                                    try {{ // Escape braces
+                                        var projectData = JSON.parse(jsonData);
+                                        if (typeof ge !== 'undefined' && ge.loadProject) {{ // Escape braces
+                                            console.log("Loading project data into Gantt:", projectData);
+                                            ge.loadProject(projectData);
+                                            ge.redraw();
+                                            console.log("Gantt data loaded/reloaded from Python.");
+                                        }} else {{ // Escape braces
+                                            console.error("Gantt object 'ge' not found or loadProject method missing.");
+                                        }} // Escape braces
+                                    }} catch (e) {{ // Escape braces
+                                        console.error("Error parsing or loading Gantt data:", e, jsonData);
+                                    }} // Escape braces
+                                }} else {{ // Escape braces
+                                    console.warn("Received empty data from load_gantt_data.");
+                                }} // Escape braces
+                            }}); // Escape braces
+                        }} else {{ // Escape braces
+                             console.error("ganttBridge or load_gantt_data function not available.");
+                        }} // Escape braces
+                    }}; // Escape braces
+
+                    window.clearGantt = function() {{ // Escape braces
+                        console.log("clearGantt called by Python.");
+                         if (typeof ge !== 'undefined' && ge.reset) {{ // Escape braces
+                             ge.reset(); // Clear the gantt chart
+                             console.log("Gantt chart cleared.");
+                         }} else {{ // Escape braces
+                             console.error("Gantt object 'ge' not found or reset method missing.");
+                         }} // Escape braces
+                    }}; // Escape braces
+
+                    // Don't load data immediately on channel connection anymore
+                    // loadInitialData(); // Remove this initial call
                 }});
                 console.log("QWebChannel setup initiated.");
                 """
