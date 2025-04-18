@@ -90,23 +90,10 @@ class MainWindow(FluentWindow):
         )
 
         
-        # 移除在 __init__ 中启用云母特效的代码
-        self.setMicaEffectEnabled(False) # 将在 run.py 的 show() 后调用
+        
 
         # 设置当前页面
         self.navigationInterface.setCurrentItem("主页")
         self.navigationInterface.setExpandWidth(150)
 
-        # 移除信号连接和处理函数
-        # if hasattr(self, 'stackedWidget'):
-        #      self.stackedWidget.currentChanged.connect(self._on_current_interface_changed)
-        # else:
-        #      print("Warning: Could not find stackedWidget attribute in MainWindow.")
 
-    # 移除信号处理函数
-    # def _on_current_interface_changed(self, index):
-    #     """ 导航项切换时的处理 (由 stackedWidget.currentChanged 触发) """
-    #     widget = self.stackedWidget.widget(index)
-    #     if widget and widget.objectName() == "progressInterface":
-    #         print("Switching to progressInterface, re-enabling Mica effect...")
-    #         self.setMicaEffectEnabled(True)

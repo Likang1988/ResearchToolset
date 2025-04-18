@@ -96,7 +96,7 @@ class ProjectListWindow(QWidget):
         self.project_table = TableWidget()
         self.project_table.setColumnCount(9)  # 增加一列
         self.project_table.setHorizontalHeaderLabels([
-            "财务编号", "项目名称", "项目编号",
+            "简称/代号/\n财务编号", "项目名称", "项目编号",
             "项目类别", "开始日期", "结束日期", "总经费\n（万元）", "项目\n管理", "经费\n管理"
         ])
         self.project_table.setSelectionBehavior(TableWidget.SelectRows)
@@ -107,7 +107,7 @@ class ProjectListWindow(QWidget):
         self.project_table.setItemDelegate(TableItemDelegate(self.project_table))
 
         # 设置表格样式
-    #   UIUtils.set_table_style(self.project_table)
+        UIUtils.set_table_style(self.project_table)
         
         # 设置列宽模式
         header = self.project_table.horizontalHeader()  # 获取水平表头

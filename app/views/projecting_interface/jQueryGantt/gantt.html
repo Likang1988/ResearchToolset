@@ -205,24 +205,88 @@ function saveGanttData() {
       return;
   }
 
-  var prj = ge.saveProject();
-  var prjString = JSON.stringify(prj); // Stringify the project data
+  var prj;
+  try {
+      prj = ge.saveProject();
+      if (!prj || !prj.tasks) {
+          console.error("ge.saveProject() returned invalid data:", prj);
+          alert("错误：无法获取甘特图数据进行保存！");
+          return;
+      }
+  } catch (e) {
+      console.error("Error calling ge.saveProject():", e);
+      alert("错误：调用 ge.saveProject() 时出错！");
+      return;
+  }
+
+  var prjString;
+  try {
+      prjString = JSON.stringify(prj); // Stringify the project data
+  } catch (e) {
+      console.error("Error stringifying project data:", e, prj);
+      alert("错误：无法序列化甘特图数据！");
+      return;
+  }
+
 
   console.log("Sending data to Python:", prjString);
 
   // Call the Python backend function via QWebChannel
-  window.ganttBridge.save_gantt_data(prjString, function(success) {
-      // This callback receives the boolean result from the Python Slot
-      console.log("Save operation returned:", success);
-      if (success) {
-          // Optional: Reload data from server to get persistent IDs if needed
-          // window.ganttBridge.load_gantt_data(function(jsonData) { ... });
-          // Or just rely on the InfoBar shown by Python
+  // The callback now receives a JSON string response
+  window.ganttBridge.save_gantt_data(prjString, function(responseJson) {
+      console.log("Save operation returned JSON:", responseJson);
+      var response;
+      try {
+          response = JSON.parse(responseJson);
+      } catch (e) {
+          console.error("Error parsing JSON response from Python:", e, responseJson);
+          alert("错误：无法解析来自后端的保存响应！");
+          return;
+      }
+
+      if (response && response.success) {
           console.log("Data saved successfully (according to Python).");
-          ge.checkpoint(); // Clear undo stack after successful save
+          // --- Update IDs in the frontend Gantt object ---
+          if (response.id_map && Object.keys(response.id_map).length > 0) {
+              console.log("Updating frontend IDs:", response.id_map);
+              for (var tempId in response.id_map) {
+                  var persistentId = response.id_map[tempId];
+                  var task = ge.getTask(tempId); // Find task by temporary ID
+                  if (task) {
+                      // Update the task's ID within the GanttMaster's internal structure
+                      task.id = persistentId;
+                      // Update the task map in GanttMaster
+                      delete ge.tasks.map[tempId];
+                      ge.tasks.map[persistentId] = task;
+                      console.log(`Updated task ID in ge: ${tempId} -> ${persistentId}`);
+
+                      // Also update the DOM element's taskId attribute if necessary
+                      // This helps if other parts of the JS rely on the DOM attribute
+                      var taskRow = ge.element.find("#tid_" + tempId);
+                      if (taskRow.length > 0) {
+                          taskRow.attr("id", "tid_" + persistentId);
+                          taskRow.attr("taskId", persistentId);
+                          console.log(`Updated DOM element ID for task: ${tempId} -> ${persistentId}`);
+                      }
+                       var taskBar = ge.element.find(".taskBox[taskId='" + tempId + "']");
+                       if (taskBar.length > 0) {
+                           taskBar.attr("taskId", persistentId);
+                           console.log(`Updated task bar taskId attribute for task: ${tempId} -> ${persistentId}`);
+                       }
+
+                  } else {
+                      console.warn(`Task with tempId ${tempId} not found in ge object after save.`);
+                  }
+              }
+              // After updating IDs, it might be necessary to update dependencies
+              // that referred to the old temporary IDs.
+              ge.redraw(); // Redraw to reflect potential changes
+          }
+          // ---------------------------------------------
+          ge.checkpoint(); // Clear undo stack after successful save and ID update
       } else {
           // Error message is shown by Python's InfoBar
-          console.error("Data saving failed (according to Python).");
+          console.error("Data saving failed (according to Python):", response ? response.error : "Unknown error");
           // alert("保存失败，请查看日志或联系管理员。"); // Redundant if InfoBar works
       }
   });

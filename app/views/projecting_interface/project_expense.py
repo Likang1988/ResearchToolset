@@ -90,6 +90,9 @@ class ProjectExpenseWidget(QWidget):
         self.expense_table.setBorderRadius(8)
         self.expense_table.setWordWrap(False)
         self.expense_table.setItemDelegate(TableItemDelegate(self.expense_table))
+
+        # 设置表格样式
+        UIUtils.set_table_style(self.expense_table)
         
         # 设置列宽模式
         header = self.expense_table.horizontalHeader()  # 获取水平表头
@@ -224,7 +227,8 @@ class ProjectExpenseWidget(QWidget):
         self.stats_table.setSelectionBehavior(TableWidget.SelectRows)  
         self.stats_table.setSelectionMode(TableWidget.SingleSelection)  
         
-        
+        # 设置表格样式
+        UIUtils.set_table_style(self.stats_table)
         
         bottom_layout.addWidget(self.stats_table)
         splitter.addWidget(bottom_widget)

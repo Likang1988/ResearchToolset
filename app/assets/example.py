@@ -1,3 +1,9 @@
+''' 背景失效解决办法:
+在 Win11 系统下，FluentWindow 默认启用了云母特效，如果窗口中使用了 QWebEngineView 
+或者 QOpenGLWidget，会导致窗口背景特效失效，同时圆角和阴影也会消失。
+下述例子演示了如何正确地在 FluentWindow 中使用 Web 引擎。
+'''
+
 from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout)
 from PySide6.QtCore import QUrl
 from qfluentwidgets import FluentWindow, FluentIcon

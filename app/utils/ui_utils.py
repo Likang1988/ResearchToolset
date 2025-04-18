@@ -28,11 +28,12 @@ class UIUtils:
                 background-color: rgba(0, 0, 0, 0.03);
             }
             QHeaderView::section {
-                background-color: transparent;  
+                background-color: rgba(238,238,238, 1);  
                 color: #555555;
                 font-weight: 500;
                 padding: 8px;
                 border: none;
+                border-right: 1px solid rgba(0, 0, 0, 0.1);
                 border-bottom: 1px solid rgba(0, 0, 0, 0.1);
             }
             QHeaderView::section:hover {
@@ -73,7 +74,7 @@ class UIUtils:
                 background-color: rgba(0, 0, 0, 0.001);
             }
             QHeaderView::section {
-                background-color: rgba(0, 0, 0, 0.01);  
+                background-color: rgba(238,238,238, 1);  
                 color: #333333;
                 font-weight: 500;
                 padding: 8px;

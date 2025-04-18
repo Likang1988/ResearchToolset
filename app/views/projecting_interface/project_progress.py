@@ -97,10 +97,16 @@ class GanttBridge(QObject):
                 deps.append(str(dep.predecessor_gantt_id))
         return ",".join(deps)
 
-    @Slot(str, result=bool) # 接收JSON字符串，返回布尔值
+    # 修改 Slot 返回类型为 str，以包含 ID 映射
+    @Slot(str, result=str) # 接收JSON字符串，返回包含ID映射的JSON字符串或错误信息
     def save_gantt_data(self, project_json_str):
-        """将甘特图数据保存到数据库"""
+        """
+        将甘特图数据保存到数据库。
+        成功时返回包含临时ID到持久化ID映射的JSON字符串。
+        失败时返回包含错误信息的JSON字符串。
+        """
         session = self.Session()
+        new_task_id_map = {} # 存储临时ID到新数据库ID的映射
         try:
             project_data = json.loads(project_json_str)
             tasks_data = project_data.get("tasks", [])
@@ -122,11 +128,24 @@ class GanttBridge(QObject):
                 print(f"Deleted tasks: {deleted_task_ids}")
 
             # 2. 处理现有任务和新任务
+            # --- 事务开始 ---
+            # 1. 处理删除的任务 (保持不变)
+            if deleted_task_ids:
+                session.query(GanttDependency).filter(
+                    GanttDependency.project_id == self.project.id,
+                    (GanttDependency.predecessor_gantt_id.in_(deleted_task_ids)) |
+                    (GanttDependency.successor_gantt_id.in_(deleted_task_ids))
+                ).delete(synchronize_session=False)
+                session.query(GanttTask).filter(
+                    GanttTask.project_id == self.project.id,
+                    GanttTask.gantt_id.in_(deleted_task_ids)
+                ).delete(synchronize_session=False)
+                print(f"Deleted tasks: {deleted_task_ids}")
+
+            # 2. 处理更新和新增的任务
             existing_tasks_db = session.query(GanttTask).filter(GanttTask.project_id == self.project.id).all()
             existing_task_map = {task.gantt_id: task for task in existing_tasks_db}
-            new_task_id_map = {} # 存储临时ID到新数据库ID的映射
             processed_gantt_ids = set() # 存储处理过的持久化ID
-
             all_dependencies_to_save = []
 
             for task_data in tasks_data:
@@ -156,27 +175,32 @@ class GanttBridge(QObject):
                 }
 
                 current_gantt_id = None # 用于依赖关系处理
+                is_new_task = gantt_id.startswith("tmp_")
 
-                if gantt_id.startswith("tmp_"):
+                if is_new_task:
                     # 新任务：插入数据库
-                    new_task = GanttTask(**task_obj_data)
-                    # 先添加获取ID
+                    # 1. 创建对象时，先使用临时ID填充gantt_id，避免NOT NULL错误
+                    new_task = GanttTask(gantt_id=gantt_id, **task_obj_data)
+                    # 2. 添加到 session
                     session.add(new_task)
-                    session.flush() # 获取新任务的数据库ID
-                    new_gantt_id = str(new_task.id) # 使用数据库ID作为持久化ID
-                    new_task.gantt_id = new_gantt_id # 更新gantt_id
-                    session.merge(new_task) # 合并更新
-                    new_task_id_map[gantt_id] = new_gantt_id # 记录临时ID到新ID的映射
-                    print(f"Added new task: {gantt_id} -> {new_gantt_id}")
-                    current_gantt_id = new_gantt_id
+                    # 3. Flush 获取数据库生成的真实 ID
+                    session.flush()
+                    # 4. 生成持久化 ID (使用数据库ID)
+                    persistent_gantt_id = str(new_task.id)
+                    # 5. 更新任务对象的 gantt_id 为持久化 ID
+                    new_task.gantt_id = persistent_gantt_id
+                    # 6. 记录临时ID到持久化ID的映射
+                    new_task_id_map[gantt_id] = persistent_gantt_id
+                    print(f"Added new task: {gantt_id} -> {persistent_gantt_id}")
+                    current_gantt_id = persistent_gantt_id
                     processed_gantt_ids.add(current_gantt_id)
+                    # 注意：新任务的依赖关系需要在所有任务处理完、ID映射确定后再处理
                 elif gantt_id in existing_task_map:
                     # 现有任务：更新数据库
-                    existing_task = existing_task_map[gantt_id]
+                    existing_task = existing_task_map.pop(gantt_id) # 从map中取出并移除，表示已处理
                     for key, value in task_obj_data.items():
                         setattr(existing_task, key, value)
-                    existing_task.gantt_id = gantt_id # 确保gantt_id不变
-                    session.merge(existing_task)
+                    # existing_task 对象已在 session 中，修改后会自动更新，无需 merge
                     print(f"Updated task: {gantt_id}")
                     current_gantt_id = gantt_id
                     processed_gantt_ids.add(current_gantt_id)
@@ -242,16 +266,48 @@ class GanttBridge(QObject):
                      print(f"Skipping dependency: Pred '{final_pred_id}' or Succ '{succ_id}' not found in processed tasks.")
 
 
+            # --- 依赖关系处理 ---
+            # 先删除该项目的所有旧依赖
+            session.query(GanttDependency).filter(GanttDependency.project_id == self.project.id).delete(synchronize_session=False)
+            print("Cleared old dependencies.")
+
+            # 添加新的依赖关系 (使用最终的ID)
+            added_deps_count = 0
+            for dep_data in all_dependencies_to_save:
+                pred_id_orig = dep_data["predecessor"]
+                succ_id_orig = dep_data["successor"] # 这个ID应该是持久化的
+
+                # 使用映射转换ID
+                final_pred_id = new_task_id_map.get(pred_id_orig, pred_id_orig)
+                final_succ_id = new_task_id_map.get(succ_id_orig, succ_id_orig) # 后继ID也可能来自新任务
+
+                # 检查ID是否存在于已处理的任务集合中
+                if final_pred_id in processed_gantt_ids and final_succ_id in processed_gantt_ids:
+                    new_dependency = GanttDependency(
+                        project_id=self.project.id,
+                        predecessor_gantt_id=final_pred_id,
+                        successor_gantt_id=final_succ_id,
+                        type="FS" # 假设默认为 FS 类型
+                    )
+                    session.add(new_dependency)
+                    added_deps_count += 1
+                else:
+                     print(f"Skipping dependency: Pred '{final_pred_id}' (orig: {pred_id_orig}) or Succ '{final_succ_id}' (orig: {succ_id_orig}) not found in processed tasks.")
+
+            # --- 事务提交 ---
             session.commit()
-            print(f"Saved {len(processed_gantt_ids)} tasks and {added_deps_count} dependencies.")
+            print(f"Saved/Updated {len(processed_gantt_ids)} tasks and added {added_deps_count} dependencies.")
             self.data_saved.emit(True, "甘特图数据保存成功！")
-            return True
+            # 返回包含ID映射的JSON
+            return json.dumps({"success": True, "id_map": new_task_id_map})
 
         except Exception as e:
             session.rollback()
             print(f"Error saving Gantt data: {e}")
-            self.data_saved.emit(False, f"保存失败: {e}")
-            return False
+            error_message = f"保存失败: {e}"
+            self.data_saved.emit(False, error_message)
+            # 返回包含错误的JSON
+            return json.dumps({"success": False, "error": error_message})
         finally:
             session.close()
 
@@ -276,7 +332,7 @@ class ProjectProgressWidget(QWidget):
         self.layout.setContentsMargins(0, 0, 0, 0)
 
         # 创建WebEngineView并设置样式
-        self.web_view = FramelessWebEngineView(self)
+        self.web_view = QWebEngineView(self)
         self.layout.addWidget(self.web_view)
 
         # --- 设置 QWebChannel ---
