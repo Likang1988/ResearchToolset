@@ -39,7 +39,7 @@ class ProjectBudgetWidget(QWidget):
 
         # --- Add Project Selector ---
         selector_layout = QHBoxLayout()        
-        selector_label = TitleLabel("项目经费:", self)
+        selector_label = TitleLabel("项目经费-", self)
         self.project_selector = UIUtils.create_project_selector(self.engine, self)
         selector_layout.addWidget(selector_label)
         selector_layout.addWidget(self.project_selector)
@@ -177,12 +177,17 @@ class ProjectBudgetWidget(QWidget):
         if main_window:
             # 创建项目预算界面
             from app.views.projecting_interface.project_expense import ProjectExpenseWidget
-            expense_widget = ProjectExpenseWidget(self.engine, self.current_project, budget) # Use current_project
+            expense_widget = ProjectExpenseWidget(self.engine, self.current_project, budget) # Added missing project argument
             expense_widget.setObjectName(f"projectExpenseInterface_{budget.id}")
-            # Show as a dialog instead of adding to main window's stack
-            expense_dialog = Dialog(f"支出管理 - {budget.year}年度", expense_widget, self)
-            expense_dialog.resize(800, 600) # Adjust size as needed
-            expense_dialog.exec()
+            # 检查是否已存在相同预算的支出窗口
+            for i in range(main_window.stackedWidget.count()):
+                widget = main_window.stackedWidget.widget(i)
+                if widget.objectName() == expense_widget.objectName():
+                    main_window.stackedWidget.setCurrentWidget(widget)
+                    return
+            # 添加新窗口并切换
+            main_window.stackedWidget.addWidget(expense_widget)
+            main_window.stackedWidget.setCurrentWidget(expense_widget)
 
 
     def load_budgets(self):

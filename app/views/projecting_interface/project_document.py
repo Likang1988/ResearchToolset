@@ -120,7 +120,7 @@ class ProjectDocumentWidget(QWidget):
         self.main_layout.setContentsMargins(18, 18, 18, 18) # Add some margins
         # --- Add Project Selector ---
         selector_layout = QHBoxLayout()        
-        selector_label = TitleLabel("项目文档:", self)
+        selector_label = TitleLabel("项目文档-", self)
         self.project_selector = UIUtils.create_project_selector(self.engine, self)
         selector_layout.addWidget(selector_label)
         selector_layout.addWidget(self.project_selector)

@@ -27,7 +27,9 @@ class MainWindow(FluentWindow):
         
         # 设置窗口标题和大小
         self.setWindowTitle("科研工具集")
-        self.setMinimumSize(1200, 800)
+        self.setWindowIcon(QIcon(':/app/assets/icon.ico'))
+        self.resize(1200, 800)
+        #self.setMinimumSize(1200, 800)
         
         
         # 创建界面实例

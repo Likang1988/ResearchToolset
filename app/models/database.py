@@ -33,7 +33,9 @@ class Project(Base):
     start_date = Column(Date)
     end_date = Column(Date)
     total_budget = Column(Float, default=0.00)
+    director = Column(String(50)) # 添加负责人字段
     budgets = relationship("Budget", back_populates="project", cascade="all, delete-orphan")
+    director = Column(String(50))
 
 class Budget(Base):
     """预算"""
@@ -282,7 +284,22 @@ def migrate_db(engine):
         if 'submit_date' not in columns:
             # 添加submit_date列
             connection.execute(text("ALTER TABLE project_achievements ADD COLUMN submit_date DATE"))
-    
+
+    # 检查 projects 表是否存在 director 列
+    result = connection.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='projects'"))
+    if result.fetchone():
+        result = connection.execute(text("PRAGMA table_info(projects)"))
+        columns = [row[1] for row in result.fetchall()]
+        if 'director' not in columns:
+            try:
+                connection.execute(text("ALTER TABLE projects ADD COLUMN director VARCHAR(50)"))
+                print("成功添加 director 列到 projects 表")
+            except Exception as e:
+                print(f"添加 director 列失败: {e}")
+                # 如果需要，可以在这里回滚事务或采取其他错误处理措施
+                # transaction.rollback()
+                # raise e
+
     try:
         # 检查expenses表是否存在
         result = connection.execute(

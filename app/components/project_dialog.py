@@ -62,9 +62,9 @@ class ProjectDialog(QDialog):
         
         # 财务编号
         financial_layout = QHBoxLayout()
-        financial_layout.addWidget(QLabel("财务编号:"))
+        financial_layout.addWidget(QLabel("简称/代号:"))
         self.financial_code = LineEdit()
-        self.financial_code.setPlaceholderText("请输入财务编号")
+        self.financial_code.setPlaceholderText("请输入项目简称/代号/财务编号")
         financial_layout.addWidget(self.financial_code)
         layout.addLayout(financial_layout)
         
@@ -88,7 +88,8 @@ class ProjectDialog(QDialog):
         type_layout = QHBoxLayout()
         type_layout.addWidget(QLabel("项目类别:"))
         self.project_type = EditableComboBox()
-        self.project_type.setPlaceholderText("输入或选择项目类别") # 设置占位文本
+        # 添加默认提示项
+        self.project_type.addItem("请输入或选择项目类别", userData=None)
         self.project_type.addItems([
             "国家自然科学基金",
             "国家重点研发计划", 
@@ -126,6 +127,14 @@ class ProjectDialog(QDialog):
         self.total_budget.setPlaceholderText("单位：万元")
         budget_layout.addWidget(self.total_budget)
         layout.addLayout(budget_layout)
+
+        # 项目负责人
+        director_layout = QHBoxLayout()
+        director_layout.addWidget(QLabel("负责人:"))
+        self.project_director = LineEdit()
+        self.project_director.setPlaceholderText("请输入项目负责人")
+        director_layout.addWidget(self.project_director)
+        layout.addLayout(director_layout)
         
         # 按钮
         button_layout = QHBoxLayout()
