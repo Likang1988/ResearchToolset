@@ -11,6 +11,192 @@ from app.utils.ui_utils import UIUtils
 from app.models.database import sessionmaker, GanttTask, GanttDependency, Project
 import os
 
+class ProjectProgressWidget(QWidget):
+    """项目进度管理组件，集成jQueryGantt甘特图"""
+
+    # 定义信号
+    progress_updated = Signal()
+
+    # Modify __init__ to remove project argument
+    def __init__(self, engine=None, parent=None):
+        super().__init__(parent)        
+        self.engine = engine
+        self.setObjectName("projectProgressWidget")
+        self.current_project = None # Track the currently selected project in the widget
+        self.setup_ui()
+
+    def setup_ui(self):
+        """初始化界面"""
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(18, 18, 18, 18) # Add some margins
+
+        # --- Add Project Selector ---
+        selector_layout = QHBoxLayout()
+        selector_label = TitleLabel("项目进度-", self)
+        self.project_selector = UIUtils.create_project_selector(self.engine, self)
+        selector_layout.addWidget(selector_label)
+        selector_layout.addWidget(self.project_selector)
+        selector_layout.addStretch()
+        self.layout.addLayout(selector_layout)
+        # --- Project Selector End ---
+
+        # 创建WebEngineView并设置样式
+        # Use FramelessWebEngineView
+        self.web_view = FramelessWebEngineView(self)
+        self.layout.addWidget(self.web_view) # Add web_view *after* selector
+
+        # --- 设置 QWebChannel ---
+        self.channel = QWebChannel(self.web_view.page())
+        # Initialize GanttBridge without a project initially
+        self.gantt_bridge = GanttBridge(self.engine, parent=self)
+        self.channel.registerObject("ganttBridge", self.gantt_bridge) # 注册对象，JS端将通过 'ganttBridge' 访问
+        self.web_view.page().setWebChannel(self.channel)
+        # 连接保存信号到信息提示
+        self.gantt_bridge.data_saved.connect(self.show_save_status)
+        # -----------------------
+
+        # 加载本地甘特图资源
+        self.load_gantt()
+
+        # Connect project selector signal
+        self.project_selector.currentIndexChanged.connect(self._on_project_selected)
+
+    def _on_project_selected(self, index):
+        """Handles project selection change."""
+        selected_project = self.project_selector.itemData(index)
+        if selected_project and isinstance(selected_project, Project):
+            self.current_project = selected_project
+            print(f"Project selected in widget: {self.current_project.name}")
+            self.gantt_bridge.set_project(self.current_project)
+            # Trigger data loading in JavaScript
+            self.web_view.page().runJavaScript("loadInitialData();")
+        else:
+            # Handle "请选择项目..." or error case
+            self.current_project = None
+            self.gantt_bridge.set_project(None)
+            # Optionally clear the Gantt chart in JS
+            self.web_view.page().runJavaScript("clearGantt();")
+            print("No valid project selected.")
+
+
+    def load_gantt(self):
+        """加载本地jQueryGantt资源"""
+        try:
+            # 获取绝对路径并确保路径存在
+            gantt_dir = os.path.dirname(os.path.abspath(__file__))
+            gantt_path = os.path.join(gantt_dir, "jQueryGantt", "gantt.html")
+            libs_dir = os.path.join(gantt_dir, "jQueryGantt", "libs") # 获取libs目录
+            self.qwebchannel_js_path = os.path.join(libs_dir, "qwebchannel.js") # qwebchannel.js 的路径
+
+            if not os.path.exists(gantt_path):
+                raise FileNotFoundError(f"Gantt file not found at {gantt_path}")
+            if not os.path.exists(self.qwebchannel_js_path):
+                 # 尝试从标准位置复制（如果需要）
+                 # 或者提示用户手动放置
+                 print(f"Warning: qwebchannel.js not found at {self.qwebchannel_js_path}. QWebChannel might not work.")
+                 # raise FileNotFoundError(f"qwebchannel.js not found at {self.qwebchannel_js_path}")
+
+
+            # 转换为file:// URL格式并设置基础URL
+            gantt_url = QUrl.fromLocalFile(gantt_path)
+            self.web_view.setUrl(gantt_url)
+
+            # 设置页面加载完成后的回调
+            self.web_view.loadFinished.connect(self.on_gantt_loaded)
+        except Exception as e:
+            print(f"Error loading Gantt: {str(e)}")
+
+    def on_gantt_loaded(self, success):
+        """甘特图加载完成回调"""
+        if success:
+            print("jQueryGantt HTML loaded successfully. Initializing QWebChannel...")
+            # 注入 qwebchannel.js 并初始化连接
+            try:
+                with open(self.qwebchannel_js_path, 'r', encoding='utf-8') as f:
+                    qwebchannel_js = f.read()
+
+                # Use triple quotes and escape JS braces for f-string compatibility
+                init_script = f"""
+                {qwebchannel_js}
+
+                var ganttBridge;
+                new QWebChannel(qt.webChannelTransport, function (channel) {{
+                    window.ganttBridge = channel.objects.ganttBridge;
+                    console.log("QWebChannel connected, ganttBridge object available.");
+
+                    // Define functions to load/clear data, called by Python later
+                    window.loadInitialData = function() {{ // Escape braces
+                        console.log("loadInitialData called by Python.");
+                        if (window.ganttBridge && window.ganttBridge.load_gantt_data) {{ // Escape braces
+                            window.ganttBridge.load_gantt_data(function(jsonData) {{ // Escape braces
+                                if (jsonData) {{ // Escape braces
+                                    try {{ // Escape braces
+                                        var projectData = JSON.parse(jsonData);
+                                        if (typeof ge !== 'undefined' && ge.loadProject) {{ // Escape braces
+                                            console.log("Loading project data into Gantt:", projectData);
+                                            ge.loadProject(projectData);
+                                            ge.redraw();
+                                            console.log("Gantt data loaded/reloaded from Python.");
+                                        }} else {{ // Escape braces
+                                            console.error("Gantt object 'ge' not found or loadProject method missing.");
+                                        }} // Escape braces
+                                    }} catch (e) {{ // Escape braces
+                                        console.error("Error parsing or loading Gantt data:", e, jsonData);
+                                    }} // Escape braces
+                                }} else {{ // Escape braces
+                                    console.warn("Received empty data from load_gantt_data.");
+                                }} // Escape braces
+                            }}); // Escape braces
+                        }} else {{ // Escape braces
+                             console.error("ganttBridge or load_gantt_data function not available.");
+                        }} // Escape braces
+                    }}; // Escape braces
+
+                    window.clearGantt = function() {{ // Escape braces
+                        console.log("clearGantt called by Python.");
+                         if (typeof ge !== 'undefined' && ge.reset) {{ // Escape braces
+                             ge.reset(); // Clear the gantt chart
+                             console.log("Gantt chart cleared.");
+                         }} else {{ // Escape braces
+                             console.error("Gantt object 'ge' not found or reset method missing.");
+                         }} // Escape braces
+                    }}; // Escape braces
+
+                    // Don't load data immediately on channel connection anymore
+                    // loadInitialData(); // Remove this initial call
+                }});
+                console.log("QWebChannel setup initiated.");
+                """
+                self.web_view.page().runJavaScript(init_script)
+            except Exception as e:
+                 print(f"Error injecting qwebchannel.js or initializing: {e}")
+
+        else:
+            print("Failed to load jQueryGantt HTML")
+    # 移除旧的 init_gantt_data 和 update_progress_data 方法
+    # def init_gantt_data(self): ...
+    # def update_progress_data(self, data): ...
+
+    @Slot(bool, str)
+    def show_save_status(self, success, message):
+        """显示保存状态的信息提示"""
+        if success:
+            InfoBar.success(
+                title='成功',
+                content=message,
+                duration=2000,
+                position=InfoBarPosition.TOP,
+                parent=self
+            )
+        else:
+            InfoBar.error(
+                title='错误',
+                content=message,
+                duration=5000, # 错误信息显示时间长一点
+                position=InfoBarPosition.TOP,
+                parent=self
+            )            
+
 # --- GanttBridge Class for Python-JS Communication ---
 class GanttBridge(QObject):
     """用于在Python和JavaScript之间通过QWebChannel通信的桥梁类"""
@@ -335,173 +521,6 @@ class GanttBridge(QObject):
             session.close()
 
 
-class ProjectProgressWidget(QWidget):
-    """项目进度管理组件，集成jQueryGantt甘特图"""
-
-    # 定义信号
-    progress_updated = Signal()
-
-    # Modify __init__ to remove project argument
-    def __init__(self, engine=None, parent=None):
-        super().__init__(parent)
-        # self.project = project # No longer needed here
-        self.engine = engine
-        self.setObjectName("projectProgressWidget")
-        self.current_project = None # Track the currently selected project in the widget
-        self.setup_ui()
-
-    def setup_ui(self):
-        """初始化界面"""
-        self.setStyleSheet("background: transparent;")
-        self.layout = QVBoxLayout(self)
-        self.layout.setContentsMargins(18, 18, 18, 18) # Add some margins
-
-        # --- Add Project Selector ---
-        selector_layout = QHBoxLayout()
-        selector_label = TitleLabel("项目进度-", self)
-        self.project_selector = UIUtils.create_project_selector(self.engine, self)
-        selector_layout.addWidget(selector_label)
-        selector_layout.addWidget(self.project_selector)
-        selector_layout.addStretch()
-        self.layout.addLayout(selector_layout)
-        # --- Project Selector End ---
-
-        # 创建WebEngineView并设置样式
-        # Use FramelessWebEngineView
-        self.web_view = FramelessWebEngineView(self)
-        # Ensure background is transparent (might be redundant but safe)
-        self.web_view.setAttribute(Qt.WA_TranslucentBackground)
-        self.web_view.setStyleSheet("background: transparent;")
-        self.layout.addWidget(self.web_view) # Add web_view *after* selector
-
-        # --- 设置 QWebChannel ---
-        self.channel = QWebChannel(self.web_view.page())
-        # Initialize GanttBridge without a project initially
-        self.gantt_bridge = GanttBridge(self.engine, parent=self)
-        self.channel.registerObject("ganttBridge", self.gantt_bridge) # 注册对象，JS端将通过 'ganttBridge' 访问
-        self.web_view.page().setWebChannel(self.channel)
-        # 连接保存信号到信息提示
-        self.gantt_bridge.data_saved.connect(self.show_save_status)
-        # -----------------------
-
-        # 加载本地甘特图资源
-        self.load_gantt()
-
-        # Connect project selector signal
-        self.project_selector.currentIndexChanged.connect(self._on_project_selected)
-
-    def _on_project_selected(self, index):
-        """Handles project selection change."""
-        selected_project = self.project_selector.itemData(index)
-        if selected_project and isinstance(selected_project, Project):
-            self.current_project = selected_project
-            print(f"Project selected in widget: {self.current_project.name}")
-            self.gantt_bridge.set_project(self.current_project)
-            # Trigger data loading in JavaScript
-            self.web_view.page().runJavaScript("loadInitialData();")
-        else:
-            # Handle "请选择项目..." or error case
-            self.current_project = None
-            self.gantt_bridge.set_project(None)
-            # Optionally clear the Gantt chart in JS
-            self.web_view.page().runJavaScript("clearGantt();")
-            print("No valid project selected.")
-
-
-    def load_gantt(self):
-        """加载本地jQueryGantt资源"""
-        try:
-            # 获取绝对路径并确保路径存在
-            gantt_dir = os.path.dirname(os.path.abspath(__file__))
-            gantt_path = os.path.join(gantt_dir, "jQueryGantt", "gantt.html")
-            libs_dir = os.path.join(gantt_dir, "jQueryGantt", "libs") # 获取libs目录
-            self.qwebchannel_js_path = os.path.join(libs_dir, "qwebchannel.js") # qwebchannel.js 的路径
-
-            if not os.path.exists(gantt_path):
-                raise FileNotFoundError(f"Gantt file not found at {gantt_path}")
-            if not os.path.exists(self.qwebchannel_js_path):
-                 # 尝试从标准位置复制（如果需要）
-                 # 或者提示用户手动放置
-                 print(f"Warning: qwebchannel.js not found at {self.qwebchannel_js_path}. QWebChannel might not work.")
-                 # raise FileNotFoundError(f"qwebchannel.js not found at {self.qwebchannel_js_path}")
-
-
-            # 转换为file:// URL格式并设置基础URL
-            gantt_url = QUrl.fromLocalFile(gantt_path)
-            self.web_view.setUrl(gantt_url)
-
-            # 设置页面加载完成后的回调
-            self.web_view.loadFinished.connect(self.on_gantt_loaded)
-        except Exception as e:
-            print(f"Error loading Gantt: {str(e)}")
-
-    def on_gantt_loaded(self, success):
-        """甘特图加载完成回调"""
-        if success:
-            print("jQueryGantt HTML loaded successfully. Initializing QWebChannel...")
-            # 注入 qwebchannel.js 并初始化连接
-            try:
-                with open(self.qwebchannel_js_path, 'r', encoding='utf-8') as f:
-                    qwebchannel_js = f.read()
-
-                # Use triple quotes and escape JS braces for f-string compatibility
-                init_script = f"""
-                {qwebchannel_js}
-
-                var ganttBridge;
-                new QWebChannel(qt.webChannelTransport, function (channel) {{
-                    window.ganttBridge = channel.objects.ganttBridge;
-                    console.log("QWebChannel connected, ganttBridge object available.");
-
-                    // Define functions to load/clear data, called by Python later
-                    window.loadInitialData = function() {{ // Escape braces
-                        console.log("loadInitialData called by Python.");
-                        if (window.ganttBridge && window.ganttBridge.load_gantt_data) {{ // Escape braces
-                            window.ganttBridge.load_gantt_data(function(jsonData) {{ // Escape braces
-                                if (jsonData) {{ // Escape braces
-                                    try {{ // Escape braces
-                                        var projectData = JSON.parse(jsonData);
-                                        if (typeof ge !== 'undefined' && ge.loadProject) {{ // Escape braces
-                                            console.log("Loading project data into Gantt:", projectData);
-                                            ge.loadProject(projectData);
-                                            ge.redraw();
-                                            console.log("Gantt data loaded/reloaded from Python.");
-                                        }} else {{ // Escape braces
-                                            console.error("Gantt object 'ge' not found or loadProject method missing.");
-                                        }} // Escape braces
-                                    }} catch (e) {{ // Escape braces
-                                        console.error("Error parsing or loading Gantt data:", e, jsonData);
-                                    }} // Escape braces
-                                }} else {{ // Escape braces
-                                    console.warn("Received empty data from load_gantt_data.");
-                                }} // Escape braces
-                            }}); // Escape braces
-                        }} else {{ // Escape braces
-                             console.error("ganttBridge or load_gantt_data function not available.");
-                        }} // Escape braces
-                    }}; // Escape braces
-
-                    window.clearGantt = function() {{ // Escape braces
-                        console.log("clearGantt called by Python.");
-                         if (typeof ge !== 'undefined' && ge.reset) {{ // Escape braces
-                             ge.reset(); // Clear the gantt chart
-                             console.log("Gantt chart cleared.");
-                         }} else {{ // Escape braces
-                             console.error("Gantt object 'ge' not found or reset method missing.");
-                         }} // Escape braces
-                    }}; // Escape braces
-
-                    // Don't load data immediately on channel connection anymore
-                    // loadInitialData(); // Remove this initial call
-                }});
-                console.log("QWebChannel setup initiated.");
-                """
-                self.web_view.page().runJavaScript(init_script)
-            except Exception as e:
-                 print(f"Error injecting qwebchannel.js or initializing: {e}")
-
-        else:
-            print("Failed to load jQueryGantt HTML")
 
     # 移除旧的 init_gantt_data 和 update_progress_data 方法
     # def init_gantt_data(self): ...

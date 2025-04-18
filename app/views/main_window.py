@@ -30,8 +30,10 @@ class MainWindow(FluentWindow):
         self.setWindowIcon(QIcon(':/app/assets/icon.ico'))
         self.resize(1200, 800)
         #self.setMinimumSize(1200, 800)
-        
-        
+
+        # 启用 Mica 特效 (解决 WebEngineView 导致背景失效的问题)
+        self.setMicaEffectEnabled(False)
+
         # 创建界面实例
         self.home_interface = HomeInterface(self.engine)
         self.home_interface.setObjectName("homeInterface")
