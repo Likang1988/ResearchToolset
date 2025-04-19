@@ -8,7 +8,7 @@ from .projecting_interface.project_list import ProjectListWindow
 from .projecting_interface.project_budget import ProjectBudgetWidget
 from .projecting_interface.project_progress import ProjectProgressWidget
 from .projecting_interface.project_document import ProjectDocumentWidget # Import Document Widget
-from .projecting_interface.project_achievement import ProjectAchievementWidget # Import Achievement Widget
+from .projecting_interface.project_outcome import ProjectOutcomeWidget # Import Outcome Widget
 from .home_interface import HomeInterface
 from .help_interface import HelpInterface
 from .budgeting_interface import BudgetingInterface
@@ -80,11 +80,11 @@ class MainWindow(FluentWindow):
         )
 
         # 添加项目成果导航项
-        self.achievement_interface = ProjectAchievementWidget(self.engine) 
-        self.achievement_interface.setObjectName("achievementInterface")
+        self.achievement_interface = ProjectOutcomeWidget(self.engine) 
+        self.achievement_interface.setObjectName("outcomeInterface")
         self.addSubInterface(
             self.achievement_interface,
-            QIcon(UIUtils.get_svg_icon_path('achievement')), 
+            QIcon(UIUtils.get_svg_icon_path('outcome')), 
             "项目成果"
         )
         

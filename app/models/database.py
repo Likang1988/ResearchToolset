@@ -275,15 +275,15 @@ def migrate_db(engine):
     # 执行项目任务表迁移
     # migrate_project_tasks(engine) # Removed function call
     
-    # 检查project_achievements表是否存在submit_date列
-    result = connection.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='project_achievements'"))
+    # 检查project_outcomes表是否存在submit_date列 (原 project_achievements)
+    result = connection.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='project_outcomes'")) # 更新表名
     if result.fetchone():
-        result = connection.execute(text("PRAGMA table_info(project_achievements)"))
+        result = connection.execute(text("PRAGMA table_info(project_outcomes)")) # 更新表名
         columns = [row[1] for row in result.fetchall()]
         
         if 'submit_date' not in columns:
             # 添加submit_date列
-            connection.execute(text("ALTER TABLE project_achievements ADD COLUMN submit_date DATE"))
+            connection.execute(text("ALTER TABLE project_outcomes ADD COLUMN submit_date DATE")) # 更新表名
 
     # 检查 projects 表是否存在 director 列
     result = connection.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='projects'"))

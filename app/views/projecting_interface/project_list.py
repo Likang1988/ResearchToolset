@@ -4,13 +4,15 @@ from qfluentwidgets import PrimaryPushButton, ToolButton, InfoBar, Dialog
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon
 from qfluentwidgets import FluentIcon, TableWidget, TableItemDelegate, TitleLabel, RoundMenu, Action
+import os # 导入 os 模块
+import shutil # 导入 shutil 模块
 from ...components.project_dialog import ProjectDialog
 from .project_budget import ProjectBudgetWidget
-from ...models.database import init_db, add_project_to_db, sessionmaker, Project, Budget, Expense, Activity
+from ...models.database import init_db, add_project_to_db, sessionmaker, Project, Budget, Expense, Activity, GanttTask, GanttDependency # 导入 GanttTask 和 GanttDependency
+# from ...models.achievements import ProjectAchievement # 如果有成果模型，取消注释并导入
 from ...utils.ui_utils import UIUtils
 from ...utils.db_utils import DBUtils
 from sqlalchemy import func
-import os
 from datetime import datetime
 
 class ProjectListWindow(QWidget):
@@ -399,35 +401,149 @@ class ProjectListWindow(QWidget):
         if confirm_dialog.exec():
             Session = sessionmaker(bind=self.engine)
             session = Session()
-            
+            project_doc_dir = None
+            project_voucher_dir = None
+            voucher_files_to_delete = []
+            project_name_for_log = "未知项目"
+            project_code_for_log = "未知编号"
+
             try:
-                # 获取项目信息用于记录活动
+                # --- 1. 获取项目信息和待删除文件路径 ---
                 project = session.query(Project).filter(Project.id == project_id).first()
-                if project:
-                    # 记录删除项目的活动
-                    activity = Activity(
-                        project_id=project.id,
-                        type="项目",
-                        action="删除",
-                        description=f"删除项目：{project.name} - {project.financial_code}",
-                        operator="系统用户"
+                if not project:
+                    UIUtils.show_warning(title='警告', content='未找到要删除的项目！', parent=self)
+                    return
+
+                project_name_for_log = project.name
+                project_code_for_log = project.financial_code
+
+                # 获取项目根目录 (假设 project_list.py 在 app/views/projecting_interface/ 下)
+                current_dir = os.path.dirname(os.path.abspath(__file__))
+                root_dir = os.path.abspath(os.path.join(current_dir, '..', '..', '..'))
+
+                project_doc_dir = os.path.join(root_dir, 'documents', str(project_id))
+                project_voucher_dir = os.path.join(root_dir, 'vouchers', str(project_id)) # 项目专属凭证目录（如果存在）
+
+                # 获取关联的支出记录中的凭证文件路径 (在删除项目前获取)
+                expenses_to_delete = session.query(Expense).join(Budget).filter(Budget.project_id == project_id).all()
+                for expense in expenses_to_delete:
+                    if expense.voucher_path and os.path.isabs(expense.voucher_path) and os.path.exists(expense.voucher_path):
+                        voucher_files_to_delete.append(expense.voucher_path)
+                    elif expense.voucher_path:
+                        # 尝试构建绝对路径 (假设 voucher_path 存储的是相对路径或不完整路径)
+                        # 这里需要根据 voucher_path 的实际存储格式调整
+                        potential_path = os.path.join(root_dir, expense.voucher_path) # 示例：假设相对根目录
+                        if os.path.exists(potential_path):
+                             voucher_files_to_delete.append(potential_path)
+                        else:
+                             print(f"凭证文件路径记录存在但文件未找到: {expense.voucher_path} (尝试路径: {potential_path})")
+
+
+                # --- 2. 数据库删除操作 ---
+                # 记录删除项目的活动
+                activity = Activity(
+                    project_id=project.id, # 使用 project.id 保证关联
+                    type="项目",
+                    action="删除",
+                    description=f"删除项目及其所有关联数据：{project_name_for_log} - {project_code_for_log}",
+                    operator="系统用户"
+                )
+                session.add(activity)
+
+                # 删除无 cascade 或需要优先处理的关联记录
+                session.query(GanttTask).filter(GanttTask.project_id == project_id).delete(synchronize_session='fetch')
+                session.query(GanttDependency).filter(GanttDependency.project_id == project_id).delete(synchronize_session='fetch')
+                # 注意：Activity 记录与 Project 的关系没有 cascade，需要手动删除
+                # 但我们刚添加了一条删除记录，所以不能直接删 project_id 的所有记录
+                # 如果需要删除项目相关的 *其他* 活动记录，需要更复杂的查询逻辑，这里暂时保留刚添加的删除记录
+
+                # 如果有 ProjectAchievement 模型，在这里添加删除逻辑
+                # session.query(ProjectAchievement).filter(ProjectAchievement.project_id == project_id).delete(synchronize_session='fetch')
+
+                # 删除项目本身 (会自动级联删除 Budget, BudgetItem, Expense)
+                session.delete(project)
+                session.commit() # 提交数据库事务
+
+                # --- 3. 文件系统清理 (数据库提交成功后执行) ---
+                try:
+                    # 删除凭证文件
+                    deleted_files_count = 0
+                    for file_path in voucher_files_to_delete:
+                        try:
+                            os.remove(file_path)
+                            deleted_files_count += 1
+                            # print(f"已删除凭证文件: {file_path}")
+                        except OSError as e:
+                            print(f"删除凭证文件失败 {file_path}: {e}")
+                    if deleted_files_count > 0:
+                        print(f"共删除了 {deleted_files_count} 个凭证文件。")
+
+
+                    # 删除项目文档目录
+                    if project_doc_dir and os.path.isdir(project_doc_dir):
+                        try:
+                            shutil.rmtree(project_doc_dir)
+                            print(f"已删除文档目录: {project_doc_dir}")
+                        except OSError as e:
+                            print(f"删除文档目录失败 {project_doc_dir}: {e}")
+                    elif project_doc_dir:
+                         print(f"文档目录不存在，无需删除: {project_doc_dir}")
+
+
+                    # 删除项目凭证目录 (如果存在且为空)
+                    if project_voucher_dir and os.path.isdir(project_voucher_dir):
+                        try:
+                            if not os.listdir(project_voucher_dir):
+                                os.rmdir(project_voucher_dir)
+                                print(f"已删除空的凭证目录: {project_voucher_dir}")
+                            else:
+                                print(f"凭证目录非空，未删除: {project_voucher_dir}")
+                        except OSError as e:
+                            print(f"删除凭证目录失败 {project_voucher_dir}: {e}")
+                    elif project_voucher_dir:
+                        print(f"项目凭证目录不存在，无需删除: {project_voucher_dir}")
+
+
+                except Exception as fs_e:
+                    # 文件系统清理失败不应回滚数据库，但需要记录错误
+                    print(f"文件系统清理过程中发生错误: {fs_e}")
+                    UIUtils.show_error(
+                        title='文件清理错误',
+                        content=f'数据库记录已删除，但清理相关文件时出错: {fs_e}',
+                        parent=self
                     )
-                    session.add(activity)
-                    
-                    # 删除项目
-                    session.delete(project)
-                    session.commit()
+                    # 即使文件清理失败，也要刷新表格并显示成功信息（因为数据库已成功）
                     self.refresh_project_table()
                     UIUtils.show_success(
+                        title='部分成功',
+                        content='项目数据库记录已删除，但文件清理时遇到问题。详情请查看日志。',
+                        parent=self
+                    )
+                    return # 提前返回，避免显示完全成功的消息
+
+                # --- 4. 完成 ---
+                self.refresh_project_table()
+                UIUtils.show_success(
                     title='成功',
-                    content='项目已成功删除',
+                    content=f'项目 "{project_name_for_log}" 及其所有关联数据和文件已成功删除。',
                     parent=self
                 )
+
             except Exception as e:
-                session.rollback()
+                session.rollback() # 回滚数据库事务
+                print(f"删除项目时发生数据库错误: {e}") # 打印详细错误到控制台
+                # 提取更具体的错误信息给用户
+                error_message = str(e)
+                if isinstance(e, IntegrityError) and "FOREIGN KEY constraint failed" in error_message:
+                     error_content = f'删除项目失败：存在未能自动删除的关联数据，请检查数据库约束设置。错误详情: {error_message}'
+                elif isinstance(e, IntegrityError):
+                     error_content = f'删除项目失败：数据库完整性约束冲突。错误详情: {error_message}'
+                else:
+                     error_content = f'删除项目失败：发生未知数据库错误。错误详情: {error_message}'
+
                 UIUtils.show_error(
-                    title='错误',
-                    content=f'删除项目失败：{str(e)}',
+                    title='数据库错误',
+                    content=error_content,
                     parent=self
                 )
             finally:

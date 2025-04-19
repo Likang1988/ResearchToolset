@@ -23,8 +23,8 @@ class AchievementStatus(Enum):
     PUBLISHED = "已发表/授权"
     REJECTED = "已拒绝"
 
-class ProjectAchievement(Base):
-    __tablename__ = 'project_achievements'
+class ProjectOutcome(Base): # 重命名模型类
+    __tablename__ = 'project_outcomes' # 重命名表名
     
     id = Column(Integer, primary_key=True)
     project_id = Column(Integer, ForeignKey('projects.id'), nullable=False)
@@ -117,7 +117,7 @@ class AchievementDialog(QDialog):
         self.description_edit.setText(self.achievement.description)
         self.remarks_edit.setText(self.achievement.remarks)
 
-class ProjectAchievementWidget(QWidget):
+class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
     # Modify __init__ to accept engine and remove project
     def __init__(self, engine: Engine, parent=None):
         super().__init__(parent=parent)
@@ -209,10 +209,10 @@ class ProjectAchievementWidget(QWidget):
         session = Session()
 
         try:
-            print(f"AchievementWidget: Loading achievements for project ID: {self.current_project.id}")
-            achievements = session.query(ProjectAchievement).filter(
-                ProjectAchievement.project_id == self.current_project.id
-            ).order_by(ProjectAchievement.publish_date.desc()).all() # Order by publish date
+            print(f"OutcomeWidget: Loading outcomes for project ID: {self.current_project.id}") # 更新日志信息
+            achievements = session.query(ProjectOutcome).filter( # 使用新的模型类名
+                ProjectOutcome.project_id == self.current_project.id
+            ).order_by(ProjectOutcome.publish_date.desc()).all() # Order by publish date
 
             self.achievement_table.setRowCount(len(achievements))
             for row, achievement in enumerate(achievements):
@@ -270,7 +270,7 @@ class ProjectAchievementWidget(QWidget):
             session = Session()
 
             try:
-                achievement = ProjectAchievement(
+                achievement = ProjectOutcome( # 使用新的模型类名
                     project_id=self.current_project.id, # Use current_project.id
                     name=dialog.name_edit.text(),
                     type=AchievementType(dialog.type_combo.currentText()),
@@ -306,9 +306,9 @@ class ProjectAchievementWidget(QWidget):
         session = Session()
 
         try:
-            achievement = session.query(ProjectAchievement).filter(
-                ProjectAchievement.project_id == self.current_project.id, # Use current_project.id
-                ProjectAchievement.name == achievement_name
+            achievement = session.query(ProjectOutcome).filter( # 使用新的模型类名
+                ProjectOutcome.project_id == self.current_project.id, # Use current_project.id
+                ProjectOutcome.name == achievement_name
             ).first()
 
             if achievement:
@@ -347,9 +347,9 @@ class ProjectAchievementWidget(QWidget):
         session = Session()
 
         try:
-            achievement = session.query(ProjectAchievement).filter(
-                ProjectAchievement.project_id == self.current_project.id, # Use current_project.id
-                ProjectAchievement.name == achievement_name
+            achievement = session.query(ProjectOutcome).filter( # 使用新的模型类名
+                ProjectOutcome.project_id == self.current_project.id, # Use current_project.id
+                ProjectOutcome.name == achievement_name
             ).first()
 
             if achievement:
