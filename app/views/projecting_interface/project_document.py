@@ -1,6 +1,8 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QFileDialog, QDialog, QLabel # Added QLabel
-from PySide6.QtCore import Qt
-from qfluentwidgets import TitleLabel, PrimaryPushButton, FluentIcon, ComboBox, LineEdit, InfoBar, Dialog
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QFileDialog, QDialog, QLabel, QHeaderView # Added QHeaderView
+from PySide6.QtCore import Qt, QSize # Added QSize
+# Import BodyLabel and PushButton, remove PrimaryPushButton if no longer needed elsewhere
+# Also import TableItemDelegate
+from qfluentwidgets import TitleLabel, FluentIcon, ComboBox, LineEdit, InfoBar, Dialog, BodyLabel, PushButton, TableItemDelegate
 from ...utils.ui_utils import UIUtils
 from ...models.database import Project, Base, get_engine, sessionmaker # Added sessionmaker import
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum as SQLEnum, DateTime, Engine # Added Engine type hint
@@ -8,6 +10,8 @@ from enum import Enum
 from datetime import datetime
 import os
 import shutil
+# 假设存在 attachment_utils.py 用于处理附件按钮和逻辑
+from ...utils.attachment_utils import create_attachment_button, handle_attachment # Import attachment utils
 
 class DocumentType(Enum):
     APPLICATION = "申请书"
@@ -40,62 +44,115 @@ class DocumentDialog(QDialog):
         if document:
             self.load_document_data()
     
+    # This setup_ui method seems correct based on the previous successful application.
+    # No changes needed here unless there was an unseen modification.
+    # The diff will focus on adding the accept method correctly.
     def setup_ui(self):
         layout = QVBoxLayout(self)
-        layout.setSpacing(16)
-        layout.setContentsMargins(24, 24, 24, 24)
-        
-        # 文档表单
+        layout.setSpacing(10) # Adjust spacing to match ExpenseDialog
+        # layout.setContentsMargins(24, 24, 24, 24) # Keep original margins or adjust as needed
+
+        # 文档名称
+        name_layout = QHBoxLayout()
+        name_layout.addWidget(BodyLabel("文档名称:"))
         self.name_edit = LineEdit()
-        self.name_edit.setPlaceholderText("文档名称")
-        layout.addWidget(self.name_edit)
+        self.name_edit.setPlaceholderText("请输入文档名称，必填")
+        name_layout.addWidget(self.name_edit)
+        layout.addLayout(name_layout)
+
+        # 文档类型
+        type_layout = QHBoxLayout()
+        type_layout.addWidget(BodyLabel("文档类型:"))
         self.type_combo = ComboBox()
         for doc_type in DocumentType:
             self.type_combo.addItem(doc_type.value)
-        layout.addWidget(self.type_combo)
-        
+        type_layout.addWidget(self.type_combo)
+        layout.addLayout(type_layout)
+
+        # 版本号
+        version_layout = QHBoxLayout()
+        version_layout.addWidget(BodyLabel("版 本 号 :")) # Align label width
         self.version_edit = LineEdit()
-        self.version_edit.setPlaceholderText("版本号")
-        layout.addWidget(self.version_edit)
-        
+        self.version_edit.setPlaceholderText("请输入版本号")
+        version_layout.addWidget(self.version_edit)
+        layout.addLayout(version_layout)
+
+        # 文档描述
+        description_layout = QHBoxLayout()
+        description_layout.addWidget(BodyLabel("文档描述:"))
         self.description_edit = LineEdit()
-        self.description_edit.setPlaceholderText("文档描述")
-        layout.addWidget(self.description_edit)
-        
+        self.description_edit.setPlaceholderText("请输入文档描述")
+        description_layout.addWidget(self.description_edit)
+        layout.addLayout(description_layout)
+
+        # 关键词
+        keywords_layout = QHBoxLayout()
+        keywords_layout.addWidget(BodyLabel("关 键 词 :")) # Align label width
         self.keywords_edit = LineEdit()
-        self.keywords_edit.setPlaceholderText("关键词（用逗号分隔）")
-        layout.addWidget(self.keywords_edit)
-        
+        self.keywords_edit.setPlaceholderText("请输入关键词（用逗号分隔）")
+        keywords_layout.addWidget(self.keywords_edit)
+        layout.addLayout(keywords_layout)
+
+        # 上传人
+        uploader_layout = QHBoxLayout()
+        uploader_layout.addWidget(BodyLabel("上 传 人 :")) # Align label width
         self.uploader_edit = LineEdit()
-        self.uploader_edit.setPlaceholderText("上传人")
-        layout.addWidget(self.uploader_edit)
-        
+        self.uploader_edit.setPlaceholderText("请输入上传人")
+        uploader_layout.addWidget(self.uploader_edit)
+        layout.addLayout(uploader_layout)
+
         # 文件选择
         file_layout = QHBoxLayout()
+        file_layout.addWidget(BodyLabel("选择文件:"))
         self.file_path_edit = LineEdit()
         self.file_path_edit.setReadOnly(True)
+        self.file_path_edit.setPlaceholderText("点击右侧按钮选择文件") # Add placeholder
         file_layout.addWidget(self.file_path_edit)
-        
-        select_file_btn = PrimaryPushButton("选择文件")
+        select_file_btn = PushButton("选择文件", self, FluentIcon.FOLDER) # Use PushButton with icon
         select_file_btn.clicked.connect(self.select_file)
         file_layout.addWidget(select_file_btn)
         layout.addLayout(file_layout)
-        
+
+        layout.addStretch() # Add stretch before buttons
+
         # 按钮
         button_layout = QHBoxLayout()
-        save_btn = PrimaryPushButton("保存")
-        cancel_btn = PrimaryPushButton("取消")
-        save_btn.clicked.connect(self.accept)
+        button_layout.setSpacing(12)
+        # Use PushButton and add icons, push to the right
+        save_btn = PushButton("保存", self, FluentIcon.SAVE) # Already PushButton, ensure correct icon
+        cancel_btn = PushButton("取消", self, FluentIcon.CLOSE) # Already PushButton, ensure correct icon
+        save_btn.clicked.connect(self.accept) # Connect accept for validation
         cancel_btn.clicked.connect(self.reject)
+        button_layout.addStretch() # Push buttons to the right
         button_layout.addWidget(save_btn)
         button_layout.addWidget(cancel_btn)
         layout.addLayout(button_layout)
-    
+
     def select_file(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "选择文件")
         if file_path:
             self.file_path_edit.setText(file_path)
-    
+
+    # Add accept method for validation like in ExpenseDialog
+    def accept(self):
+        """Validate input before accepting the dialog."""
+        if not self.name_edit.text().strip():
+            UIUtils.show_warning(
+                title='警告',
+                content='文档名称不能为空',
+                parent=self
+            )
+            return
+        # Check if a file is selected when adding a new document
+        if not self.document and not self.file_path_edit.text():
+             UIUtils.show_warning(
+                title='警告',
+                content='请选择要上传的文件',
+                parent=self
+            )
+             return
+        super().accept()
+
     def load_document_data(self):
         self.name_edit.setText(self.document.name)
         self.type_combo.setCurrentText(self.document.doc_type.value)
@@ -131,7 +188,7 @@ class ProjectDocumentWidget(QWidget):
         # --- Project Selector End ---
 
         # 按钮栏
-        add_btn = UIUtils.create_action_button("上传文档", FluentIcon.ADD)
+        add_btn = UIUtils.create_action_button("添加文档", FluentIcon.ADD)
         edit_btn = UIUtils.create_action_button("编辑文档", FluentIcon.EDIT)
         delete_btn = UIUtils.create_action_button("删除文档", FluentIcon.DELETE)
         download_btn = UIUtils.create_action_button("下载文档", FluentIcon.DOWNLOAD)
@@ -146,10 +203,45 @@ class ProjectDocumentWidget(QWidget):
         
         # 文档列表
         self.document_table = QTableWidget()
-        self.document_table.setColumnCount(8)
-        self.document_table.setHorizontalHeaderLabels(["文档名称", "类型", "版本", "描述", "关键词", "上传人", "上传时间", "文件路径"])
-        UIUtils.set_table_style(self.document_table)
-        
+        self.document_table.setColumnCount(9) # 增加一列用于附件
+        self.document_table.setHorizontalHeaderLabels([
+            "文档名称", "类型", "版本", "描述", "关键词",
+            "上传人", "上传时间", "文件路径", "附件" # 添加附件列标题
+        ])
+        # 设置表格样式
+        #self.document_table.setBorderVisible(True)
+        #self.document_table.setBorderRadius(8)
+        self.document_table.setWordWrap(False)
+        self.document_table.setItemDelegate(TableItemDelegate(self.document_table))
+        UIUtils.set_table_style(self.document_table) # 应用通用样式
+
+        # 设置列宽模式和排序
+        header = self.document_table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.Interactive)
+        # header.setSortIndicatorShown(True) # 可选：启用排序
+        # header.sectionClicked.connect(self.sort_table) # 可选：连接排序信号
+
+        # 隐藏行号
+        self.document_table.verticalHeader().setVisible(False)
+
+        # 设置初始列宽 (需要调整以适应新列)
+        header.resizeSection(0, 150) # 文档名称
+        header.resizeSection(1, 100) # 类型
+        header.resizeSection(2, 80)  # 版本
+        header.resizeSection(3, 150) # 描述
+        header.resizeSection(4, 120) # 关键词
+        header.resizeSection(5, 80)  # 上传人
+        header.resizeSection(6, 120) # 上传时间
+        header.resizeSection(7, 150) # 文件路径 (可能需要调整)
+        header.resizeSection(8, 80)  # 附件列
+
+        # 允许用户调整列宽和移动列
+        header.setSectionsMovable(True)
+        # header.setStretchLastSection(True) # 取消最后一列拉伸
+
+        self.document_table.setSelectionMode(QTableWidget.ExtendedSelection)
+        self.document_table.setSelectionBehavior(QTableWidget.SelectRows)
+
         self.main_layout.addWidget(self.document_table)
         
         # 搜索栏
@@ -199,14 +291,44 @@ class ProjectDocumentWidget(QWidget):
 
             self.document_table.setRowCount(len(documents))
             for row, doc in enumerate(documents):
-                self.document_table.setItem(row, 0, QTableWidgetItem(doc.name))
-                self.document_table.setItem(row, 1, QTableWidgetItem(doc.doc_type.value))
-                self.document_table.setItem(row, 2, QTableWidgetItem(doc.version))
-                self.document_table.setItem(row, 3, QTableWidgetItem(doc.description))
-                self.document_table.setItem(row, 4, QTableWidgetItem(doc.keywords))
-                self.document_table.setItem(row, 5, QTableWidgetItem(doc.uploader))
-                self.document_table.setItem(row, 6, QTableWidgetItem(str(doc.upload_time)))
-                self.document_table.setItem(row, 7, QTableWidgetItem(doc.file_path))
+                # 设置文本对齐方式
+                name_item = QTableWidgetItem(doc.name)
+                type_item = QTableWidgetItem(doc.doc_type.value)
+                type_item.setTextAlignment(Qt.AlignCenter)
+                version_item = QTableWidgetItem(doc.version or "")
+                version_item.setTextAlignment(Qt.AlignCenter)
+                description_item = QTableWidgetItem(doc.description or "")
+                keywords_item = QTableWidgetItem(doc.keywords or "")
+                uploader_item = QTableWidgetItem(doc.uploader or "")
+                uploader_item.setTextAlignment(Qt.AlignCenter)
+                upload_time_item = QTableWidgetItem(doc.upload_time.strftime("%Y-%m-%d %H:%M") if doc.upload_time else "")
+                upload_time_item.setTextAlignment(Qt.AlignCenter)
+                file_path_item = QTableWidgetItem(doc.file_path or "") # 文件路径可能为空
+
+                self.document_table.setItem(row, 0, name_item)
+                self.document_table.setItem(row, 1, type_item)
+                self.document_table.setItem(row, 2, version_item)
+                self.document_table.setItem(row, 3, description_item)
+                self.document_table.setItem(row, 4, keywords_item)
+                self.document_table.setItem(row, 5, uploader_item)
+                self.document_table.setItem(row, 6, upload_time_item)
+                self.document_table.setItem(row, 7, file_path_item)
+
+                # 在其他单元格也存储文档ID
+                for col in range(self.document_table.columnCount() - 1): # 排除最后一列
+                    cell_item = self.document_table.item(row, col)
+                    if cell_item:
+                        cell_item.setData(Qt.UserRole, doc.id)
+
+                # 添加附件管理按钮
+                container = create_attachment_button(
+                    item_id=doc.id,
+                    attachment_path=doc.file_path, # 文档模型使用 file_path
+                    handle_attachment_func=lambda event, btn, item_id=doc.id: self.handle_document_attachment(event, btn, item_id),
+                    parent_widget=self,
+                    item_type='document' # 标识附件类型为文档
+                )
+                self.document_table.setCellWidget(row, 8, container) # 第 8 列是附件列
         finally:
             session.close()
     
@@ -384,3 +506,35 @@ class ProjectDocumentWidget(QWidget):
                 UIUtils.show_success(self, "成功", "文件下载成功")
             except Exception as e:
                 UIUtils.show_error(self, "错误", f"文件下载失败：{str(e)}")
+
+    # --- 添加附件处理逻辑 ---
+    def handle_document_attachment(self, event, btn, doc_id):
+        """处理文档附件的操作"""
+        Session = sessionmaker(bind=self.engine)
+        session = Session()
+        try:
+            document = session.query(ProjectDocument).filter(ProjectDocument.id == doc_id).first()
+            if not document:
+                UIUtils.show_error(self, "错误", "找不到对应的文档记录")
+                return
+
+            # 调用通用的附件处理函数
+            handle_attachment(
+                event=event,
+                btn=btn,
+                item=document, # 传递文档对象
+                session=session,
+                parent_widget=self,
+                project=self.current_project, # 传递当前项目
+                item_type='document', # 标识类型
+                attachment_attr='file_path', # 指定存储路径的属性名
+                base_folder='documents' # 指定存储的根目录
+            )
+            # 刷新列表以更新按钮状态
+            self.load_documents()
+
+        except Exception as e:
+            session.rollback() # Ensure rollback on error
+            UIUtils.show_error(self, "附件操作错误", f"处理文档附件时出错: {e}")
+        finally:
+            session.close()

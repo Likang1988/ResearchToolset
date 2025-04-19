@@ -179,6 +179,8 @@ class ProjectBudgetWidget(QWidget):
             from app.views.projecting_interface.project_expense import ProjectExpenseWidget
             expense_widget = ProjectExpenseWidget(self.engine, self.current_project, budget) # Added missing project argument
             expense_widget.setObjectName(f"projectExpenseInterface_{budget.id}")
+            # 连接信号：当支出更新时，刷新预算数据
+            expense_widget.expense_updated.connect(self.load_budgets)
             # 检查是否已存在相同预算的支出窗口
             for i in range(main_window.stackedWidget.count()):
                 widget = main_window.stackedWidget.widget(i)
@@ -510,27 +512,36 @@ class ProjectBudgetWidget(QWidget):
                     # Need a fresh session for this calculation
                     temp_session = Session()
                     try:
+                        # 获取总预算信息
                         current_total_budget = temp_session.query(Budget).filter(
                             Budget.project_id == self.current_project.id,
                             Budget.year.is_(None)
                         ).first()
                         if not current_total_budget:
                              UIUtils.show_error(self, "错误", "无法获取总预算以校验额度")
-                             return # Keep main session open? No, close it.
+                             return # 必须有总预算才能继续
 
-                        current_annual_total = self.calculate_annual_budgets_total(temp_session) # Use temp_session
-                        current_total_balance = current_total_budget.total_amount - current_annual_total
+                        # 计算所有年度预算的实际已支出总额
+                        total_spent_all_years = temp_session.query(func.sum(Budget.spent_amount)).filter(
+                            Budget.project_id == self.current_project.id,
+                            Budget.year.isnot(None)
+                        ).scalar() or 0.0
+
+                        # 计算实际剩余金额
+                        actual_remaining_balance = current_total_budget.total_amount - total_spent_all_years
                     finally:
                         temp_session.close()
 
 
-                    if data['total_amount'] > current_total_balance:
+                    # 检查新年度预算是否超出实际剩余金额
+                    if data['total_amount'] > actual_remaining_balance:
                         UIUtils.show_warning(
                             title="警告",
-                            content=f"年度预算({data['total_amount']}万元)超出当前总结余({current_total_balance:.2f}万元)！",
+                            content=f"注意：新年度预算({data['total_amount']:.2f}万元)已超出项目实际剩余金额({actual_remaining_balance:.2f}万元)！允许保存，请确认。", # 更新警告信息和比较值
                             parent=self
                             )
-                        return # Keep session open? No, close it.
+                        # 不再阻止保存，仅弹出警告
+                        # return # 移除 return
 
                     # 创建年度预算
                     budget = Budget(
@@ -555,9 +566,12 @@ class ProjectBudgetWidget(QWidget):
 
                     activity = Activity(
                         project_id=self.current_project.id, # Use current_project.id
-                        timestamp=datetime.now(),
-                        user="系统", # 或者记录当前用户
-                        action=f"添加了 {data['year']} 年度预算"
+                        budget_id=budget.id,                 # 添加 budget_id 关联
+                        type="预算",                         # 添加 type
+                        action="新增",                       # 设置 action
+                        description=f"添加了 {data['year']} 年度预算", # 使用 description
+                        operator="系统用户",                 # 修正: 使用 operator
+                        timestamp=datetime.now()             # 保留 timestamp
                     )
                     session.add(activity)
 
@@ -625,9 +639,11 @@ class ProjectBudgetWidget(QWidget):
 
                         activity = Activity(
                             project_id=self.current_project.id, # Use current_project.id
-                            timestamp=datetime.now(),
-                            user="系统", # 或者记录当前用户
-                            action=f"删除了项目总预算"
+                            type="预算",                             # 添加 type
+                            action="删除",                           # 设置 action
+                            description="删除了项目总预算",             # 使用 description
+                            operator="系统用户",                     # 修正: 使用 operator
+                            timestamp=datetime.now()                 # 保留 timestamp
                         )
                         session.add(activity)
 
@@ -657,9 +673,12 @@ class ProjectBudgetWidget(QWidget):
 
                         activity = Activity(
                             project_id=self.current_project.id, # Use current_project.id
-                            timestamp=datetime.now(),
-                            user="系统", # 或者记录当前用户
-                            action=f"删除了 {year} 年度预算"
+                            budget_id=budget.id,                 # 添加 budget_id 关联
+                            type="预算",                         # 添加 type
+                            action="删除",                       # 设置 action
+                            description=f"删除了 {year} 年度预算", # 使用 description
+                            operator="系统用户",                 # 修正: 使用 operator
+                            timestamp=datetime.now()             # 保留 timestamp
                         )
                         session.add(activity)
 
@@ -747,9 +766,12 @@ class ProjectBudgetWidget(QWidget):
 
                     activity = Activity(
                         project_id=self.current_project.id, # Use current_project.id
-                        timestamp=datetime.now(),
-                        user="系统", # 或者记录当前用户
-                        action=f"编辑了项目总预算"
+                        budget_id=budget.id,                 # 添加 budget_id 关联
+                        type="预算",                         # 添加 type
+                        action="编辑",                       # 设置 action
+                        description="编辑了项目总预算",         # 使用 description
+                        operator="系统用户",                 # 修正: 使用 operator
+                        timestamp=datetime.now()             # 保留 timestamp
                     )
                     session.add(activity)
 
@@ -801,26 +823,27 @@ class ProjectBudgetWidget(QWidget):
                     other_annual_total = self.calculate_annual_budgets_total(session, exclude_year=year)
                     available_total = total_budget.total_amount - other_annual_total
 
+                    # 检查年度预算是否超出可用总预算额度
                     if data['total_amount'] > available_total:
                         UIUtils.show_warning(
                             title="警告",
-                            content=f"年度预算({data['total_amount']}万元)超出当前可用总预算额度({available_total:.2f}万元)！",
+                            content=f"注意：年度预算({data['total_amount']:.2f}万元)已超出当前可用总预算额度({available_total:.2f}万元)！允许保存，请确认。", # 更新警告信息
                             parent=self
                         )
-                        # Ensure session is closed before returning
-                        session.close()
-                        return
+                        # 不再阻止保存，仅弹出警告
+                        # session.close() # 不需要关闭会话
+                        # return # 移除 return
 
                     # 检查修改后的年度预算是否小于已支出金额
                     if data['total_amount'] < budget.spent_amount:
                         UIUtils.show_warning(
                             title="警告",
-                            content=f"年度预算({data['total_amount']}万元)不能小于已支出金额({budget.spent_amount:.2f}万元)！",
+                            content=f"注意：年度预算({data['total_amount']:.2f}万元)小于已支出金额({budget.spent_amount:.2f}万元)！允许保存，请确认。", # 更新警告信息
                             parent=self
                         )
-                        # Ensure session is closed before returning
-                        session.close()
-                        return
+                        # 不再阻止保存，仅弹出警告
+                        # session.close() # 不需要关闭会话
+                        # return # 移除 return
 
                     budget.total_amount = data['total_amount']
 
@@ -832,13 +855,12 @@ class ProjectBudgetWidget(QWidget):
                             if amount < item.spent_amount:
                                 UIUtils.show_warning(
                                     title="警告",
-                                    content=f"{category.value}预算({amount}万元)不能小于已支出金额({item.spent_amount:.2f}万元)！",
+                                    content=f"注意：{category.value}预算({amount:.2f}万元)小于已支出金额({item.spent_amount:.2f}万元)！允许保存，请确认。", # 更新警告信息
                                     parent=self
                                 )
-                                # 回滚更改或阻止保存？这里简单返回
-                                # Ensure session is closed before returning
-                                session.close()
-                                return
+                                # 不再阻止保存，仅弹出警告
+                                # session.close() # 不需要关闭会话
+                                # return # 移除 return
                             item.amount = amount
                         else:
                             # 如果年度预算子项不存在，则创建它
@@ -852,9 +874,12 @@ class ProjectBudgetWidget(QWidget):
 
                     activity = Activity(
                         project_id=self.current_project.id, # Use current_project.id
-                        timestamp=datetime.now(),
-                        user="系统", # 或者记录当前用户
-                        action=f"编辑了 {year} 年度预算"
+                        budget_id=budget.id,                 # 添加 budget_id 关联
+                        type="预算",                         # 添加 type
+                        action="编辑",                       # 设置 action
+                        description=f"编辑了 {year} 年度预算", # 使用 description
+                        operator="系统用户",                 # 修正: 使用 operator
+                        timestamp=datetime.now()             # 保留 timestamp
                     )
                     session.add(activity)
 

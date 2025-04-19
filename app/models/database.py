@@ -418,9 +418,31 @@ def migrate_db(engine):
     except Exception as e:
         print(f"数据库迁移失败: {str(e)}")
         transaction.rollback()
-        raise e
-    
+        # Don't raise e here, let the finally block close the connection
+        # raise e
+
+    # --- Add migration for project_outcomes table ---
+    try:
+        result = connection.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='project_outcomes'"))
+        if result.fetchone():
+            result = connection.execute(text("PRAGMA table_info(project_outcomes)"))
+            columns = [row[1] for row in result.fetchall()]
+            if 'attachment_path' not in columns:
+                connection.execute(text("ALTER TABLE project_outcomes ADD COLUMN attachment_path VARCHAR(500)"))
+                transaction.commit() # Commit this specific change
+                print("成功添加 attachment_path 列到 project_outcomes 表")
+            # Start a new transaction if needed for subsequent migrations
+            # transaction = connection.begin()
+    except Exception as e:
+        print(f"迁移 project_outcomes 表失败: {e}")
+        # Decide if rollback is needed here or handled globally
+        # transaction.rollback()
+
     finally:
+        # Ensure transaction is handled (committed or rolled back) before closing
+        if transaction.is_active:
+             print("Warning: Transaction was still active during migration finalization. Rolling back.")
+             transaction.rollback()
         connection.close()
 
 def init_db(db_path):
