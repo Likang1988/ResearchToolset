@@ -9,7 +9,7 @@ import os
 
 class UIUtils:
     # 统一设置InfoBar的显示时间为15秒
-    DEFAULT_INFOBAR_DURATION = 5000
+    DEFAULT_INFOBAR_DURATION = 10000
   
     @staticmethod
     def set_table_style(table: TableWidget):
@@ -197,7 +197,7 @@ class UIUtils:
         Session = sessionmaker(bind=engine)
         session = Session()
         try:
-            projects = session.query(Project).order_by(Project.name).all()
+            projects = session.query(Project).order_by(Project.financial_code).all()
             if not projects:
                 combo_box.addItem("没有找到项目", userData=None)
                 combo_box.setEnabled(False)
@@ -205,7 +205,7 @@ class UIUtils:
                 combo_box.addItem("请选择项目...", userData=None) # 添加默认提示项
                 for project in projects:
                     # 显示项目名称，将整个 project 对象存储在 userData 中
-                    combo_box.addItem(f"{project.name} ", userData=project)
+                    combo_box.addItem(f"{project.financial_code} ", userData=project)
         except Exception as e:
             print(f"Error loading projects for ComboBox: {e}")
             combo_box.addItem("加载项目出错", userData=None)

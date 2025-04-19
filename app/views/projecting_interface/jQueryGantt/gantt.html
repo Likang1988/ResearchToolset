@@ -280,8 +280,47 @@ function saveGanttData() {
               }
               // After updating IDs, it might be necessary to update dependencies
               // that referred to the old temporary IDs.
+
+              // --- Update dependencies referencing old IDs ---
+              console.log("Updating dependencies...");
+              for (var i = 0; i < ge.tasks.length; i++) {
+                  var taskToUpdate = ge.tasks[i];
+                  // Check if the task object and its depends property exist
+                  if (taskToUpdate && taskToUpdate.depends && typeof taskToUpdate.depends === 'string' && taskToUpdate.depends.length > 0) {
+                      var originalDepends = taskToUpdate.depends;
+                      var newDepends = originalDepends;
+                      // Iterate through the map of changed IDs
+                      for (var tempIdDep in response.id_map) {
+                          // Ensure the key belongs to the id_map itself
+                          if (response.id_map.hasOwnProperty(tempIdDep)) {
+                              var persistentIdDep = response.id_map[tempIdDep];
+                              // Use regex to replace tempId only when it appears as a whole ID (word boundary)
+                              // Handles cases like "tmp_1", "tmp_1:5", but not "tmp_10" if tempIdDep is "tmp_1"
+                              var regex = new RegExp("\\b" + tempIdDep.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') + "\\b", "g"); // Escape regex special chars in tempId
+                              newDepends = newDepends.replace(regex, persistentIdDep);
+                          }
+                      }
+                      // If dependencies were changed, update the task object and the DOM input field
+                      if (newDepends !== originalDepends) {
+                          taskToUpdate.depends = newDepends;
+                          console.log(`Updated dependencies for task ${taskToUpdate.id} (${taskToUpdate.name}): ${originalDepends} -> ${newDepends}`);
+                          // Also update the input field in the grid editor if it's visible
+                          var taskRowDep = ge.element.find("#tid_" + taskToUpdate.id); // Use updated ID
+                          if (taskRowDep.length > 0) {
+                              var dependsInput = taskRowDep.find("input[name='depends']");
+                              if (dependsInput.length > 0) {
+                                  dependsInput.val(newDepends);
+                                  console.log(`Updated DOM input field for dependencies of task ${taskToUpdate.id}`);
+                              }
+                          }
+                      }
+                  }
+              }
+              console.log("Dependency update complete.");
+              // --- End of new dependency update logic ---
+
               ge.redraw(); // Redraw to reflect potential changes
-          }
+            }
           // ---------------------------------------------
           ge.checkpoint(); // Clear undo stack after successful save and ID update
       } else {
@@ -549,9 +588,9 @@ function showBaselineInfo (event,element){
   <div class="ganttButtonBar noprint">
     <div class="buttons">
       <button onclick="saveGanttOnServer();" class="button first big requireWrite" title="保存">保存</button>
-      <input type="file" name="load-file" id="load-file" style="display: none;">
-      <label for="load-file" class="button big">加载</label>
-      <button onclick='newProject();' class='button requireWrite newproject'><em>清空项目</em></button>
+      
+      
+      <button onclick='newProject();' class='button requireWrite newproject'><em>清空</em></button>
       <button class="button login" title="登录/注册" onclick="loginEnroll($(this));" style="display:none;">登录/注册</button>
       <button class="button opt collab" title="Start with Twproject" onclick="collaborate($(this));" style="display:none;"><em>协作</em></button>
       &nbsp; &nbsp; &nbsp; &nbsp;
@@ -576,8 +615,7 @@ function showBaselineInfo (event,element){
     <span class="ganttButtonSeparator"></span>
       <button onclick="$('#workSpace').trigger('zoomMinus.gantt'); return false;" class="button textual icon " title="缩小"><span class="teamworkIcon">)</span></button>
       <button onclick="$('#workSpace').trigger('zoomPlus.gantt');return false;" class="button textual icon " title="放大"><span class="teamworkIcon">(</span></button>
-    <span class="ganttButtonSeparator"></span>
-      <button onclick="$('#workSpace').trigger('print.gantt');return false;" class="button textual icon " title="打印"><span class="teamworkIcon">p</span></button>
+    
     <span class="ganttButtonSeparator"></span>
       <button onclick="ge.gantt.showCriticalPath=!ge.gantt.showCriticalPath; ge.redraw();return false;" class="button textual icon requireCanSeeCriticalPath" title="关键路径"><span class="teamworkIcon">&pound;</span></button>
     <span class="ganttButtonSeparator requireCanSeeCriticalPath"></span>
@@ -585,10 +623,10 @@ function showBaselineInfo (event,element){
       <button onclick="ge.splitter.resize(50);return false;" class="button textual icon" ><span class="teamworkIcon">O</span></button>
       <button onclick="ge.splitter.resize(100);return false;" class="button textual icon"><span class="teamworkIcon">R</span></button>
       <span class="ganttButtonSeparator"></span>
-      <button onclick="$('#workSpace').trigger('fullScreen.gantt');return false;" class="button textual icon" title="全屏" id="fullscrbtn"><span class="teamworkIcon">@</span></button>
-      <button onclick="ge.element.toggleClass('colorByStatus' );return false;" class="button textual icon"><span class="teamworkIcon">&sect;</span></button>
+      
+      
 
-    <button onclick="editResources();" class="button textual requireWrite" title="编辑资源"><span class="teamworkIcon">M</span></button>
+    
       &nbsp; &nbsp; &nbsp; &nbsp;
     </div>
 

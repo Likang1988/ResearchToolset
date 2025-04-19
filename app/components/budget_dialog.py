@@ -29,10 +29,10 @@ class TotalBudgetDialog(QDialog):
     - 预算子项管理
     """
     
-    def __init__(self, parent=None, budget=None):
+    def __init__(self, project, engine, parent=None, budget=None): # Added project and engine parameters
         super().__init__(parent)
-        self.project = parent.project
-        self.engine = parent.engine
+        self.project = project # Use passed project
+        self.engine = engine # Use passed engine
         self.budget = budget
         self.setup_ui()
         self.load_budget_data()
@@ -145,13 +145,13 @@ class TotalBudgetDialog(QDialog):
                 
     def update_balance_amounts(self):
         """更新各费用类别的结余金额显示"""
-        Session = sessionmaker(bind=self.parent().engine)
+        Session = sessionmaker(bind=self.engine) # Use self.engine
         session = Session()
         
         try:
             # 获取总预算
             total_budget = session.query(Budget).filter(
-                Budget.project_id == self.parent().project.id,
+                Budget.project_id == self.project.id, # Use self.project.id
                 Budget.year.is_(None)
             ).first()
             
@@ -168,7 +168,7 @@ class TotalBudgetDialog(QDialog):
                     category_spent = session.query(func.sum(BudgetItem.spent_amount)).filter(
                         BudgetItem.budget_id.in_(
                             session.query(Budget.id).filter(
-                                Budget.project_id == self.parent().project.id,
+                                Budget.project_id == self.project.id, # Use self.project.id
                                 Budget.year.isnot(None)  # 只计算年度预算
                             )
                         ),
@@ -235,8 +235,10 @@ class BudgetDialog(QDialog):
     # 定义信号
     budget_updated = Signal()
     
-    def __init__(self, parent=None, budget=None):
+    def __init__(self, project, engine, parent=None, budget=None): # Added project and engine parameters
         super().__init__(parent)
+        self.project = project # Use passed project
+        self.engine = engine # Use passed engine
         self.budget = budget
         self.setup_ui()
         
@@ -368,7 +370,7 @@ class BudgetDialog(QDialog):
             
         self.year_spin.setValue(self.budget.year)
             
-        Session = sessionmaker(bind=self.parent().engine)
+        Session = sessionmaker(bind=self.engine) # Use self.engine
         session = Session()
         try:
             budget_items = session.query(BudgetItem).filter_by(
@@ -391,13 +393,13 @@ class BudgetDialog(QDialog):
         
     def update_balance_amounts(self):
         """更新各费用类别的结余金额显示"""
-        Session = sessionmaker(bind=self.parent().engine)
+        Session = sessionmaker(bind=self.engine) # Use self.engine
         session = Session()
         
         try:
             # 获取总预算
             total_budget = session.query(Budget).filter(
-                Budget.project_id == self.parent().project.id,
+                Budget.project_id == self.project.id, # Use self.project.id
                 Budget.year.is_(None)
             ).first()
             
@@ -414,7 +416,7 @@ class BudgetDialog(QDialog):
                     category_spent = session.query(func.sum(BudgetItem.spent_amount)).filter(
                         BudgetItem.budget_id.in_(
                             session.query(Budget.id).filter(
-                                Budget.project_id == self.parent().project.id,
+                                Budget.project_id == self.project.id, # Use self.project.id
                                 Budget.year.isnot(None)  # 只计算年度预算
                             )
                         ),
@@ -450,7 +452,7 @@ class BudgetDialog(QDialog):
             )
             return
             
-        Session = sessionmaker(bind=self.parent().engine)
+        Session = sessionmaker(bind=self.engine) # Use self.engine
         session = Session()
         
         try:
@@ -459,7 +461,7 @@ class BudgetDialog(QDialog):
             
             # 检查年度预算是否已存在（在同一事务中）
             existing_budget = session.query(Budget).filter_by(
-                project_id=self.parent().project.id,
+                project_id=self.project.id, # Use self.project.id
                 year=year
             ).with_for_update().first()  # 添加行级锁
             

@@ -27,96 +27,77 @@ class MainWindow(FluentWindow):
         
         # 设置窗口标题和大小
         self.setWindowTitle("科研工具集")
-        self.setWindowIcon(QIcon(':/app/assets/icon.ico'))
+        self.setWindowIcon(QIcon(':/assets/icon.ico'))
         self.resize(1200, 800)
         #self.setMinimumSize(1200, 800)
 
         # 启用 Mica 特效 (解决 WebEngineView 导致背景失效的问题)
         self.setMicaEffectEnabled(False)
 
-        # 创建界面实例
+        # 添加主页导航项
         self.home_interface = HomeInterface(self.engine)
-        self.home_interface.setObjectName("homeInterface")
-        
-        self.projecting_interface = ProjectListWindow(self.engine)
-        self.projecting_interface.setObjectName("projectingInterface")
-        
-        # 创建预算编制界面实例
-        self.budget_edit_interface = BudgetingInterface(self.engine)
-        self.budget_edit_interface.setObjectName("budgetingInterface")
-        
-        self.help_interface = HelpInterface()
-        self.help_interface.setObjectName("helpInterface")
-
-        
-        # 添加导航项
+        self.home_interface.setObjectName("homeInterface")        
         self.addSubInterface(
             self.home_interface,
             FluentIcon.HOME,
             "主页"
         )
-        
-        # 使用自定义SVG图标
+
+        # 添加项目清单导航项
+        self.projecting_interface = ProjectListWindow(self.engine)
+        self.projecting_interface.setObjectName("projectingInterface")
         self.addSubInterface(  
             self.projecting_interface,
             QIcon(UIUtils.get_svg_icon_path('projecting_tab')),
             "项目清单"
         )
-        
-        
-        # 添加项目经费界面 (新的顶级导航项)
-        self.project_budget_interface = ProjectBudgetWidget(self.engine) # Pass engine
-        self.project_budget_interface.setObjectName("projectBudgetInterface")
-        self.addSubInterface(
-            self.project_budget_interface,
-            QIcon(UIUtils.get_svg_icon_path('budgeting_tab')), # Reuse icon or create new one
-            "项目经费"
-        )
-        
-        self.addSubInterface(
-            self.help_interface,
-            FluentIcon.HELP,
-            "帮助",
-            position=NavigationItemPosition.BOTTOM
-        )
 
-        # 添加项目进度界面 (现在作为顶级导航项)
-        self.progress_interface = ProjectProgressWidget(self.engine) # Pass engine
+        # 添加项目进度导航项
+        self.progress_interface = ProjectProgressWidget(self.engine) 
         self.progress_interface.setObjectName("progressInterface")
         self.addSubInterface(
             self.progress_interface,
-            QIcon(UIUtils.get_svg_icon_path('progress')), # Use existing icon
+            QIcon(UIUtils.get_svg_icon_path('progress')), 
             "项目进度"
+        )      
+                                                              
+        # 添加项目经费导航项
+        self.project_budget_interface = ProjectBudgetWidget(self.engine) 
+        self.project_budget_interface.setObjectName("projectBudgetInterface")
+        self.addSubInterface(
+            self.project_budget_interface,
+            QIcon(UIUtils.get_svg_icon_path('budgeting_tab')), 
+            "项目经费"
         )
-
-        # 添加项目文档界面
-        self.document_interface = ProjectDocumentWidget(self.engine) # Pass engine
+        
+        # 添加项目文档导航项
+        self.document_interface = ProjectDocumentWidget(self.engine) 
         self.document_interface.setObjectName("documentInterface")
         self.addSubInterface(
             self.document_interface,
-            QIcon(UIUtils.get_svg_icon_path('document')), # Use existing icon
+            QIcon(UIUtils.get_svg_icon_path('document')), 
             "项目文档"
         )
 
-        # 添加项目成果界面
-        self.achievement_interface = ProjectAchievementWidget(self.engine) # Pass engine
+        # 添加项目成果导航项
+        self.achievement_interface = ProjectAchievementWidget(self.engine) 
         self.achievement_interface.setObjectName("achievementInterface")
         self.addSubInterface(
             self.achievement_interface,
-            QIcon(UIUtils.get_svg_icon_path('achievement')), # Use existing icon
+            QIcon(UIUtils.get_svg_icon_path('achievement')), 
             "项目成果"
         )
-
-        # # 添加预算编制导航项
+        
+        # 添加预算编制导航项
+        self.budget_edit_interface = BudgetingInterface(self.engine)
+        self.budget_edit_interface.setObjectName("budgetingInterface")
         self.addSubInterface(
             self.budget_edit_interface,
             QIcon(UIUtils.get_svg_icon_path('budgeting_interface')),
             "预算编制"
         )
 
-
-
-        # 添加工具界面
+        # 添加小工具导航项
         self.tools_interface = ToolsInterface()
         self.tools_interface.setObjectName("toolsInterface")
         self.addSubInterface(
@@ -125,9 +106,16 @@ class MainWindow(FluentWindow):
             "小工具"
         )
 
-        
-        
-
+        # 添加帮助导航项
+        self.help_interface = HelpInterface()
+        self.help_interface.setObjectName("helpInterface")
+        self.addSubInterface(
+            self.help_interface,
+            FluentIcon.HELP,
+            "帮助",
+            position=NavigationItemPosition.BOTTOM
+        )
+                
         # 设置当前页面
         self.navigationInterface.setCurrentItem("主页")
         self.navigationInterface.setExpandWidth(150)

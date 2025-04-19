@@ -1,6 +1,6 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QComboBox, QLineEdit, QDialog, QDateEdit, QLabel # Added QLabel
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QDialog,  QLabel # Added QLabel
 from PySide6.QtCore import Qt
-from qfluentwidgets import TitleLabel, PrimaryPushButton, FluentIcon, InfoBar
+from qfluentwidgets import TitleLabel, PrimaryPushButton, FluentIcon, LineEdit, ComboBox, DateEdit, InfoBar
 from ...utils.ui_utils import UIUtils
 from ...models.database import Project, Base, get_engine, sessionmaker # Added sessionmaker import
 from sqlalchemy.orm import sessionmaker
@@ -52,45 +52,45 @@ class AchievementDialog(QDialog):
         layout = QVBoxLayout(self)
         
         # 成果表单
-        self.name_edit = QLineEdit()
+        self.name_edit = LineEdit()
         self.name_edit.setPlaceholderText("成果名称")
         layout.addWidget(self.name_edit)
         
-        self.type_combo = QComboBox()
+        self.type_combo = ComboBox()
         for type in AchievementType:
             self.type_combo.addItem(type.value)
         layout.addWidget(self.type_combo)
         
-        self.status_combo = QComboBox()
+        self.status_combo = ComboBox()
         for status in AchievementStatus:
             self.status_combo.addItem(status.value)
         layout.addWidget(self.status_combo)
         
-        self.authors_edit = QLineEdit()
+        self.authors_edit = LineEdit()
         self.authors_edit.setPlaceholderText("作者/完成人")
         layout.addWidget(self.authors_edit)
         
-        self.submit_date = QDateEdit()
-        self.submit_date.setCalendarPopup(True)
+        self.submit_date = DateEdit()
+        #self.submit_date.setCalendarPopup(True)
         self.submit_date.setDate(datetime.now())
         self.submit_date.setDisplayFormat("yyyy-MM-dd")
         layout.addWidget(self.submit_date)
         
-        self.publish_date = QDateEdit()
-        self.publish_date.setCalendarPopup(True)
+        self.publish_date = DateEdit()
+        #self.publish_date.setCalendarPopup(True)
         self.publish_date.setDate(datetime.now())
         self.publish_date.setDisplayFormat("yyyy-MM-dd")
         layout.addWidget(self.publish_date)
         
-        self.journal_edit = QLineEdit()
+        self.journal_edit = LineEdit()
         self.journal_edit.setPlaceholderText("期刊/授权单位")
         layout.addWidget(self.journal_edit)
         
-        self.description_edit = QLineEdit()
+        self.description_edit = LineEdit()
         self.description_edit.setPlaceholderText("成果描述")
         layout.addWidget(self.description_edit)
         
-        self.remarks_edit = QLineEdit()
+        self.remarks_edit = LineEdit()
         self.remarks_edit.setPlaceholderText("备注")
         layout.addWidget(self.remarks_edit)
         
@@ -164,19 +164,19 @@ class ProjectAchievementWidget(QWidget):
         
         # 搜索栏（移动到列表下方）
         search_layout = QHBoxLayout()
-        self.search_edit = QLineEdit()
+        self.search_edit = LineEdit()
         self.search_edit.setPlaceholderText("输入关键词搜索成果")
         self.search_edit.textChanged.connect(self.search_achievements)
         search_layout.addWidget(self.search_edit)
         
-        self.type_filter = QComboBox()
+        self.type_filter = ComboBox()
         self.type_filter.addItem("全部类型")
         for type in AchievementType:
             self.type_filter.addItem(type.value)
         self.type_filter.currentTextChanged.connect(self.search_achievements)
         search_layout.addWidget(self.type_filter)
         
-        self.status_filter = QComboBox()
+        self.status_filter = ComboBox()
         self.status_filter.addItem("全部状态")
         for status in AchievementStatus:
             self.status_filter.addItem(status.value)

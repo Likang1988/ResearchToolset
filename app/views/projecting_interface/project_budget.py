@@ -461,7 +461,7 @@ class ProjectBudgetWidget(QWidget):
             # 创建临时的BudgetDialog实例来计算总结余
             # Pass current_project to BudgetDialog if it needs it for validation
             # Note: BudgetDialog might need internal adjustments to use the passed project
-            temp_dialog = BudgetDialog(self, project=self.current_project)
+            temp_dialog = BudgetDialog(project=self.current_project, engine=self.engine, parent=self) # Pass project and engine
             temp_dialog.update_balance_amounts() # This might need adjustment
             total_balance_text = temp_dialog.total_balance_label.text().replace(' 万元', '').replace(',', '')
             try:
@@ -485,7 +485,7 @@ class ProjectBudgetWidget(QWidget):
             session.close()
 
             # Pass current_project to BudgetDialog
-            dialog = BudgetDialog(self, project=self.current_project)
+            dialog = BudgetDialog(project=self.current_project, engine=self.engine, parent=self) # Pass project and engine
             if dialog.exec():
                 # 重新打开会话进行后续操作
                 session = Session()
@@ -712,7 +712,7 @@ class ProjectBudgetWidget(QWidget):
                 budget_items = session.query(BudgetItem).filter_by(budget_id=budget.id).all()
 
                 # Pass current_project if TotalBudgetDialog needs it
-                dialog = TotalBudgetDialog(self, budget, budget_items, project=self.current_project)
+                dialog = TotalBudgetDialog(project=self.current_project, engine=self.engine, parent=self, budget=budget) # Pass project and engine
                 if dialog.exec():
                     data = dialog.get_data()
 
@@ -782,7 +782,7 @@ class ProjectBudgetWidget(QWidget):
                 budget_items = session.query(BudgetItem).filter_by(budget_id=budget.id).all()
 
                 # Pass current_project if BudgetDialog needs it
-                dialog = BudgetDialog(self, budget, budget_items, project=self.current_project)
+                dialog = BudgetDialog(project=self.current_project, engine=self.engine, parent=self, budget=budget) # Pass project and engine
                 if dialog.exec():
                     data = dialog.get_data()
 

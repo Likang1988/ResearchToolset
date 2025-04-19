@@ -1,6 +1,6 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QComboBox, QLineEdit, QFileDialog, QDialog, QLabel # Added QLabel
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QFileDialog, QDialog, QLabel # Added QLabel
 from PySide6.QtCore import Qt
-from qfluentwidgets import TitleLabel, PrimaryPushButton, FluentIcon, InfoBar, Dialog
+from qfluentwidgets import TitleLabel, PrimaryPushButton, FluentIcon, ComboBox, LineEdit, InfoBar, Dialog
 from ...utils.ui_utils import UIUtils
 from ...models.database import Project, Base, get_engine, sessionmaker # Added sessionmaker import
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum as SQLEnum, DateTime, Engine # Added Engine type hint
@@ -46,33 +46,33 @@ class DocumentDialog(QDialog):
         layout.setContentsMargins(24, 24, 24, 24)
         
         # 文档表单
-        self.name_edit = QLineEdit()
+        self.name_edit = LineEdit()
         self.name_edit.setPlaceholderText("文档名称")
         layout.addWidget(self.name_edit)
-        self.type_combo = QComboBox()
+        self.type_combo = ComboBox()
         for doc_type in DocumentType:
             self.type_combo.addItem(doc_type.value)
         layout.addWidget(self.type_combo)
         
-        self.version_edit = QLineEdit()
+        self.version_edit = LineEdit()
         self.version_edit.setPlaceholderText("版本号")
         layout.addWidget(self.version_edit)
         
-        self.description_edit = QLineEdit()
+        self.description_edit = LineEdit()
         self.description_edit.setPlaceholderText("文档描述")
         layout.addWidget(self.description_edit)
         
-        self.keywords_edit = QLineEdit()
+        self.keywords_edit = LineEdit()
         self.keywords_edit.setPlaceholderText("关键词（用逗号分隔）")
         layout.addWidget(self.keywords_edit)
         
-        self.uploader_edit = QLineEdit()
+        self.uploader_edit = LineEdit()
         self.uploader_edit.setPlaceholderText("上传人")
         layout.addWidget(self.uploader_edit)
         
         # 文件选择
         file_layout = QHBoxLayout()
-        self.file_path_edit = QLineEdit()
+        self.file_path_edit = LineEdit()
         self.file_path_edit.setReadOnly(True)
         file_layout.addWidget(self.file_path_edit)
         
@@ -154,12 +154,12 @@ class ProjectDocumentWidget(QWidget):
         
         # 搜索栏
         search_layout = QHBoxLayout()
-        self.search_edit = QLineEdit()
+        self.search_edit = LineEdit()
         self.search_edit.setPlaceholderText("输入关键词搜索文档")
         self.search_edit.textChanged.connect(self.search_documents)
         search_layout.addWidget(self.search_edit)
         
-        self.type_filter = QComboBox()
+        self.type_filter = ComboBox()
         self.type_filter.addItem("全部类型")
         for doc_type in DocumentType:
             self.type_filter.addItem(doc_type.value)
