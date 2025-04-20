@@ -124,5 +124,6 @@ class MainWindow(FluentWindow):
         # 设置当前页面
         self.navigationInterface.setCurrentItem("主页")
         self.navigationInterface.setExpandWidth(150)
+        FluentWindow.updateFrameless(self)
 
 

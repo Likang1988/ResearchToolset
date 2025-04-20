@@ -71,10 +71,6 @@ def main():
     window = MainWindow(engine)
     window.show()
 
-    # 重新启用云母/亚克力特效 (解决 QWebEngineView 导致特效失效的问题)
-    # 确保在 window.show() 之后调用
-    window.setMicaEffectEnabled(False)
-
     # Start the event loop
     sys.exit(app.exec())
 
