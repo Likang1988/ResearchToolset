@@ -150,10 +150,12 @@ class ProjectProgressWidget(QWidget):
     def load_gantt(self):
         """加载本地jQueryGantt资源"""
         try:
-            # 获取绝对路径并确保路径存在
-            gantt_dir = os.path.dirname(os.path.abspath(__file__))
-            gantt_path = os.path.join(gantt_dir, "jQueryGantt", "gantt.html")
-            libs_dir = os.path.join(gantt_dir, "jQueryGantt", "libs") # 获取libs目录
+            # 获取当前文件所在目录
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            # 构建新的 jQueryGantt 基础目录路径 (向上两级到 app/, 再进入 integration/jQueryGantt/)
+            gantt_base_dir = os.path.abspath(os.path.join(current_dir, '..', '..', 'integration', 'jQueryGantt'))
+            gantt_path = os.path.join(gantt_base_dir, "gantt.html")
+            libs_dir = os.path.join(gantt_base_dir, "libs") # 获取新的libs目录
             self.qwebchannel_js_path = os.path.join(libs_dir, "qwebchannel.js") # qwebchannel.js 的路径
 
             if not os.path.exists(gantt_path):
