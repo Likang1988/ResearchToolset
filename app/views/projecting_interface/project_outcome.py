@@ -1,8 +1,11 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QDialog, QLabel, QHeaderView # Added QHeaderView
 from PySide6.QtCore import Qt, QSize # Added QSize
+from PySide6.QtGui import QFont # 确保 QFont 已导入
 # Import BodyLabel and PushButton, remove PrimaryPushButton if no longer needed elsewhere
 # Also import TableItemDelegate
 from qfluentwidgets import TitleLabel, FluentIcon, LineEdit, ComboBox, DateEdit, InfoBar, BodyLabel, PushButton, TableItemDelegate
+# 需要在文件顶部导入
+from ...models.database import Project, sessionmaker
 from ...utils.ui_utils import UIUtils
 from ...models.database import Project, Base, get_engine, sessionmaker # Added sessionmaker import
 from sqlalchemy.orm import sessionmaker
@@ -193,6 +196,70 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
         self.current_project = None # Track selected project
         self.setup_ui()
         # self.load_outcome() # Don't load initially, wait for selection
+
+    def showEvent(self, event):
+        """在窗口显示时连接信号"""
+        super().showEvent(event)
+        # 尝试连接信号
+        try:
+            main_window = self.window()
+            if main_window and hasattr(main_window, 'project_updated'):
+                # 先断开旧连接，防止重复连接
+                try:
+                    main_window.project_updated.disconnect(self._refresh_project_selector)
+                except RuntimeError:
+                    pass # 信号未连接，忽略错误
+                main_window.project_updated.connect(self._refresh_project_selector)
+                print("ProjectOutcomeWidget: Connected to project_updated signal.")
+            else:
+                 print("ProjectOutcomeWidget: Could not find main window or project_updated signal.")
+        except Exception as e:
+            print(f"ProjectOutcomeWidget: Error connecting signal: {e}")
+
+    def _refresh_project_selector(self):
+        """刷新项目选择下拉框的内容"""
+        print("ProjectOutcomeWidget: Refreshing project selector...")
+        if not hasattr(self, 'project_selector') or not self.engine:
+            print("ProjectOutcomeWidget: Project selector or engine not initialized.")
+            return
+
+        current_project_id = None
+        if self.current_project: # 使用 self.current_project 存储的ID
+            current_project_id = self.current_project.id
+
+        self.project_selector.clear()
+        self.project_selector.addItem("请选择项目...", userData=None) # 添加默认提示项
+
+        Session = sessionmaker(bind=self.engine)
+        session = Session()
+        try:
+            projects = session.query(Project).order_by(Project.financial_code).all()
+            if not projects:
+                self.project_selector.addItem("没有找到项目", userData=None)
+                self.project_selector.setEnabled(False)
+            else:
+                self.project_selector.setEnabled(True)
+                for project in projects:
+                    self.project_selector.addItem(f"{project.financial_code} ", userData=project)
+
+                # 尝试恢复之前的选择
+                if current_project_id is not None:
+                    for i in range(self.project_selector.count()):
+                        data = self.project_selector.itemData(i)
+                        if isinstance(data, Project) and data.id == current_project_id:
+                            self.project_selector.setCurrentIndex(i)
+                            break
+                    else:
+                        # 如果之前的项目找不到了（可能被删除），则触发一次选中事件以清空表格
+                        self._on_project_selected(0) # 选中 "请选择项目..."
+
+        except Exception as e:
+            print(f"Error refreshing project selector in OutcomeWidget: {e}")
+            self.project_selector.addItem("加载项目出错", userData=None)
+            self.project_selector.setEnabled(False)
+        finally:
+            session.close()
+            print("ProjectOutcomeWidget: Project selector refreshed.")
     
     def setup_ui(self):
         self.main_layout = QVBoxLayout(self)

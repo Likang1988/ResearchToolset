@@ -19,6 +19,7 @@ class MainWindow(FluentWindow):
     # 定义信号
     project_updated = Signal()
     activity_updated = Signal()
+    budget_or_expense_updated = Signal() # 新增信号，用于预算或支出更新
     
     def __init__(self, engine=None):
         super().__init__()
@@ -51,6 +52,8 @@ class MainWindow(FluentWindow):
             QIcon(UIUtils.get_svg_icon_path('projecting_tab')),
             "项目清单"
         )
+        # 连接 ProjectListWindow 的信号到 MainWindow 的信号
+        self.projecting_interface.project_list_updated.connect(self.project_updated)
 
         # 添加项目进度导航项
         self.progress_interface = ProjectProgressWidget(self.engine) 
@@ -69,6 +72,8 @@ class MainWindow(FluentWindow):
             QIcon(UIUtils.get_svg_icon_path('budgeting_tab')), 
             "项目经费"
         )
+        # 连接 ProjectBudgetWidget 的信号到 MainWindow 的新信号
+        self.project_budget_interface.budget_updated.connect(self.budget_or_expense_updated)
         
         # 添加项目文档导航项
         self.document_interface = ProjectDocumentWidget(self.engine) 

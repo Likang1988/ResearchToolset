@@ -21,15 +21,47 @@ class HomeInterface(QWidget):
         # 获取主窗口实例并连接信号
         main_window = self.window()
         if main_window:
-            main_window.project_updated.connect(self.refresh_data)
-            main_window.activity_updated.connect(self.refresh_data)
+            # 连接项目列表更新信号
+            if hasattr(main_window, 'project_updated'):
+                try:
+                    main_window.project_updated.disconnect(self.refresh_data)
+                except RuntimeError: pass
+                main_window.project_updated.connect(self.refresh_data)
+            # 连接预算或支出更新信号
+            if hasattr(main_window, 'budget_or_expense_updated'):
+                try:
+                    main_window.budget_or_expense_updated.disconnect(self.refresh_data)
+                except RuntimeError: pass
+                main_window.budget_or_expense_updated.connect(self.refresh_data)
+            # 连接活动更新信号 (保持不变)
+            if hasattr(main_window, 'activity_updated'):
+                try:
+                    main_window.activity_updated.disconnect(self.refresh_data)
+                except RuntimeError: pass
+                main_window.activity_updated.connect(self.refresh_data)
     
     def post_init(self):
         # 获取主窗口实例并连接信号
         main_window = self.window()
         if main_window:
-            main_window.project_updated.connect(self.refresh_data)
-            main_window.activity_updated.connect(self.refresh_data)
+            # 连接项目列表更新信号
+            if hasattr(main_window, 'project_updated'):
+                try:
+                    main_window.project_updated.disconnect(self.refresh_data)
+                except RuntimeError: pass
+                main_window.project_updated.connect(self.refresh_data)
+            # 连接预算或支出更新信号
+            if hasattr(main_window, 'budget_or_expense_updated'):
+                try:
+                    main_window.budget_or_expense_updated.disconnect(self.refresh_data)
+                except RuntimeError: pass
+                main_window.budget_or_expense_updated.connect(self.refresh_data)
+            # 连接活动更新信号 (保持不变)
+            if hasattr(main_window, 'activity_updated'):
+                try:
+                    main_window.activity_updated.disconnect(self.refresh_data)
+                except RuntimeError: pass
+                main_window.activity_updated.connect(self.refresh_data)
     
     def refresh_data(self):
         # 清空现有布局

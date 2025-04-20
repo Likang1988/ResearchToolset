@@ -4,10 +4,12 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel # Added 
 # from PySide6.QtWebEngineWidgets import QWebEngineView # Already commented out/replaced
 from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtCore import QUrl, Signal, QObject, Slot, QCoreApplication, Qt # Ensure Qt is imported
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QFont # 确保 QFont 已导入
 from qfluentwidgets import NavigationInterface, TitleLabel, InfoBar, InfoBarPosition, ComboBox # Added ComboBox
 from qframelesswindow.webengine import FramelessWindow, FramelessWebEngineView
 from app.utils.ui_utils import UIUtils
+# 需要在文件顶部导入
+from app.models.database import Project, sessionmaker
 from app.models.database import sessionmaker, GanttTask, GanttDependency, Project
 import os
 
@@ -24,6 +26,72 @@ class ProjectProgressWidget(QWidget):
         self.setObjectName("projectProgressWidget")
         self.current_project = None # Track the currently selected project in the widget
         self.setup_ui()
+
+    def showEvent(self, event):
+        """在窗口显示时连接信号"""
+        super().showEvent(event)
+        # 尝试连接信号
+        try:
+            main_window = self.window()
+            if main_window and hasattr(main_window, 'project_updated'):
+                # 先断开旧连接，防止重复连接
+                try:
+                    main_window.project_updated.disconnect(self._refresh_project_selector)
+                except RuntimeError:
+                    pass # 信号未连接，忽略错误
+                main_window.project_updated.connect(self._refresh_project_selector)
+                print("ProjectProgressWidget: Connected to project_updated signal.")
+            else:
+                 print("ProjectProgressWidget: Could not find main window or project_updated signal.")
+        except Exception as e:
+            print(f"ProjectProgressWidget: Error connecting signal: {e}")
+
+
+    def _refresh_project_selector(self):
+        """刷新项目选择下拉框的内容"""
+        print("ProjectProgressWidget: Refreshing project selector...")
+        if not hasattr(self, 'project_selector') or not self.engine:
+            print("ProjectProgressWidget: Project selector or engine not initialized.")
+            return
+
+        current_project_id = None
+        current_data = self.project_selector.currentData()
+        if isinstance(current_data, Project):
+            current_project_id = current_data.id
+
+        self.project_selector.clear()
+        self.project_selector.addItem("请选择项目...", userData=None) # 添加默认提示项
+
+        Session = sessionmaker(bind=self.engine)
+        session = Session()
+        try:
+            projects = session.query(Project).order_by(Project.financial_code).all()
+            if not projects:
+                self.project_selector.addItem("没有找到项目", userData=None)
+                self.project_selector.setEnabled(False)
+            else:
+                self.project_selector.setEnabled(True)
+                for project in projects:
+                    self.project_selector.addItem(f"{project.financial_code} ", userData=project)
+
+                # 尝试恢复之前的选择
+                if current_project_id is not None:
+                    for i in range(self.project_selector.count()):
+                        data = self.project_selector.itemData(i)
+                        if isinstance(data, Project) and data.id == current_project_id:
+                            self.project_selector.setCurrentIndex(i)
+                            break
+                    else:
+                         # 如果之前的项目找不到了（可能被删除），则触发一次选中事件以清空甘特图
+                         self._on_project_selected(0) # 选中 "请选择项目..."
+
+        except Exception as e:
+            print(f"Error refreshing project selector: {e}")
+            self.project_selector.addItem("加载项目出错", userData=None)
+            self.project_selector.setEnabled(False)
+        finally:
+            session.close()
+            print("ProjectProgressWidget: Project selector refreshed.")
 
     def setup_ui(self):
         """初始化界面"""

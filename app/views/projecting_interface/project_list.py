@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (QMainWindow, QWidget, QHeaderView, QVBoxLayout, QHBoxLayout,
                                  QLabel, QTableWidgetItem, QStackedWidget, QApplication)
 from qfluentwidgets import PrimaryPushButton, ToolButton, InfoBar, Dialog
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import Qt, QSize, Signal # 导入 Signal
 from PySide6.QtGui import QIcon
 from qfluentwidgets import FluentIcon, TableWidget, TableItemDelegate, TitleLabel, RoundMenu, Action
 import os # 导入 os 模块
@@ -16,6 +16,9 @@ from sqlalchemy import func
 from datetime import datetime
 
 class ProjectListWindow(QWidget):
+    # 定义一个信号，当项目列表更新时发射
+    project_list_updated = Signal()
+
     def __init__(self, engine=None):
         super().__init__()
         self.engine = engine
@@ -289,6 +292,7 @@ class ProjectListWindow(QWidget):
                 
                 # 刷新项目列表
                 self.refresh_project_table()
+                self.project_list_updated.emit() # 发射信号
                 
                 # 显示成功消息
                 UIUtils.show_success(
@@ -361,6 +365,7 @@ class ProjectListWindow(QWidget):
                     
                     session.commit()
                     self.refresh_project_table()
+                    self.project_list_updated.emit() # 发射信号
             else:
                 UIUtils.show_warning(
                     title='警告',
@@ -514,6 +519,7 @@ class ProjectListWindow(QWidget):
                     )
                     # 即使文件清理失败，也要刷新表格并显示成功信息（因为数据库已成功）
                     self.refresh_project_table()
+                    self.project_list_updated.emit() # 发射信号 (部分成功)
                     UIUtils.show_success(
                         title='部分成功',
                         content='项目数据库记录已删除，但文件清理时遇到问题。详情请查看日志。',
@@ -523,6 +529,7 @@ class ProjectListWindow(QWidget):
 
                 # --- 4. 完成 ---
                 self.refresh_project_table()
+                self.project_list_updated.emit() # 发射信号 (完全成功)
                 UIUtils.show_success(
                     title='成功',
                     content=f'项目 "{project_name_for_log}" 及其所有关联数据和文件已成功删除。',
