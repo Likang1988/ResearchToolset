@@ -50,7 +50,7 @@ def create_attachment_button(item_id, attachment_path, handle_attachment_func, p
     btn.setContextMenuPolicy(Qt.CustomContextMenu)
     btn.customContextMenuRequested.connect(lambda pos, b=btn: handle_attachment_func(pos, b)) # Pass button itself
 
-    layout.addWidget(btn)
+    layout.addWidget(btn, 0, Qt.AlignCenter) # Ensure vertical centering
     container.setLayout(layout)
     return container
 

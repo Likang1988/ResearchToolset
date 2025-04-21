@@ -7,7 +7,7 @@ from qfluentwidgets import TitleLabel, FluentIcon, ComboBox, LineEdit, InfoBar, 
 # 需要在文件顶部导入
 from ...models.database import Project, sessionmaker
 from ...utils.ui_utils import UIUtils
-from ...models.database import Project, Base, get_engine, sessionmaker # Added sessionmaker import
+from ...models.database import Base, get_engine # Project and sessionmaker already imported
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum as SQLEnum, DateTime, Engine # Added Engine type hint
 from enum import Enum
 from datetime import datetime
@@ -440,12 +440,15 @@ class ProjectDocumentWidget(QWidget):
             os.makedirs(project_doc_dir, exist_ok=True)
             
             new_file_path = os.path.join(project_doc_dir, os.path.basename(file_path))
-            shutil.copy2(file_path, new_file_path)
-            
+            try:
+                shutil.copy2(file_path, new_file_path)
+            except (IOError, OSError) as e:
+                UIUtils.show_error(self, "文件复制错误", f"无法复制文件到项目目录：{e}")
+                return # Stop if copy fails
+
             # Use the stored engine
             Session = sessionmaker(bind=self.engine)
             session = Session()
-
             try:
                 document = ProjectDocument(
                     project_id=self.current_project.id, # Use current_project.id
@@ -461,6 +464,15 @@ class ProjectDocumentWidget(QWidget):
                 session.commit()
                 self.load_documents()
                 UIUtils.show_success(self, "成功", "文档上传成功")
+            except Exception as db_err: # Catch potential DB errors
+                session.rollback()
+                UIUtils.show_error(self, "数据库错误", f"保存文档信息失败：{db_err}")
+                # Attempt to remove the copied file if DB save failed
+                try:
+                    if os.path.exists(new_file_path):
+                        os.remove(new_file_path)
+                except OSError as remove_err:
+                     print(f"Warning: Failed to remove copied file after DB error: {remove_err}") # Log or print warning
             finally:
                 session.close()
     
@@ -496,18 +508,51 @@ class ProjectDocumentWidget(QWidget):
                     document.keywords = dialog.keywords_edit.text()
                     document.uploader = dialog.uploader_edit.text()
                     
-                    new_file_path = dialog.file_path_edit.text()
-                    if new_file_path and new_file_path != document.file_path:
+                    new_file_path_selected = dialog.file_path_edit.text()
+                    old_file_path = document.file_path # Store old path before potential change
+                    dest_file_path = None # Initialize destination path variable
+
+                    if new_file_path_selected and new_file_path_selected != old_file_path:
                         project_doc_dir = os.path.join("documents", str(self.current_project.id)) # Use current_project.id
                         os.makedirs(project_doc_dir, exist_ok=True)
-                        
-                        new_file_path = os.path.join(project_doc_dir, os.path.basename(new_file_path))
-                        shutil.copy2(dialog.file_path_edit.text(), new_file_path)
-                        document.file_path = new_file_path
-                    
-                    session.commit()
-                    self.load_documents()
-                    UIUtils.show_success(self, "成功", "文档更新成功")
+
+                        # Construct the destination path within the project documents folder
+                        dest_file_path = os.path.join(project_doc_dir, os.path.basename(new_file_path_selected))
+
+                        try:
+                            shutil.copy2(new_file_path_selected, dest_file_path)
+                            document.file_path = dest_file_path # Update path only after successful copy
+
+                            # Try to remove the old file after successful copy
+                            if old_file_path and os.path.exists(old_file_path):
+                                try:
+                                    os.remove(old_file_path)
+                                    print(f"Successfully removed old document file: {old_file_path}")
+                                except OSError as e:
+                                    # Log this error, but don't stop the update process
+                                    print(f"Warning: Failed to remove old document file '{old_file_path}': {e}")
+                                    UIUtils.show_warning(self, "警告", f"旧文件 '{os.path.basename(old_file_path)}' 未能删除，请手动清理。")
+
+                        except (IOError, OSError) as e:
+                            UIUtils.show_error(self, "文件复制错误", f"无法复制新文件：{e}")
+                            # Don't commit if file copy failed
+                            session.rollback() # Rollback any potential changes made before copy
+                            return # Stop the edit process
+
+                    try:
+                        session.commit()
+                        self.load_documents()
+                        UIUtils.show_success(self, "成功", "文档更新成功")
+                    except Exception as db_err:
+                        session.rollback()
+                        UIUtils.show_error(self, "数据库错误", f"更新文档信息失败：{db_err}")
+                        # If we copied a new file but DB commit failed, try to remove the newly copied file
+                        if dest_file_path and os.path.exists(dest_file_path):
+                             try:
+                                 os.remove(dest_file_path)
+                                 print(f"Removed newly copied file after DB commit error: {dest_file_path}")
+                             except OSError as remove_err:
+                                 print(f"Warning: Failed to remove newly copied file after DB commit error: {remove_err}")
         finally:
             session.close()
     
@@ -534,14 +579,28 @@ class ProjectDocumentWidget(QWidget):
             ).first()
 
             if document:
-                # 删除文件
-                if os.path.exists(document.file_path):
-                    os.remove(document.file_path)
-                
+                file_to_delete = document.file_path # Store path before deleting DB record
                 session.delete(document)
-                session.commit()
-                self.load_documents()
-                UIUtils.show_success(self, "成功", "文档删除成功")
+                try:
+                    session.commit()
+                    # Try deleting the physical file AFTER successful DB commit
+                    if file_to_delete and os.path.exists(file_to_delete):
+                        try:
+                            os.remove(file_to_delete)
+                            print(f"Successfully deleted document file: {file_to_delete}")
+                        except OSError as e:
+                            # Log error, inform user, but DB record is already deleted
+                            print(f"Error deleting document file '{file_to_delete}': {e}")
+                            UIUtils.show_warning(self, "文件删除警告", f"数据库记录已删除，但物理文件 '{os.path.basename(file_to_delete)}' 删除失败，请手动清理。错误：{e}")
+                    else:
+                         print(f"Document file path not found or file doesn't exist: {file_to_delete}")
+
+                    self.load_documents()
+                    UIUtils.show_success(self, "成功", "文档删除成功")
+                except Exception as db_err:
+                    session.rollback()
+                    UIUtils.show_error(self, "数据库错误", f"删除文档记录失败：{db_err}")
+
         finally:
             session.close()
     
