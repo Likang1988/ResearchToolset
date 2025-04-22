@@ -1356,7 +1356,13 @@ GanttMaster.prototype.checkpoint = function () {
 
 GanttMaster.prototype.undo = function () {
   //console.debug("undo before:",this.__undoStack,this.__redoStack);
-  if (this.__undoStack.length > 0) {
+  // Do nothing if there are no user actions to undo (only initial state exists)
+  if (this.__undoStack.length <= 1) {
+      console.log("No user actions to undo.");
+      return;
+  }
+
+  if (this.__undoStack.length > 0) { // This check remains as it was part of the original structure
     var his = this.__undoStack.pop();
     this.__redoStack.push(JSON.stringify(this.saveGantt()));
     var oldTasks = JSON.parse(his);
