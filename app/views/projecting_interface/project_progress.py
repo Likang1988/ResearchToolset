@@ -11,7 +11,7 @@ from app.utils.ui_utils import UIUtils
 # 需要在文件顶部导入
 from app.models.database import Project, sessionmaker
 from app.models.database import sessionmaker, GanttTask, GanttDependency, Project
-import os
+import os # 确保导入 os 模块
 
 class ProjectProgressWidget(QWidget):
     """项目进度管理组件，集成jQueryGantt甘特图"""
@@ -95,6 +95,9 @@ class ProjectProgressWidget(QWidget):
 
     def setup_ui(self):
         """初始化界面"""
+        # --- Enable Remote Debugging ---
+        os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "8081" # 设置一个端口，例如 8081
+        # -------------------------------
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(18, 18, 18, 18) # Add some margins
 
