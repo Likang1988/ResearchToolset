@@ -423,7 +423,7 @@ GanttMaster.prototype.addTask = function (task, row) {
     this.gantt.addTask(task);
   }
 
-//trigger addedTask event 
+//trigger addedTask event
   $(this.element).trigger("addedTask.gantt", task);
   return ret;
 };
@@ -743,23 +743,25 @@ GanttMaster.prototype.markUnChangedTasksAndAssignments=function(newProject){
         }
 
         //si controlla se ci sono stati cambiamenti
-        var taskChanged=
-          oldTask.id != newTask.id ||
-          oldTask.code != newTask.code ||
-          oldTask.name != newTask.name ||
-          oldTask.start != newTask.start ||
-          oldTask.startIsMilestone != newTask.startIsMilestone ||
-          oldTask.end != newTask.end ||
-          oldTask.endIsMilestone != newTask.endIsMilestone ||
-          oldTask.duration != newTask.duration ||
-          oldTask.status != newTask.status ||
-          oldTask.typeId != newTask.typeId ||
-          oldTask.relevance != newTask.relevance ||
-          oldTask.progress != newTask.progress ||
-          oldTask.progressByWorklog != newTask.progressByWorklog ||
-          oldTask.description != newTask.description ||
-          oldTask.level != newTask.level||
-          oldTask.depends != newTask.depends;
+        var taskChanged = true; // Assume changed if oldTask is not found
+        if (oldTask) { // Only compare properties if oldTask exists
+          taskChanged = // Removed ID comparison from the condition
+            oldTask.code != newTask.code ||
+            oldTask.name != newTask.name ||
+            oldTask.start != newTask.start ||
+            oldTask.startIsMilestone != newTask.startIsMilestone ||
+            oldTask.end != newTask.end ||
+            oldTask.endIsMilestone != newTask.endIsMilestone ||
+            oldTask.duration != newTask.duration ||
+            oldTask.status != newTask.status ||
+            oldTask.typeId != newTask.typeId ||
+            oldTask.relevance != newTask.relevance ||
+            oldTask.progress != newTask.progress ||
+            oldTask.progressByWorklog != newTask.progressByWorklog ||
+            oldTask.description != newTask.description ||
+            oldTask.level != newTask.level ||
+            oldTask.depends != newTask.depends;
+        }
 
         newTask.unchanged=!taskChanged;
 
