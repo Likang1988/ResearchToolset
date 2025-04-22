@@ -49,6 +49,7 @@ class UIUtils:
         
         # 设置表头属性
         header = table.horizontalHeader()
+                
         header.setSectionResizeMode(QHeaderView.Interactive)
     #    header.setSortIndicatorShown(True)
     #    header.setSectionsMovable(True)

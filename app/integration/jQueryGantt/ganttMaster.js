@@ -1711,3 +1711,172 @@ GanttMaster.prototype.setHoursOn = function(startWorkingHour,endWorkingHour,date
   Date.workingPeriodResolution=resolution;
   millisInWorkingDay=endWorkingHour-startWorkingHour;
 };
+
+GanttMaster.prototype.exportGantt = function () {
+    var self = this;
+    // Basic prompt for format selection (can be improved later with a dropdown/modal)
+    var format = prompt("请选择导出格式 (JSON, GANTT, PNG, TXT, CSV, EXCEL, WORD):", "JSON");
+    if (!format) {
+        return; // User cancelled
+    }
+
+    format = format.toUpperCase();
+    var projectData;
+    var blob;
+    var fileExtension;
+    var mimeType;
+    var fileName = "gantt_export"; // Default filename
+
+    try {
+        projectData = self.saveGantt(false); // Get current project data
+
+        switch (format) {
+            case "JSON":
+            case "GANTT": // Treat GANTT as JSON for now
+                fileName += ".json";
+                mimeType = "application/json";
+                var jsonString = JSON.stringify(projectData, null, 2); // Pretty print JSON
+                blob = new Blob([jsonString], { type: mimeType });
+                self.downloadBlob(blob, fileName);
+                break;
+
+            case "CSV":
+                fileName += ".csv";
+                mimeType = "text/csv;charset=utf-8;";
+                var csvContent = self.convertToCSV(projectData.tasks);
+                // Add BOM for Excel compatibility with UTF-8
+                var bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+                blob = new Blob([bom, csvContent], { type: mimeType });
+                self.downloadBlob(blob, fileName);
+                break;
+
+            case "TXT":
+                 fileName += ".txt";
+                 mimeType = "text/plain;charset=utf-8;";
+                 var txtContent = self.convertToText(projectData.tasks);
+                 blob = new Blob([txtContent], { type: mimeType });
+                 self.downloadBlob(blob, fileName);
+                 break;
+
+            // --- Placeholders for more complex formats ---
+            case "PNG":
+                alert("PNG 导出功能尚未实现。");
+                // TODO: Implement PNG export (e.g., using html2canvas or backend)
+                break;
+            case "EXCEL":
+                alert("Excel 导出建议通过后端实现。将尝试导出 CSV。");
+                 fileName += ".csv";
+                 mimeType = "text/csv;charset=utf-8;";
+                 var csvContentExcel = self.convertToCSV(projectData.tasks);
+                 var bomExcel = new Uint8Array([0xEF, 0xBB, 0xBF]);
+                 blob = new Blob([bomExcel, csvContentExcel], { type: mimeType });
+                 self.downloadBlob(blob, fileName);
+                // TODO: Optionally call backend: window.ganttBridge.exportExcel(projectData);
+                break;
+            case "WORD":
+                alert("Word 导出功能尚未实现。");
+                // TODO: Implement Word export (likely via backend)
+                break;
+            default:
+                alert("不支持的导出格式: " + format);
+                break;
+        }
+
+    } catch (e) {
+        console.error("导出甘特图时出错:", e);
+        alert("导出失败: " + e.message);
+    }
+};
+
+// Helper function to trigger file download
+GanttMaster.prototype.downloadBlob = function(blob, filename) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.style.display = "none";
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+};
+
+// Helper function to convert tasks to CSV
+GanttMaster.prototype.convertToCSV = function(tasks) {
+    if (!tasks || tasks.length === 0) {
+        return "";
+    }
+    // Define headers (adjust as needed)
+    var headers = ["ID", "名称", "代码", "层级", "状态", "开始日期", "结束日期", "工期(天)", "进度(%)", "依赖"];
+    var csvRows = [headers.join(",")];
+
+    // Function to format date (adjust format as needed)
+    function formatDate(timestamp) {
+        if (!timestamp) return "";
+        var date = new Date(timestamp);
+        // Simple YYYY-MM-DD format
+        return date.getFullYear() + "-" + (date.getMonth() + 1).toString().padStart(2, '0') + "-" + date.getDate().toString().padStart(2, '0');
+    }
+
+     // Function to escape CSV fields
+     function escapeCSV(field) {
+        if (field === null || field === undefined) {
+            return '""';
+        }
+        var stringField = String(field);
+        // Escape double quotes by doubling them and enclose in double quotes if it contains comma, double quote, or newline
+        if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
+            return '"' + stringField.replace(/"/g, '""') + '"';
+        }
+        return stringField; // Return as is if no special characters
+    }
+
+
+    tasks.forEach(function(task) {
+        var row = [
+            escapeCSV(task.id),
+            escapeCSV(task.name),
+            escapeCSV(task.code),
+            escapeCSV(task.level),
+            escapeCSV(task.status),
+            escapeCSV(formatDate(task.start)),
+            escapeCSV(formatDate(task.end)),
+            escapeCSV(task.duration),
+            escapeCSV(task.progress),
+            escapeCSV(task.depends)
+        ];
+        csvRows.push(row.join(","));
+    });
+
+    return csvRows.join("\n");
+};
+
+// Helper function to convert tasks to basic Text
+GanttMaster.prototype.convertToText = function(tasks) {
+    if (!tasks || tasks.length === 0) {
+        return "没有任务可导出。";
+    }
+    var textContent = "甘特图任务列表:\n====================\n\n";
+
+    function formatDate(timestamp) {
+        if (!timestamp) return "N/A";
+        var date = new Date(timestamp);
+        return date.toLocaleDateString() + " " + date.toLocaleTimeString(); // Adjust format if needed
+    }
+
+    tasks.forEach(function(task) {
+        var indent = "  ".repeat(task.level || 0);
+        textContent += indent + "ID: " + (task.id || "N/A") + "\n";
+        textContent += indent + "名称: " + (task.name || "") + "\n";
+        textContent += indent + "代码: " + (task.code || "") + "\n";
+        textContent += indent + "状态: " + (task.status || "") + "\n";
+        textContent += indent + "开始: " + formatDate(task.start) + "\n";
+        textContent += indent + "结束: " + formatDate(task.end) + "\n";
+        textContent += indent + "工期: " + (task.duration || 0) + " 天\n";
+        textContent += indent + "进度: " + (task.progress || 0) + "%\n";
+        textContent += indent + "依赖: " + (task.depends || "") + "\n";
+        textContent += "\n"; // Separator
+    });
+
+    return textContent;
+};

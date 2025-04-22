@@ -37,7 +37,7 @@
   <script src="ganttDrawerSVG.js"></script>
   <script src="ganttZoom.js"></script>
   <script src="ganttGridEditor.js"></script>
-  <script src="ganttMaster.js"></script>  
+  <script src="ganttMaster.js"></script>
 
 
   <!--<script src="libs/profiling.js"></script>-->
@@ -121,6 +121,7 @@ $(function() {
 
 
 
+
 function getDemoProject(){
   //console.debug("getDemoProject")
 ret= {"tasks":    [
@@ -166,12 +167,12 @@ function loadGanttFromServer(taskId, callback) {
 
 function upload(uploadedFile) {
   var fileread = new FileReader();
-  
+
   fileread.onload = function(e) {
     var content = e.target.result;
     var intern = JSON.parse(content); // Array of Objects.
     //console.log(intern); // You can index every object
-    
+
     ge.loadProject(intern);
     ge.checkpoint(); //empty the undo stack
 
@@ -345,8 +346,8 @@ function download(data, filename, type) {
     a.click();
     setTimeout(function() {
       document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);  
-    }, 0); 
+      window.URL.revokeObjectURL(url);
+    }, 0);
   }
 }
 
@@ -581,21 +582,20 @@ function showBaselineInfo (event,element){
 
 
 
-
 <div id="gantEditorTemplates" style="display:none;">
 <div class="__template__" type="GANTBUTTONS">
   <!--
   <div class="ganttButtonBar noprint">
     <div class="buttons">
       <button onclick="saveGanttOnServer();" class="button first big requireWrite" title="保存">保存</button>
-      
-      
-      <button onclick='newProject();' class='button requireWrite newproject'><em>清空</em></button>
+
+
+      <button onclick='ge.exportGantt();' class='button requireWrite exportproject'><em>导出</em></button>
       <button class="button login" title="登录/注册" onclick="loginEnroll($(this));" style="display:none;">登录/注册</button>
       <button class="button opt collab" title="Start with Twproject" onclick="collaborate($(this));" style="display:none;"><em>协作</em></button>
       &nbsp; &nbsp; &nbsp; &nbsp;
       <span class="ganttButtonSeparator"></span>
-      <button onclick="$('#workSpace').trigger('undo.gantt');return false;" class="button textual icon requireCanWrite" title="撤销"><span class="teamworkIcon">&#39;</span></button>
+      <button onclick="$('#workSpace').trigger('undo.gantt');return false;" class="button textual icon requireCanWrite" title="撤销"><span class="teamworkIcon">'</span></button>
       <button onclick="$('#workSpace').trigger('redo.gantt');return false;" class="button textual icon requireCanWrite" title="重做"><span class="teamworkIcon">&middot;</span></button>
       <span class="ganttButtonSeparator requireCanWrite requireCanAdd"></span>
       <button onclick="$('#workSpace').trigger('addAboveCurrentTask.gantt');return false;" class="button textual icon requireCanWrite requireCanAdd" title="在上方插入"><span class="teamworkIcon">l</span></button>
@@ -615,7 +615,7 @@ function showBaselineInfo (event,element){
     <span class="ganttButtonSeparator"></span>
       <button onclick="$('#workSpace').trigger('zoomMinus.gantt'); return false;" class="button textual icon " title="缩小"><span class="teamworkIcon">)</span></button>
       <button onclick="$('#workSpace').trigger('zoomPlus.gantt');return false;" class="button textual icon " title="放大"><span class="teamworkIcon">(</span></button>
-    
+
     <span class="ganttButtonSeparator"></span>
       <button onclick="ge.gantt.showCriticalPath=!ge.gantt.showCriticalPath; ge.redraw();return false;" class="button textual icon requireCanSeeCriticalPath" title="关键路径"><span class="teamworkIcon">&pound;</span></button>
     <span class="ganttButtonSeparator requireCanSeeCriticalPath"></span>
@@ -623,15 +623,14 @@ function showBaselineInfo (event,element){
       <button onclick="ge.splitter.resize(50);return false;" class="button textual icon" ><span class="teamworkIcon">O</span></button>
       <button onclick="ge.splitter.resize(100);return false;" class="button textual icon"><span class="teamworkIcon">R</span></button>
       <span class="ganttButtonSeparator"></span>
-      
-      
 
-    
+
+
       &nbsp; &nbsp; &nbsp; &nbsp;
     </div>
 
     <div>
-      
+
     </div>
   </div>
   -->
@@ -928,8 +927,6 @@ $(document).on("change", "#load-file", function() {
 });
 
 </script>
-
-
 
 
 
