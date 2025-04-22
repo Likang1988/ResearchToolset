@@ -418,7 +418,7 @@ GanttMaster.prototype.addTask = function (task, row) {
     ret = undefined;
   } else {
     //append task to editor
-    this.editor.addTask(task, row);
+    this.editor.addTask(task, row); // Pass the correct row index here
     //append task to gantt
     this.gantt.addTask(task);
   }
@@ -541,7 +541,7 @@ GanttMaster.prototype.loadTasks = function (tasks, selectedRow) {
       this.tasks.splice(task.getRow(), 1);
     } else {
       //append task to editor
-      this.editor.addTask(task, null, true);
+      this.editor.addTask(task, i, true); // Pass the correct index 'i' instead of null
       //append task to gantt
       this.gantt.addTask(task);
     }
@@ -553,7 +553,13 @@ GanttMaster.prototype.loadTasks = function (tasks, selectedRow) {
   // re-select old row if tasks is not empty
   if (this.tasks && this.tasks.length > 0) {
     selectedRow = selectedRow ? selectedRow : 0;
-    this.tasks[selectedRow].rowElement.click();
+    // Ensure selectedRow is within bounds
+    selectedRow = Math.min(selectedRow, this.tasks.length - 1);
+    if (this.tasks[selectedRow] && this.tasks[selectedRow].rowElement) {
+        this.tasks[selectedRow].rowElement.click();
+    } else {
+        console.warn("loadTasks: Could not select row", selectedRow);
+    }
   }
 };
 
