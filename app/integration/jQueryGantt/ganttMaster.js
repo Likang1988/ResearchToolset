@@ -1714,30 +1714,26 @@ GanttMaster.prototype.setHoursOn = function(startWorkingHour,endWorkingHour,date
 
 GanttMaster.prototype.exportGantt = function () {
     var self = this;
-    console.log("Export button clicked. Attempting to call Python backend.");
+    console.log("Export button clicked. Attempting to call Python backend for export.");
 
     try {
         // 1. Get the current Gantt data as a project object
         var projectData = self.saveGantt(false); // Use the existing save method to get data
 
         // 2. Convert the project data to a JSON string
-        var jsonString = JSON.stringify(projectData, null, 2); // Pretty print JSON
+        var jsonString = JSON.stringify(projectData); // Python will handle parsing and conversion
 
         // 3. Check if the QWebChannel bridge object exists
         if (window.ganttBridge && typeof window.ganttBridge.export_gantt_data === 'function') {
             console.log("ganttBridge found. Calling export_gantt_data...");
-            // 4. Call the Python function via the bridge, passing the JSON string
-            window.ganttBridge.export_gantt_data(jsonString);
+            // 4. Call the Python function via the bridge, passing only the JSON string
+            window.ganttBridge.export_gantt_data(jsonString); // Only pass data
             console.log("Called export_gantt_data on Python side.");
-            // Python side will now handle the QFileDialog and saving.
-            // Feedback (success/error/cancel) will be handled by the show_save_status slot connected to the data_saved signal in Python.
+            // Python side will now handle the QFileDialog (with format selection via filters) and saving.
         } else {
             // Fallback or error handling if the bridge is not available
             console.error("ganttBridge object or export_gantt_data function not found. Cannot trigger native save dialog.");
             alert("无法连接到后端导出功能。请检查应用程序设置。");
-            // Optional: Fallback to browser download for JSON as a last resort?
-            // var blob = new Blob([jsonString], { type: "application/json" });
-            // self.downloadBlob(blob, "gantt_export_fallback.json");
         }
 
     } catch (e) {

@@ -4,7 +4,7 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDi
 # from PySide6.QtWebEngineWidgets import QWebEngineView # Already commented out/replaced
 from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtCore import QUrl, Signal, QObject, Slot, QCoreApplication, Qt # Ensure Qt is imported
-from PySide6.QtGui import QIcon, QFont # 确保 QFont 已导入
+from PySide6.QtGui import QIcon, QFont, QPixmap # 确保 QFont, QPixmap 已导入 # QPixmap no longer needed
 from qfluentwidgets import NavigationInterface, TitleLabel, InfoBar, InfoBarPosition, ComboBox # Added ComboBox
 from qframelesswindow.webengine import FramelessWindow, FramelessWebEngineView
 from app.utils.ui_utils import UIUtils
@@ -12,6 +12,9 @@ from app.utils.ui_utils import UIUtils
 from app.models.database import Project, sessionmaker
 from app.models.database import sessionmaker, GanttTask, GanttDependency, Project
 import os # 确保导入 os 模块
+import csv
+from io import StringIO # 用于 CSV 写入内存
+import pandas as pd # Import pandas
 
 class ProjectProgressWidget(QWidget):
     """项目进度管理组件，集成jQueryGantt甘特图"""
@@ -118,8 +121,8 @@ class ProjectProgressWidget(QWidget):
 
         # --- 设置 QWebChannel ---
         self.channel = QWebChannel(self.web_view.page())
-        # Initialize GanttBridge without a project initially
-        self.gantt_bridge = GanttBridge(self.engine, parent=self)
+        # Initialize GanttBridge, passing the web_view instance
+        self.gantt_bridge = GanttBridge(self.engine, self.web_view, parent=self) # Pass web_view
         self.channel.registerObject("ganttBridge", self.gantt_bridge) # 注册对象，JS端将通过 'ganttBridge' 访问
         self.web_view.page().setWebChannel(self.channel)
         # 连接保存信号到信息提示
@@ -275,10 +278,11 @@ class GanttBridge(QObject):
     """用于在Python和JavaScript之间通过QWebChannel通信的桥梁类"""
     data_saved = Signal(bool, str) # 信号：保存是否成功，消息
 
-    # Modify __init__ to remove project argument
-    def __init__(self, engine, parent=None):
+    # Modify __init__ to accept web_view
+    def __init__(self, engine, web_view, parent=None): # Added web_view parameter
         super().__init__(parent)
         self.engine = engine
+        self.web_view = web_view # Store web_view instance for PNG export
         self.project = None # Project will be set later
         self.Session = sessionmaker(bind=self.engine)
 
@@ -595,59 +599,164 @@ class GanttBridge(QObject):
 
 
 
-    @Slot(str) # 接收 JSON 字符串
+    @Slot(str) # 只接收 JSON 字符串
     def export_gantt_data(self, gantt_json_str):
         """
-        接收来自 JavaScript 的甘特图 JSON 数据，并弹出“另存为”对话框让用户保存。
+        接收来自 JavaScript 的甘特图 JSON 数据，弹出“另存为”对话框，
+        让用户选择文件类型（通过过滤器）并保存。
         """
         if not self.project:
             error_message = "未选择项目，无法导出数据。"
             print(f"GanttBridge: {error_message}")
-            # 可以选择性地通知 JS 端错误
-            self.data_saved.emit(False, error_message) # 复用信号，通知导出失败
-            return # 或者直接返回
+            self.data_saved.emit(False, error_message)
+            return
+
+        print(f"GanttBridge: Received export request.")
 
         try:
-            # 弹出文件保存对话框
-            # parent 可以是 self.parent() 或者 None，这里尝试获取父窗口
             parent_widget = self.parent() if isinstance(self.parent(), QWidget) else None
-            default_filename = f"项目_{self.project.financial_code}_甘特图_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-            # 尝试获取一个更合适的默认目录，例如用户文档目录或项目目录
-            # 这里暂时使用用户主目录作为备选
+            now_str = datetime.now().strftime('%Y%m%d_%H%M%S')
+            base_filename = f"项目_{self.project.financial_code}_甘特图_{now_str}"
             default_dir = os.path.expanduser("~") # 用户主目录
+
+            # Define filters for the Save As dialog
+            filters = {
+                "Excel 文件 (*.xlsx)": "XLSX",
+                "JSON 文件 (*.json)": "JSON",
+                "CSV 文件 (*.csv)": "CSV",
+                "文本文档 (*.txt)": "TXT",
+                "所有文件 (*)": "ALL"
+            }
+            filter_string = ";;".join(filters.keys())
+            default_filter = "Excel 文件 (*.xlsx)" # Default to Excel
+
+            default_filepath = os.path.join(default_dir, f"{base_filename}.xlsx") # Default filename with Excel ext
 
             filePath, selectedFilter = QFileDialog.getSaveFileName(
                 parent_widget,
                 "导出甘特图数据",
-                os.path.join(default_dir, default_filename), # 默认文件路径和名称
-                "JSON 文件 (*.json);;所有文件 (*)" # 文件类型过滤器
+                default_filepath,
+                filter_string,
+                default_filter # Set the initial filter
             )
 
-            if filePath:
-                # 用户选择了文件路径
-                print(f"GanttBridge: Exporting data to: {filePath}")
-                try:
-                    # 解析 JSON 以便格式化写入（可选，但更友好）
-                    gantt_data = json.loads(gantt_json_str)
-                    with open(filePath, 'w', encoding='utf-8') as f:
-                        json.dump(gantt_data, f, ensure_ascii=False, indent=4) # 格式化写入
-                    print("GanttBridge: Data exported successfully.")
-                    # 发送成功信号回 JS
-                    self.data_saved.emit(True, f"数据已成功导出到 {os.path.basename(filePath)}") # 复用信号，通知导出成功
-                except Exception as e:
-                    error_message = f"写入文件时出错: {e}"
-                    print(f"GanttBridge: {error_message}")
-                    self.data_saved.emit(False, error_message) # 复用信号，通知导出失败
-            else:
-                # 用户取消了对话框
+            if not filePath:
                 print("GanttBridge: Export cancelled by user.")
-                # 可以选择性地通知 JS 端取消
-                self.data_saved.emit(False, "导出已取消") # 复用信号，通知导出取消
+                self.data_saved.emit(False, "导出已取消")
+                return
+
+            # Determine the actual format based on the selected filter
+            export_format = filters.get(selectedFilter, "JSON") # Default to JSON if filter unknown
+            if export_format == "ALL": # If user selected "All files", try to guess from extension or default
+                ext = os.path.splitext(filePath)[1].lower()
+                if ext == ".xlsx": export_format = "XLSX"
+                elif ext == ".json": export_format = "JSON"
+                elif ext == ".csv": export_format = "CSV"
+                elif ext == ".txt": export_format = "TXT"
+                else: export_format = "XLSX" # Default to Excel if extension is missing or unknown
+
+            # Ensure the correct extension is added based on the determined format
+            file_base, file_ext = os.path.splitext(filePath)
+            required_ext = ""
+            if export_format == "XLSX": required_ext = ".xlsx"
+            elif export_format == "JSON": required_ext = ".json"
+            elif export_format == "CSV": required_ext = ".csv"
+            elif export_format == "TXT": required_ext = ".txt"
+
+            if not file_ext and required_ext:
+                filePath += required_ext
+            elif file_ext.lower() != required_ext and required_ext:
+                 print(f"Warning: File extension mismatch ('{file_ext}' vs '{required_ext}'). Saving as {export_format}.")
+                 filePath = file_base + required_ext # Force correct extension
+
+
+            print(f"GanttBridge: Exporting data to: {filePath} as {export_format}")
+
+            try:
+                gantt_data = json.loads(gantt_json_str)
+                tasks = gantt_data.get("tasks", [])
+
+                if export_format == "JSON":
+                    with open(filePath, 'w', encoding='utf-8') as f:
+                        json.dump(gantt_data, f, ensure_ascii=False, indent=4)
+
+                elif export_format == "CSV":
+                    output = StringIO()
+                    writer = csv.writer(output, quoting=csv.QUOTE_ALL)
+                    header = ["ID", "名称", "层级", "开始日期", "结束日期", "工期(天)", "进度(%)", "依赖项", "状态", "描述"]
+                    writer.writerow(header)
+                    for task in tasks:
+                        start_str = datetime.fromtimestamp(task["start"] / 1000).strftime('%Y-%m-%d') if task.get("start") else ""
+                        end_str = datetime.fromtimestamp(task["end"] / 1000).strftime('%Y-%m-%d') if task.get("end") else ""
+                        duration_days = task.get("duration", "")
+                        writer.writerow([
+                            task.get("id", ""), task.get("name", ""), task.get("level", ""),
+                            start_str, end_str, duration_days, task.get("progress", ""),
+                            task.get("depends", ""), task.get("status", ""), task.get("description", "")
+                        ])
+                    with open(filePath, 'w', encoding='utf-8-sig', newline='') as f:
+                        f.write(output.getvalue())
+                    output.close()
+
+                elif export_format == "TXT":
+                    with open(filePath, 'w', encoding='utf-8') as f:
+                        f.write(f"项目: {self.project.name} ({self.project.financial_code}) - 甘特图数据\n")
+                        f.write("=" * 40 + "\n\n")
+                        for task in tasks:
+                            indent = "  " * task.get("level", 0)
+                            start_str = datetime.fromtimestamp(task["start"] / 1000).strftime('%Y-%m-%d') if task.get("start") else "N/A"
+                            end_str = datetime.fromtimestamp(task["end"] / 1000).strftime('%Y-%m-%d') if task.get("end") else "N/A"
+                            f.write(f"{indent}ID: {task.get('id', 'N/A')}\n")
+                            f.write(f"{indent}名称: {task.get('name', 'N/A')}\n")
+                            f.write(f"{indent}时间: {start_str} -> {end_str} (持续 {task.get('duration', '?')} 天)\n")
+                            f.write(f"{indent}进度: {task.get('progress', 0)}%\n")
+                            if task.get('depends'): f.write(f"{indent}依赖: {task.get('depends')}\n")
+                            if task.get('description'): f.write(f"{indent}描述: {task.get('description')}\n")
+                            f.write(f"{indent}状态: {task.get('status', 'N/A')}\n")
+                            f.write("-" * 30 + "\n")
+
+                elif export_format == "XLSX":
+                    tasks_for_df = []
+                    for task in tasks:
+                        start_str = pd.to_datetime(task["start"] / 1000, unit='s').strftime('%Y-%m-%d') if task.get("start") else None
+                        end_str = pd.to_datetime(task["end"] / 1000, unit='s').strftime('%Y-%m-%d') if task.get("end") else None
+                        # Add indentation to name based on level for visual hierarchy
+                        indent = "  " * task.get("level", 0)
+                        tasks_for_df.append({
+                            "ID": task.get("id", ""),
+                            "名称": indent + task.get("name", ""), # Add indentation
+                            # "层级": task.get("level", ""), # Maybe redundant if name is indented
+                            "开始日期": start_str,
+                            "结束日期": end_str,
+                            "工期(天)": task.get("duration", ""),
+                            "进度(%)": task.get("progress", ""),
+                            "依赖项": task.get("depends", ""),
+                            "状态": task.get("status", ""),
+                            "描述": task.get("description", "")
+                        })
+                    df = pd.DataFrame(tasks_for_df)
+                    # Reorder columns if needed
+                    df = df[["ID", "名称", "开始日期", "结束日期", "工期(天)", "进度(%)", "依赖项", "状态", "描述"]]
+                    # Write to Excel
+                    df.to_excel(filePath, index=False, engine='openpyxl')
+
+
+                else:
+                     raise ValueError(f"内部错误：未处理的导出格式 '{export_format}'")
+
+
+                print(f"GanttBridge: Data exported successfully to {filePath}")
+                self.data_saved.emit(True, f"数据已成功导出为 {export_format} 到 {os.path.basename(filePath)}")
+
+            except Exception as e:
+                error_message = f"导出为 {export_format} 时出错: {e}"
+                print(f"GanttBridge: {error_message}")
+                self.data_saved.emit(False, error_message)
 
         except Exception as e:
-            error_message = f"导出数据时发生错误: {e}"
+            error_message = f"准备导出时发生错误: {e}"
             print(f"GanttBridge: {error_message}")
-            self.data_saved.emit(False, error_message) # 复用信号，通知导出失败
+            self.data_saved.emit(False, error_message)
 
 
     # 移除旧的 init_gantt_data 和 update_progress_data 方法

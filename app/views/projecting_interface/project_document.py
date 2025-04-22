@@ -290,7 +290,7 @@ class ProjectDocumentWidget(QWidget):
         header.sectionClicked.connect(self.sort_table) # 连接排序信号
 
         # 隐藏行号
-        self.document_table.verticalHeader().setVisible(False)
+        #self.document_table.verticalHeader().setVisible(False)
 
         # 设置初始列宽 (需要调整以适应新列)
         header.resizeSection(0, 150) # 文档名称

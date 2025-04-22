@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QDialog, QLabel, QHeaderView # Added QHeaderView
-from PySide6.QtCore import Qt, QSize # Added QSize
+from PySide6.QtCore import Qt, QSize, QPoint # Added QSize
 from PySide6.QtGui import QFont # 确保 QFont 已导入
 # Import BodyLabel and PushButton, remove PrimaryPushButton if no longer needed elsewhere
 # Also import TableItemDelegate
@@ -301,7 +301,7 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
         # 设置表格样式 (复用 expense 的样式设置)
         #self.outcome_table.setBorderVisible(True)
         #self.outcome_table.setBorderRadius(8)
-        self.outcome_table.setWordWrap(False)
+        self.outcome_table.setWordWrap(False) 
         self.outcome_table.setItemDelegate(TableItemDelegate(self.outcome_table))
         UIUtils.set_table_style(self.outcome_table) # 应用通用样式
 
@@ -312,7 +312,7 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
         header.sectionClicked.connect(self.sort_table) # 连接排序信号
 
         # 隐藏行号
-        self.outcome_table.verticalHeader().setVisible(False)
+        #self.outcome_table.verticalHeader().setVisible(False)
 
         # 设置初始列宽 (需要调整以适应新列)
         header.resizeSection(0, 150) # 成果名称

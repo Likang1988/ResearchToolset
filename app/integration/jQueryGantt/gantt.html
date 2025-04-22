@@ -642,15 +642,15 @@ function showBaselineInfo (event,element){
     <tr style="height:40px">
       <th class="gdfColHeader" style="width:35px; border-right: none"></th>
       <th class="gdfColHeader" style="width:25px;"></th>
-      <th class="gdfColHeader gdfResizable" style="width:100px;">代码/简称</th>
+      <th class="gdfColHeader gdfResizable" style="width:80px;">代码/简称</th>
       <th class="gdfColHeader gdfResizable" style="width:300px;">名称</th>
       <th class="gdfColHeader"  align="center" style="width:17px;" title="开始日期是里程碑。"><span class="teamworkIcon" style="font-size: 8px;">^</span></th>
       <th class="gdfColHeader gdfResizable" style="width:80px;">开始日期</th>
       <th class="gdfColHeader"  align="center" style="width:17px;" title="结束日期是里程碑。"><span class="teamworkIcon" style="font-size: 8px;">^</span></th>
       <th class="gdfColHeader gdfResizable" style="width:80px;">结束日期</th>
-      <th class="gdfColHeader gdfResizable" style="width:50px;">工期</th>
-      <th class="gdfColHeader gdfResizable" style="width:20px;">进度</th>
-      <th class="gdfColHeader gdfResizable requireCanSeeDep" style="width:50px;">依赖</th>
+      <th class="gdfColHeader gdfResizable" style="width:60px;">工期(天)</th>
+      <th class="gdfColHeader gdfResizable" style="width:60px;">进度(%)</th>
+      <th class="gdfColHeader gdfResizable requireCanSeeDep" style="width:50px;">依赖项</th>
       <th class="gdfColHeader gdfResizable" style="width:1000px; text-align: left; padding-left: 10px;">负责人</th>
     </tr>
     </thead>
@@ -711,10 +711,10 @@ function showBaselineInfo (event,element){
 <div class="__template__" type="CHANGE_STATUS"><!--
     <div class="taskStatusBox">
     <div class="taskStatus cvcColorSquare" status="STATUS_ACTIVE" title="进行中"></div>
-    <div class="taskStatus cvcColorSquare" status="STATUS_DONE" title="已完成"></div>
-    <div class="taskStatus cvcColorSquare" status="STATUS_FAILED" title="已失败"></div>
+    <div class="taskStatus cvcColorSquare" status="STATUS_WAITING" title="等待中"></div>
     <div class="taskStatus cvcColorSquare" status="STATUS_SUSPENDED" title="已暂停"></div>
-    <div class="taskStatus cvcColorSquare" status="STATUS_WAITING" title="等待中" style="display: none;"></div>
+    <div class="taskStatus cvcColorSquare" status="STATUS_DONE" title="已完成"></div>
+    <div class="taskStatus cvcColorSquare" status="STATUS_FAILED" title="已失败"></div>     
     <div class="taskStatus cvcColorSquare" status="STATUS_UNDEFINED" title="未定义"></div>
     </div>
   --></div>
@@ -750,7 +750,7 @@ function showBaselineInfo (event,element){
           <span title="日历" id="ends_inputDate" class="teamworkIcon openCalendar" onclick="$(this).dateField({inputField:$(this).prevAll(':input:first'),isSearchField:false});">m</span>
         </td>
         <td nowrap="" >
-          <label for="duration" class=" ">天数</label><br>
+          <label for="duration" class=" ">工期(天)</label><br>
           <input type="text" name="duration" id="duration" size="4" class="formElements validated durationdays" title="工期以工作日计算。" autocomplete="off" maxlength="255" value="" oldvalue="1" entrytype="DURATIONDAYS">&nbsp;
         </td>
       </tr>
@@ -760,7 +760,7 @@ function showBaselineInfo (event,element){
           <label for="status" class=" ">状态</label><br>
           <select id="status" name="status" class="taskStatus" status="(#=obj.status#)"  onchange="$(this).attr('STATUS',$(this).val());">
             <option value="STATUS_ACTIVE" class="taskStatus" status="STATUS_ACTIVE" >进行中</option>
-            <option value="STATUS_WAITING" class="taskStatus" status="STATUS_WAITING" >等待中</option> <!-- Corrected translation based on value -->
+            <option value="STATUS_WAITING" class="taskStatus" status="STATUS_WAITING" >等待中</option>
             <option value="STATUS_SUSPENDED" class="taskStatus" status="STATUS_SUSPENDED" >已暂停</option>
             <option value="STATUS_DONE" class="taskStatus" status="STATUS_DONE" >已完成</option>
             <option value="STATUS_FAILED" class="taskStatus" status="STATUS_FAILED" >已失败</option>
@@ -769,7 +769,7 @@ function showBaselineInfo (event,element){
         </td>
 
         <td valign="top" nowrap>
-          <label>进度</label><br>
+          <label>进度(%)</label><br>
           <input type="text" name="progress" id="progress" size="7" class="formElements validated percentile" autocomplete="off" maxlength="255" value="" oldvalue="1" entrytype="PERCENTILE">
         </td>
       </tr>
@@ -783,15 +783,7 @@ function showBaselineInfo (event,element){
           </tr>
         </table>
 
-    <h2>分配</h2>
-  <table  cellspacing="1" cellpadding="0" width="100%" id="assigsTable">
-    <tr>
-      <th style="width:100px;">名称</th>
-      <th style="width:70px;">角色</th>
-      <th style="width:30px;">估算工时</th>
-      <th style="width:30px;" id="addAssig"><span class="teamworkIcon" style="cursor: pointer">+</span></th>
-    </tr>
-  </table>
+   
 
   <div style="text-align: right; padding-top: 20px">
     <span id="saveButton" class="button first" onClick="$(this).trigger('saveFullEditor.gantt');">保存</span>
