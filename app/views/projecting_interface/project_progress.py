@@ -1,6 +1,6 @@
 import json
 from datetime import datetime, timezone
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel # Added QHBoxLayout, QLabel
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog # Added QHBoxLayout, QLabel, QFileDialog
 # from PySide6.QtWebEngineWidgets import QWebEngineView # Already commented out/replaced
 from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtCore import QUrl, Signal, QObject, Slot, QCoreApplication, Qt # Ensure Qt is imported
@@ -593,6 +593,61 @@ class GanttBridge(QObject):
         finally:
             session.close()
 
+
+
+    @Slot(str) # 接收 JSON 字符串
+    def export_gantt_data(self, gantt_json_str):
+        """
+        接收来自 JavaScript 的甘特图 JSON 数据，并弹出“另存为”对话框让用户保存。
+        """
+        if not self.project:
+            error_message = "未选择项目，无法导出数据。"
+            print(f"GanttBridge: {error_message}")
+            # 可以选择性地通知 JS 端错误
+            self.data_saved.emit(False, error_message) # 复用信号，通知导出失败
+            return # 或者直接返回
+
+        try:
+            # 弹出文件保存对话框
+            # parent 可以是 self.parent() 或者 None，这里尝试获取父窗口
+            parent_widget = self.parent() if isinstance(self.parent(), QWidget) else None
+            default_filename = f"项目_{self.project.financial_code}_甘特图_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            # 尝试获取一个更合适的默认目录，例如用户文档目录或项目目录
+            # 这里暂时使用用户主目录作为备选
+            default_dir = os.path.expanduser("~") # 用户主目录
+
+            filePath, selectedFilter = QFileDialog.getSaveFileName(
+                parent_widget,
+                "导出甘特图数据",
+                os.path.join(default_dir, default_filename), # 默认文件路径和名称
+                "JSON 文件 (*.json);;所有文件 (*)" # 文件类型过滤器
+            )
+
+            if filePath:
+                # 用户选择了文件路径
+                print(f"GanttBridge: Exporting data to: {filePath}")
+                try:
+                    # 解析 JSON 以便格式化写入（可选，但更友好）
+                    gantt_data = json.loads(gantt_json_str)
+                    with open(filePath, 'w', encoding='utf-8') as f:
+                        json.dump(gantt_data, f, ensure_ascii=False, indent=4) # 格式化写入
+                    print("GanttBridge: Data exported successfully.")
+                    # 发送成功信号回 JS
+                    self.data_saved.emit(True, f"数据已成功导出到 {os.path.basename(filePath)}") # 复用信号，通知导出成功
+                except Exception as e:
+                    error_message = f"写入文件时出错: {e}"
+                    print(f"GanttBridge: {error_message}")
+                    self.data_saved.emit(False, error_message) # 复用信号，通知导出失败
+            else:
+                # 用户取消了对话框
+                print("GanttBridge: Export cancelled by user.")
+                # 可以选择性地通知 JS 端取消
+                self.data_saved.emit(False, "导出已取消") # 复用信号，通知导出取消
+
+        except Exception as e:
+            error_message = f"导出数据时发生错误: {e}"
+            print(f"GanttBridge: {error_message}")
+            self.data_saved.emit(False, error_message) # 复用信号，通知导出失败
 
 
     # 移除旧的 init_gantt_data 和 update_progress_data 方法

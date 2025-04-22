@@ -1714,77 +1714,35 @@ GanttMaster.prototype.setHoursOn = function(startWorkingHour,endWorkingHour,date
 
 GanttMaster.prototype.exportGantt = function () {
     var self = this;
-    // Basic prompt for format selection (can be improved later with a dropdown/modal)
-    var format = prompt("请选择导出格式 (JSON, GANTT, PNG, TXT, CSV, EXCEL, WORD):", "JSON");
-    if (!format) {
-        return; // User cancelled
-    }
-
-    format = format.toUpperCase();
-    var projectData;
-    var blob;
-    var fileExtension;
-    var mimeType;
-    var fileName = "gantt_export"; // Default filename
+    console.log("Export button clicked. Attempting to call Python backend.");
 
     try {
-        projectData = self.saveGantt(false); // Get current project data
+        // 1. Get the current Gantt data as a project object
+        var projectData = self.saveGantt(false); // Use the existing save method to get data
 
-        switch (format) {
-            case "JSON":
-            case "GANTT": // Treat GANTT as JSON for now
-                fileName += ".json";
-                mimeType = "application/json";
-                var jsonString = JSON.stringify(projectData, null, 2); // Pretty print JSON
-                blob = new Blob([jsonString], { type: mimeType });
-                self.downloadBlob(blob, fileName);
-                break;
+        // 2. Convert the project data to a JSON string
+        var jsonString = JSON.stringify(projectData, null, 2); // Pretty print JSON
 
-            case "CSV":
-                fileName += ".csv";
-                mimeType = "text/csv;charset=utf-8;";
-                var csvContent = self.convertToCSV(projectData.tasks);
-                // Add BOM for Excel compatibility with UTF-8
-                var bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
-                blob = new Blob([bom, csvContent], { type: mimeType });
-                self.downloadBlob(blob, fileName);
-                break;
-
-            case "TXT":
-                 fileName += ".txt";
-                 mimeType = "text/plain;charset=utf-8;";
-                 var txtContent = self.convertToText(projectData.tasks);
-                 blob = new Blob([txtContent], { type: mimeType });
-                 self.downloadBlob(blob, fileName);
-                 break;
-
-            // --- Placeholders for more complex formats ---
-            case "PNG":
-                alert("PNG 导出功能尚未实现。");
-                // TODO: Implement PNG export (e.g., using html2canvas or backend)
-                break;
-            case "EXCEL":
-                alert("Excel 导出建议通过后端实现。将尝试导出 CSV。");
-                 fileName += ".csv";
-                 mimeType = "text/csv;charset=utf-8;";
-                 var csvContentExcel = self.convertToCSV(projectData.tasks);
-                 var bomExcel = new Uint8Array([0xEF, 0xBB, 0xBF]);
-                 blob = new Blob([bomExcel, csvContentExcel], { type: mimeType });
-                 self.downloadBlob(blob, fileName);
-                // TODO: Optionally call backend: window.ganttBridge.exportExcel(projectData);
-                break;
-            case "WORD":
-                alert("Word 导出功能尚未实现。");
-                // TODO: Implement Word export (likely via backend)
-                break;
-            default:
-                alert("不支持的导出格式: " + format);
-                break;
+        // 3. Check if the QWebChannel bridge object exists
+        if (window.ganttBridge && typeof window.ganttBridge.export_gantt_data === 'function') {
+            console.log("ganttBridge found. Calling export_gantt_data...");
+            // 4. Call the Python function via the bridge, passing the JSON string
+            window.ganttBridge.export_gantt_data(jsonString);
+            console.log("Called export_gantt_data on Python side.");
+            // Python side will now handle the QFileDialog and saving.
+            // Feedback (success/error/cancel) will be handled by the show_save_status slot connected to the data_saved signal in Python.
+        } else {
+            // Fallback or error handling if the bridge is not available
+            console.error("ganttBridge object or export_gantt_data function not found. Cannot trigger native save dialog.");
+            alert("无法连接到后端导出功能。请检查应用程序设置。");
+            // Optional: Fallback to browser download for JSON as a last resort?
+            // var blob = new Blob([jsonString], { type: "application/json" });
+            // self.downloadBlob(blob, "gantt_export_fallback.json");
         }
 
     } catch (e) {
-        console.error("导出甘特图时出错:", e);
-        alert("导出失败: " + e.message);
+        console.error("导出甘特图时出错 (JS):", e);
+        alert("导出准备数据时出错: " + e.message);
     }
 };
 
