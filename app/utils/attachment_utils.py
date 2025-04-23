@@ -1,7 +1,9 @@
 import os
 import shutil
+import sys # Added for platform check
+import subprocess # Added for opening files on Linux/macOS
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QFileDialog, QApplication
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import Qt, QSize, QPoint
 from PySide6.QtGui import QIcon
 from qfluentwidgets import ToolButton, RoundMenu, Action, FluentIcon, Dialog
 from ..utils.ui_utils import UIUtils # Assuming UIUtils is in the parent directory
@@ -47,8 +49,8 @@ def create_attachment_button(item_id, attachment_path, handle_attachment_func, p
     btn.setFixedSize(28, 28)
     btn.setIconSize(QSize(18, 18)) # Slightly smaller icon size
     btn.clicked.connect(lambda checked=False, b=btn: handle_attachment_func(None, b)) # Pass button itself
-    btn.setContextMenuPolicy(Qt.CustomContextMenu)
-    btn.customContextMenuRequested.connect(lambda pos, b=btn: handle_attachment_func(pos, b)) # Pass button itself
+    # btn.setContextMenuPolicy(Qt.CustomContextMenu) # Disabled right-click menu
+    # btn.customContextMenuRequested.connect(lambda pos, b=btn: handle_attachment_func(pos, b)) # Disabled right-click menu
 
     layout.addWidget(btn, 0, Qt.AlignCenter) # Ensure vertical centering
     container.setLayout(layout)
@@ -59,19 +61,22 @@ def create_attachment_menu(parent, attachment_path, item_id, handle_attachment_f
     menu = RoundMenu(parent=parent)
     if attachment_path and os.path.exists(attachment_path):
         view_action = Action(FluentIcon.VIEW, "查看", parent)
+        download_action = Action(FluentIcon.DOWNLOAD, "下载", parent) # Added Download Action
         replace_action = Action(FluentIcon.SYNC, "替换", parent)
         delete_action = Action(FluentIcon.DELETE, "删除", parent)
 
         view_action.triggered.connect(lambda: handle_attachment_func("view", item_id))
+        download_action.triggered.connect(lambda: handle_attachment_func("download", item_id)) # Connect Download Action
         replace_action.triggered.connect(lambda: handle_attachment_func("replace", item_id))
         delete_action.triggered.connect(lambda: handle_attachment_func("delete", item_id))
 
         menu.addAction(view_action)
+        menu.addAction(download_action) # Add Download Action to menu
         menu.addAction(replace_action)
         menu.addSeparator()
         menu.addAction(delete_action)
     else:
-        upload_action = Action(FluentIcon.UPLOAD, "上传附件", parent)
+        upload_action = Action(FluentIcon.ADD_TO, "上传附件", parent)
         upload_action.triggered.connect(lambda: handle_attachment_func("upload", item_id))
         menu.addAction(upload_action)
 
@@ -93,32 +98,54 @@ def handle_attachment(event, btn, item, session, parent_widget, project, item_ty
         base_folder: The base directory name for storing attachments (e.g., 'documents', 'outcomes').
     """
     item_id = btn.property("item_id")
-    current_path = getattr(item, attachment_attr, None) # Get current path using attribute name
+    # For context menu (right-click), we still need the item's state initially to build the correct menu
+    context_menu_path = getattr(item, attachment_attr, None)
 
-    if event is None: # Direct click
-        if current_path and os.path.exists(current_path):
-            # If attachment exists, show menu on left click
-            menu = create_attachment_menu(parent_widget, current_path, item_id,
-                                          lambda action_type, id: handle_attachment_action(action_type, id, item, session, parent_widget, project, item_type, attachment_attr, base_folder, btn))
+    if event is None: # Direct click (left-click)
+        # --- CRITICAL CHANGE for left-click behavior ---
+        # Use the button's property, which is updated immediately after actions
+        button_path = btn.property("attachment_path")
+        if button_path and os.path.exists(button_path):
+            # If button property indicates an existing attachment, show menu
+            # Pass the button_path to create_attachment_menu for consistency
+            # Pass button_path as path_to_use for view/download actions triggered from this menu
+            menu = create_attachment_menu(parent_widget, button_path, item_id,
+                                          lambda action_type, id, path=button_path: handle_attachment_action(action_type, id, item, session, parent_widget, project, item_type, attachment_attr, base_folder, btn, path))
             menu.exec(btn.mapToGlobal(btn.rect().bottomLeft()))
         else:
-            # If no attachment, trigger upload on left click
-            handle_attachment_action("upload", item_id, item, session, parent_widget, project, item_type, attachment_attr, base_folder, btn)
-    elif isinstance(event, QPoint): # Context menu request
-        menu = create_attachment_menu(parent_widget, current_path, item_id,
-                                      lambda action_type, id: handle_attachment_action(action_type, id, item, session, parent_widget, project, item_type, attachment_attr, base_folder, btn))
+            # If button property indicates no attachment, trigger upload. Upload doesn't need path_to_use.
+            # We can pass None or an empty string, or adjust handle_attachment_action if needed, but current implementation handles it.
+            handle_attachment_action("upload", item_id, item, session, parent_widget, project, item_type, attachment_attr, base_folder, btn, None) # Pass None for path_to_use
+    elif isinstance(event, QPoint): # Context menu request (right-click)
+        # Build the context menu based on the item's state at the time of the right-click
+        # Use context_menu_path here which was fetched from the item earlier
+        # Pass context_menu_path as path_to_use for view/download actions triggered from this menu
+        menu = create_attachment_menu(parent_widget, context_menu_path, item_id,
+                                      lambda action_type, id, path=context_menu_path: handle_attachment_action(action_type, id, item, session, parent_widget, project, item_type, attachment_attr, base_folder, btn, path))
         menu.exec(btn.mapToGlobal(event))
 
-def handle_attachment_action(action_type, item_id, item, session, parent_widget, project, item_type, attachment_attr, base_folder, btn):
+def handle_attachment_action(action_type, item_id, item, session, parent_widget, project, item_type, attachment_attr, base_folder, btn, path_to_use):
     """Executes the specific attachment action."""
-    current_path = getattr(item, attachment_attr, None)
+    # Note: 'item' might hold outdated path info immediately after an action via the menu.
+    # 'path_to_use' holds the path that was valid when the menu was created/clicked.
 
     if action_type == "view":
-        view_attachment(current_path, parent_widget)
+        # Use the path that was valid when the menu action was triggered
+        view_attachment(path_to_use, parent_widget)
+    elif action_type == "download":
+        # Use the path that was valid when the menu action was triggered
+        download_attachment(path_to_use, parent_widget)
     elif action_type == "upload" or action_type == "replace":
+        # Upload/Replace needs the item to update the DB and generate new path
         replace_attachment(item, session, parent_widget, project, item_type, attachment_attr, base_folder, btn)
     elif action_type == "delete":
+        # Delete needs the item to update the DB
         delete_attachment(item, session, parent_widget, attachment_attr, btn)
+
+import sys # Add sys import if not already present at the top
+import subprocess # Add subprocess import if not already present at the top
+
+# ... (ensure other necessary imports like shutil, QFileDialog are present)
 
 def view_attachment(attachment_path, parent_widget):
     """Opens the attachment file using the default system application."""
@@ -127,14 +154,43 @@ def view_attachment(attachment_path, parent_widget):
             # Use os.startfile on Windows, open on macOS/Linux
             if os.name == 'nt':
                 os.startfile(attachment_path)
-            elif sys.platform == 'darwin':
+            elif sys.platform == 'darwin': # Use sys.platform for macOS check
                 subprocess.call(['open', attachment_path])
-            else:
+            else: # Assume Linux/other Unix-like
                 subprocess.call(['xdg-open', attachment_path])
         except Exception as e:
             UIUtils.show_error(parent_widget, "错误", f"无法打开附件：{e}")
     else:
         UIUtils.show_warning(parent_widget, "提示", "附件文件不存在或路径无效")
+
+def download_attachment(attachment_path, parent_widget):
+    """Handles downloading (saving a copy) of the attachment file."""
+    if not attachment_path or not os.path.exists(attachment_path):
+        UIUtils.show_warning(parent_widget, "提示", "附件文件不存在或路径无效")
+        return
+
+    # Suggest a filename based on the original attachment name
+    suggested_filename = os.path.basename(attachment_path)
+
+    # Open 'Save As' dialog
+    save_path, _ = QFileDialog.getSaveFileName(
+        parent_widget,
+        "保存附件",
+        suggested_filename, # Suggest the original filename
+        "所有文件 (*.*)" # Allow saving as any type, or specify based on original?
+    )
+
+    if not save_path:
+        # User cancelled the dialog
+        return
+
+    try:
+        # Copy the file to the chosen location
+        shutil.copy2(attachment_path, save_path)
+        UIUtils.show_success(parent_widget, "成功", f"附件已保存到：\n{save_path}")
+    except Exception as e:
+        UIUtils.show_error(parent_widget, "错误", f"保存附件失败：{e}")
+
 
 def get_new_attachment_path(item, project, item_type, base_folder, original_filename):
     """Generates a standardized path for the new attachment."""
@@ -214,12 +270,10 @@ def delete_attachment(item, session, parent_widget, attachment_attr, btn):
             setattr(item, attachment_attr, None)
             session.commit()
 
-            # No need to update the button state here.
-            # The table refresh in the calling widget will recreate the button
-            # with the correct state based on the updated database record.
-            # btn.setIcon(QIcon(get_attachment_icon_path('add_outline.svg'))) # REMOVED
-            # btn.setToolTip("添加附件") # REMOVED
-            # btn.setProperty("attachment_path", None) # REMOVED
+            # Update button state to reflect deletion
+            btn.setIcon(QIcon(get_attachment_icon_path('add_outline.svg')))
+            btn.setToolTip("添加附件")
+            btn.setProperty("attachment_path", None) # Clear the stored path
 
             UIUtils.show_success(parent_widget, "成功", "附件已删除")
 

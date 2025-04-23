@@ -51,6 +51,8 @@ class UIUtils:
         header = table.horizontalHeader()
                 
         header.setSectionResizeMode(QHeaderView.Interactive)
+        header.setStretchLastSection(True)  # 最后一列自动填充剩余空间        
+        header.setSectionsMovable(True)  # 允许用户调整列宽
     #    header.setSortIndicatorShown(True)
     #    header.setSectionsMovable(True)
         

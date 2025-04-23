@@ -129,13 +129,8 @@ class ProjectListWindow(QWidget):
         header.resizeSection(4, 90)  # 开始日期
         header.resizeSection(5, 90)  # 结束日期
         header.resizeSection(6, 80)  # 总经费
-        header.resizeSection(7, 80)  # 负责人
-       
-        
-        # 允许用户调整列宽
-        header.setSectionsMovable(True)  # 可移动列
-        header.setStretchLastSection(True)  # 最后一列自动填充剩余空间
-        
+        header.resizeSection(7, 80)  # 负责人 
+                        
         layout.addWidget(self.project_table)
         self.refresh_project_table()
     def refresh_project_table(self):

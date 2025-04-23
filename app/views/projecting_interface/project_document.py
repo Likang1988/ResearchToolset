@@ -3,7 +3,7 @@ from PySide6.QtCore import Qt, QSize, QPoint # Added QSize and QPoint
 from PySide6.QtGui import QFont # 确保 QFont 已导入
 # Import BodyLabel and PushButton, remove PrimaryPushButton if no longer needed elsewhere
 # Also import TableItemDelegate
-from qfluentwidgets import TitleLabel, FluentIcon, ComboBox, LineEdit, InfoBar, Dialog, BodyLabel, PushButton, TableItemDelegate
+from qfluentwidgets import TitleLabel, FluentIcon, ComboBox, LineEdit, InfoBar, Dialog, BodyLabel, PushButton, TableWidget, TableItemDelegate
 # 需要在文件顶部导入
 from ...models.database import Project, sessionmaker
 from ...utils.ui_utils import UIUtils
@@ -79,15 +79,7 @@ class DocumentDialog(QDialog):
         self.version_edit = LineEdit()
         self.version_edit.setPlaceholderText("请输入版本号")
         version_layout.addWidget(self.version_edit)
-        layout.addLayout(version_layout)
-
-        # 文档描述
-        description_layout = QHBoxLayout()
-        description_layout.addWidget(BodyLabel("文档描述:"))
-        self.description_edit = LineEdit()
-        self.description_edit.setPlaceholderText("请输入文档描述")
-        description_layout.addWidget(self.description_edit)
-        layout.addLayout(description_layout)
+        layout.addLayout(version_layout)        
 
         # 关键词
         keywords_layout = QHBoxLayout()
@@ -97,13 +89,21 @@ class DocumentDialog(QDialog):
         keywords_layout.addWidget(self.keywords_edit)
         layout.addLayout(keywords_layout)
 
-        # 上传人
-        uploader_layout = QHBoxLayout()
-        uploader_layout.addWidget(BodyLabel("上 传 人 :")) # Align label width
-        self.uploader_edit = LineEdit()
-        self.uploader_edit.setPlaceholderText("请输入上传人")
-        uploader_layout.addWidget(self.uploader_edit)
-        layout.addLayout(uploader_layout)
+        # 文档描述
+        description_layout = QHBoxLayout()
+        description_layout.addWidget(BodyLabel("文档描述:"))
+        self.description_edit = LineEdit()
+        self.description_edit.setPlaceholderText("请输入文档描述")
+        description_layout.addWidget(self.description_edit)
+        layout.addLayout(description_layout)
+
+        # 上传人 (Removed)
+        # uploader_layout = QHBoxLayout()
+        # uploader_layout.addWidget(BodyLabel("上 传 人 :")) # Align label width
+        # self.uploader_edit = LineEdit()
+        # self.uploader_edit.setPlaceholderText("请输入上传人")
+        # uploader_layout.addWidget(self.uploader_edit)
+        # layout.addLayout(uploader_layout)
 
         # 文件选择
         file_layout = QHBoxLayout()
@@ -163,7 +163,7 @@ class DocumentDialog(QDialog):
         self.version_edit.setText(self.document.version)
         self.description_edit.setText(self.document.description)
         self.keywords_edit.setText(self.document.keywords)
-        self.uploader_edit.setText(self.document.uploader)
+        # self.uploader_edit.setText(self.document.uploader) # Removed uploader
         self.file_path_edit.setText(self.document.file_path)
 
 class ProjectDocumentWidget(QWidget):
@@ -259,22 +259,22 @@ class ProjectDocumentWidget(QWidget):
         add_btn = UIUtils.create_action_button("添加文档", FluentIcon.ADD)
         edit_btn = UIUtils.create_action_button("编辑文档", FluentIcon.EDIT)
         delete_btn = UIUtils.create_action_button("删除文档", FluentIcon.DELETE)
-        download_btn = UIUtils.create_action_button("下载文档", FluentIcon.DOWNLOAD)
+        
 
         add_btn.clicked.connect(self.add_document)
         edit_btn.clicked.connect(self.edit_document)
         delete_btn.clicked.connect(self.delete_document)
-        download_btn.clicked.connect(self.download_document)
+        
 
-        button_layout = UIUtils.create_button_layout(add_btn, edit_btn, delete_btn, download_btn)
+        button_layout = UIUtils.create_button_layout(add_btn, edit_btn, delete_btn)
         self.main_layout.addLayout(button_layout)
 
         # 文档列表
-        self.document_table = QTableWidget()
-        self.document_table.setColumnCount(9) # 增加一列用于附件
+        self.document_table = TableWidget()
+        self.document_table.setColumnCount(7) # 移除上传人列，总列数减1
         self.document_table.setHorizontalHeaderLabels([
-            "文档名称", "类型", "版本", "描述", "关键词",
-            "上传人", "上传时间", "文件路径", "文档附件" # 添加附件列标题
+            "文档名称", "类型", "版本", "关键词", # 调整顺序
+            "上传时间", "描述", "文档附件" # 调整顺序，移除上传人
         ])
         # 设置表格样式
         #self.document_table.setBorderVisible(True)
@@ -293,22 +293,21 @@ class ProjectDocumentWidget(QWidget):
         #self.document_table.verticalHeader().setVisible(False)
 
         # 设置初始列宽 (需要调整以适应新列)
-        header.resizeSection(0, 150) # 文档名称
+        header.resizeSection(0, 200) # 文档名称
         header.resizeSection(1, 100) # 类型
         header.resizeSection(2, 80)  # 版本
-        header.resizeSection(3, 150) # 描述
-        header.resizeSection(4, 120) # 关键词
-        header.resizeSection(5, 80)  # 上传人
-        header.resizeSection(6, 120) # 上传时间
-        header.resizeSection(7, 150) # 文件路径 (可能需要调整)
-        header.resizeSection(8, 80)  # 附件列
+        header.resizeSection(3, 120) # 关键词 (索引改为3)
+        header.resizeSection(4, 120) # 上传时间 (索引改为4)
+        header.resizeSection(5, 200) # 描述 (索引改为5)
+        # header.resizeSection(5, 80)  # 移除上传人列宽设置
+        header.resizeSection(6, 80)  # 附件列 (索引改为6)
 
-        # 允许用户调整列宽和移动列
+    # 允许用户调整列宽和移动列
         header.setSectionsMovable(True)
         # header.setStretchLastSection(True) # 取消最后一列拉伸
 
-        self.document_table.setSelectionMode(QTableWidget.ExtendedSelection)
-        self.document_table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.document_table.setSelectionMode(TableWidget.ExtendedSelection)
+        self.document_table.setSelectionBehavior(TableWidget.SelectRows)
 
         self.main_layout.addWidget(self.document_table)
 
@@ -384,29 +383,29 @@ class ProjectDocumentWidget(QWidget):
             type_item = QTableWidgetItem(doc.doc_type.value); type_item.setTextAlignment(Qt.AlignCenter); self.document_table.setItem(row, 1, type_item)
             # Col 2: Version
             version_item = QTableWidgetItem(doc.version or ""); version_item.setTextAlignment(Qt.AlignCenter); self.document_table.setItem(row, 2, version_item)
-            # Col 3: Description
-            description_item = QTableWidgetItem(doc.description or ""); self.document_table.setItem(row, 3, description_item)
-            # Col 4: Keywords
-            keywords_item = QTableWidgetItem(doc.keywords or ""); self.document_table.setItem(row, 4, keywords_item)
-            # Col 5: Uploader
-            uploader_item = QTableWidgetItem(doc.uploader or ""); uploader_item.setTextAlignment(Qt.AlignCenter); self.document_table.setItem(row, 5, uploader_item)
-            # Col 6: Upload Time
+            # Col 3: Keywords (Index changed from 4 to 3)
+            keywords_item = QTableWidgetItem(doc.keywords or ""); self.document_table.setItem(row, 3, keywords_item)
+            # Col 4: Upload Time (Index changed from 6 to 4)
             upload_time_str = doc.upload_time.strftime("%Y-%m-%d %H:%M") if doc.upload_time else ""
             upload_time_item = QTableWidgetItem(upload_time_str); upload_time_item.setTextAlignment(Qt.AlignCenter)
             upload_time_item.setData(Qt.UserRole + 1, doc.upload_time) # Store datetime for sorting
-            self.document_table.setItem(row, 6, upload_time_item)
-            # Col 7: File Path (Hidden or less prominent?)
-            file_path_item = QTableWidgetItem(doc.file_path or ""); self.document_table.setItem(row, 7, file_path_item)
+            self.document_table.setItem(row, 4, upload_time_item)
+            # Col 5: Description (Index changed from 3 to 5)
+            description_item = QTableWidgetItem(doc.description or ""); self.document_table.setItem(row, 5, description_item)
+            # Col 5: Uploader (Removed)
+            # uploader_item = QTableWidgetItem(doc.uploader or ""); uploader_item.setTextAlignment(Qt.AlignCenter); self.document_table.setItem(row, 5, uploader_item)
+            # Col 7: File Path (Removed)
+            # file_path_item = QTableWidgetItem(doc.file_path or ""); self.document_table.setItem(row, 7, file_path_item) # 移除文件路径列
 
-            # Col 8: Attachment Button
+            # Col 6: Attachment Button (Index changed from 7 to 6)
             container = create_attachment_button(
                 item_id=doc.id,
                 attachment_path=doc.file_path,
-                handle_attachment_func=lambda event, btn, item_id=doc.id: self.handle_document_attachment(event, btn, item_id),
+                handle_attachment_func=self.handle_document_attachment, # Pass the method reference directly
                 parent_widget=self,
                 item_type='document'
             )
-            self.document_table.setCellWidget(row, 8, container)
+            self.document_table.setCellWidget(row, 6, container) # 附件列索引从7改为6
 
         self.document_table.setSortingEnabled(True)
 
@@ -419,7 +418,7 @@ class ProjectDocumentWidget(QWidget):
 
         filter_criteria = {
             'keyword': keyword,
-            'keyword_attributes': ['name', 'description', 'keywords', 'uploader'], # Attributes to search keyword in
+            'keyword_attributes': ['name', 'description', 'keywords'], # Removed 'uploader'
             'doc_type': doc_type_filter
         }
 
@@ -474,7 +473,7 @@ class ProjectDocumentWidget(QWidget):
                     version=dialog.version_edit.text(),
                     description=dialog.description_edit.text(),
                     keywords=dialog.keywords_edit.text(),
-                    uploader=dialog.uploader_edit.text(),
+                    # uploader=dialog.uploader_edit.text(), # Removed uploader
                     file_path=new_file_path
                 )
                 session.add(document)
@@ -528,7 +527,7 @@ class ProjectDocumentWidget(QWidget):
                 document.version = dialog.version_edit.text()
                 document.description = dialog.description_edit.text()
                 document.keywords = dialog.keywords_edit.text()
-                document.uploader = dialog.uploader_edit.text()
+                # document.uploader = dialog.uploader_edit.text() # Removed uploader update
                 # File path is not edited here, only through attachment handling
                 session.commit()
                 self.load_documents()
@@ -637,50 +636,57 @@ class ProjectDocumentWidget(QWidget):
         finally:
             session.close()
 
-    def handle_document_attachment(self, event, btn, doc_id):
+    def handle_document_attachment(self, event, btn): # Removed doc_id from signature
         """Wraps the handle_attachment call specifically for documents."""
-        # Find the row this button belongs to
-        button_pos = btn.mapToGlobal(self.mapToGlobal(QPoint(0, 0))) # Map from widget's coords
-        row_index = self.document_table.indexAt(self.document_table.viewport().mapFromGlobal(button_pos)).row()
-        if row_index < 0: return
+        # Get the document ID from the button's property
+        doc_id = btn.property("item_id")
+        if doc_id is None:
+            print("Error: Could not get document ID from button property.")
+            return
+
+        # Find the row this button belongs to (optional, might not be needed if handle_attachment updates btn directly)
+        # button_pos = btn.mapToGlobal(self.mapToGlobal(QPoint(0, 0)))
+        # row_index = self.document_table.indexAt(self.document_table.viewport().mapFromGlobal(button_pos)).row()
+        # if row_index < 0: return
 
         Session = sessionmaker(bind=self.engine)
         session = Session()
         try:
-            document = session.query(ProjectDocument).get(doc_id)
+            document = session.query(ProjectDocument).get(doc_id) # Use ID fetched from button
             if not document:
                 UIUtils.show_error(self, "错误", "找不到对应的文档记录")
                 return
 
-            # Define the target directory for documents
-            target_dir = os.path.join("documents", str(self.current_project.id))
-
-            # Call the generic handler
-            new_path = handle_attachment(
+            # Call the generic handler from attachment_utils with correct parameters
+            handle_attachment(
                 event=event,
                 btn=btn,
-                item_id=doc_id,
-                current_path=document.file_path,
-                target_dir=target_dir,
+                item=document, # Pass the actual document object
+                session=session, # Pass the current session
                 parent_widget=self,
-                item_type_name="文档附件" # Specific name for messages
+                project=self.current_project, # Pass the current project object
+                item_type='document', # Pass the item type identifier
+                attachment_attr='file_path', # Pass the attribute name for the path
+                base_folder='documents' # Pass the base folder name
             )
 
-            # If a new path was set (add/replace), update the database
-            if new_path is not None and new_path != document.file_path:
-                document.file_path = new_path
-                session.commit()
-                print(f"Updated file path for document {doc_id} to {new_path}")
-                # Refresh the button state and file path column in the table
-                new_container = create_attachment_button(
-                    item_id=document.id,
-                    attachment_path=document.file_path, # Use updated path
-                    handle_attachment_func=lambda ev, b, item_id=document.id: self.handle_document_attachment(ev, b, item_id),
-                    parent_widget=self,
-                    item_type='document'
-                )
-                self.document_table.setCellWidget(row_index, 8, new_container) # Column 8 for attachment
-                self.document_table.setItem(row_index, 7, QTableWidgetItem(document.file_path or "")) # Update file path display
+            # The handle_attachment function from attachment_utils now handles
+            # database updates, file operations, button state updates,
+            # and user feedback messages internally.
+            # No further action is needed in this wrapper function after calling handle_attachment.
+
+            # --- Add logic to update the in-memory list ---
+            # Get the potentially updated path from the button property
+            updated_path = btn.property("attachment_path")
+
+            # Find the corresponding document in the main list and update its path
+            for doc_in_list in self.all_documents:
+                if doc_in_list.id == doc_id:
+                    doc_in_list.file_path = updated_path
+                    break # Found and updated, exit loop
+
+            # Note: We don't need to explicitly update self.current_documents here,
+            # as filtering/sorting operations typically rebuild it from self.all_documents.
 
         except Exception as e:
             session.rollback()
@@ -698,12 +704,11 @@ class ProjectDocumentWidget(QWidget):
             0: ('name', 'str'),
             1: ('doc_type', 'enum'),
             2: ('version', 'str_none'),
-            3: ('description', 'str_none'),
-            4: ('keywords', 'str_none'),
-            5: ('uploader', 'str_none'),
-            6: ('upload_time', 'datetime'), # Use datetime for sorting
-            # 7: ('file_path', 'str'), # Usually not sorted
-            # 8: ('attachment', None) # Not sortable
+            3: ('keywords', 'str_none'),    # Index changed from 4 to 3
+            4: ('upload_time', 'datetime'), # Index changed from 6 to 4
+            5: ('description', 'str_none'), # Index changed from 3 to 5
+            # 6: ('attachment', None) # Not sortable (Index changed from 7 to 6)
+            # Removed 'uploader' (was index 5)
         }
 
         if column not in column_map: return

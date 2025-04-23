@@ -3,7 +3,7 @@ from PySide6.QtCore import Qt, QSize, QPoint # Added QSize
 from PySide6.QtGui import QFont # 确保 QFont 已导入
 # Import BodyLabel and PushButton, remove PrimaryPushButton if no longer needed elsewhere
 # Also import TableItemDelegate
-from qfluentwidgets import TitleLabel, FluentIcon, LineEdit, ComboBox, DateEdit, InfoBar, BodyLabel, PushButton, TableItemDelegate
+from qfluentwidgets import TitleLabel, FluentIcon, LineEdit, ComboBox, DateEdit, InfoBar, BodyLabel, PushButton, TableWidget, TableItemDelegate
 # 需要在文件顶部导入
 from ...models.database import Project, sessionmaker
 from ...utils.ui_utils import UIUtils
@@ -140,13 +140,13 @@ class OutcomeDialog(QDialog):
         description_layout.addWidget(self.description_edit)
         layout.addLayout(description_layout)
 
-        # 备注
-        remarks_layout = QHBoxLayout()
-        remarks_layout.addWidget(BodyLabel("备       注:")) # Align label width
-        self.remarks_edit = LineEdit()
-        self.remarks_edit.setPlaceholderText("请输入备注")
-        remarks_layout.addWidget(self.remarks_edit)
-        layout.addLayout(remarks_layout)
+        # 备注 (Removed)
+        # remarks_layout = QHBoxLayout()
+        # remarks_layout.addWidget(BodyLabel("备       注:")) # Align label width
+        # self.remarks_edit = LineEdit()
+        # self.remarks_edit.setPlaceholderText("请输入备注")
+        # remarks_layout.addWidget(self.remarks_edit)
+        # layout.addLayout(remarks_layout)
 
         layout.addStretch() # Add stretch before buttons
 
@@ -186,7 +186,7 @@ class OutcomeDialog(QDialog):
             self.publish_date.setDate(self.outcome.publish_date)
         self.journal_edit.setText(self.outcome.journal)
         self.description_edit.setText(self.outcome.description)
-        self.remarks_edit.setText(self.outcome.remarks)
+        # self.remarks_edit.setText(self.outcome.remarks) # Removed remarks
 
 class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
     # Modify __init__ to accept engine and remove project
@@ -292,11 +292,11 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
         self.main_layout.addLayout(button_layout)
 
         # 成果列表
-        self.outcome_table = QTableWidget()
-        self.outcome_table.setColumnCount(10) # 增加一列用于附件
+        self.outcome_table = TableWidget()
+        self.outcome_table.setColumnCount(9) # 移除备注列，总列数减1
         self.outcome_table.setHorizontalHeaderLabels([
             "成果名称", "类型", "状态", "作者/完成人", "投稿/申请日期",
-            "发表/授权日期", "期刊/授权单位", "描述", "备注", "成果附件" # 添加附件列标题
+            "发表/授权日期", "期刊/授权单位", "描述", "成果附件" # 移除备注，调整附件列标题
         ])
         # 设置表格样式 (复用 expense 的样式设置)
         #self.outcome_table.setBorderVisible(True)
@@ -323,15 +323,15 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
         header.resizeSection(5, 100) # 发表/授权日期
         header.resizeSection(6, 120) # 期刊/授权单位
         header.resizeSection(7, 150) # 描述
-        header.resizeSection(8, 100) # 备注
-        header.resizeSection(9, 80)  # 附件列
+        # header.resizeSection(8, 100) # 移除备注列宽设置
+        header.resizeSection(8, 80)  # 附件列 (索引从9改为8)
 
-        # 允许用户调整列宽和移动列
+    # 允许用户调整列宽和移动列
         header.setSectionsMovable(True)
         # header.setStretchLastSection(True) # 取消最后一列拉伸，手动设置附件列宽度
 
-        self.outcome_table.setSelectionMode(QTableWidget.ExtendedSelection)
-        self.outcome_table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.outcome_table.setSelectionMode(TableWidget.ExtendedSelection)
+        self.outcome_table.setSelectionBehavior(TableWidget.SelectRows)
 
         self.main_layout.addWidget(self.outcome_table)
 
@@ -452,20 +452,20 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
             description_item = QTableWidgetItem(outcome.description or "")
             self.outcome_table.setItem(row, 7, description_item)
 
-            # Col 8: Remarks
-            remarks_item = QTableWidgetItem(outcome.remarks or "")
-            remarks_item.setTextAlignment(Qt.AlignCenter)
-            self.outcome_table.setItem(row, 8, remarks_item)
+            # Col 8: Remarks (Removed)
+            # remarks_item = QTableWidgetItem(outcome.remarks or "")
+            # remarks_item.setTextAlignment(Qt.AlignCenter)
+            # self.outcome_table.setItem(row, 8, remarks_item)
 
-            # Col 9: Attachment Button
+            # Col 8: Attachment Button (Index changed from 9 to 8)
             container = create_attachment_button(
                 item_id=outcome.id,
                 attachment_path=outcome.attachment_path,
-                handle_attachment_func=lambda event, btn, item_id=outcome.id: self.handle_outcome_attachment(event, btn, item_id),
+                handle_attachment_func=self.handle_outcome_attachment, # Pass the method reference directly
                 parent_widget=self,
                 item_type='outcome'
             )
-            self.outcome_table.setCellWidget(row, 9, container)
+            self.outcome_table.setCellWidget(row, 8, container) # 附件列索引从9改为8
 
         self.outcome_table.setSortingEnabled(True) # Re-enable sorting
 
@@ -480,7 +480,7 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
 
         filter_criteria = {
             'keyword': keyword,
-            'keyword_attributes': ['name', 'authors', 'journal', 'description', 'remarks'], # Attributes to search
+            'keyword_attributes': ['name', 'authors', 'journal', 'description'], # Removed 'remarks'
             'outcome_type': outcome_type_filter,
             'status': outcome_status_filter
             # No date or amount range here
@@ -531,7 +531,7 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
                     publish_date=dialog.publish_date.date().toPython(),
                     journal=dialog.journal_edit.text(),
                     description=dialog.description_edit.text(),
-                    remarks=dialog.remarks_edit.text()
+                    # remarks=dialog.remarks_edit.text() # Removed remarks
                 )
                 session.add(outcome)
                 session.commit()
@@ -544,55 +544,54 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
                 session.close()
 
     # --- 添加附件处理逻辑 ---
-    def handle_outcome_attachment(self, event, btn, outcome_id):
+    def handle_outcome_attachment(self, event, btn): # Removed outcome_id from signature
         """Wraps the handle_attachment call specifically for outcomes."""
-        # Find the row this button belongs to
-        button_pos = btn.mapToGlobal(self.mapToGlobal(QPoint(0, 0))) # Map from widget's coords
-        row_index = self.outcome_table.indexAt(self.outcome_table.viewport().mapFromGlobal(button_pos)).row()
-        if row_index < 0: return
+        # Get the outcome ID from the button's property
+        outcome_id = btn.property("item_id")
+        if outcome_id is None:
+            print("Error: Could not get outcome ID from button property.")
+            return
 
-        # Get the outcome ID (already passed as argument, but could also get from row 0)
-        # id_item = self.outcome_table.item(row_index, 0)
-        # if not id_item: return
-        # outcome_id = id_item.data(Qt.UserRole)
+        # Find the row this button belongs to (optional)
+        # button_pos = btn.mapToGlobal(self.mapToGlobal(QPoint(0, 0)))
+        # row_index = self.outcome_table.indexAt(self.outcome_table.viewport().mapFromGlobal(button_pos)).row()
+        # if row_index < 0: return
 
         Session = sessionmaker(bind=self.engine)
         session = Session()
         try:
-            outcome = session.query(ProjectOutcome).get(outcome_id)
+            outcome = session.query(ProjectOutcome).get(outcome_id) # Use ID fetched from button
             if not outcome:
                 UIUtils.show_error(self, "错误", "找不到对应的成果记录")
                 return
 
-            # Define the target directory for outcome attachments
-            target_dir = os.path.join("outcomes", str(self.current_project.id))
-
-            # Call the generic handler
-            new_path = handle_attachment(
+            # Call the generic handler from attachment_utils with correct parameters
+            handle_attachment(
                 event=event,
                 btn=btn,
-                item_id=outcome_id,
-                current_path=outcome.attachment_path,
-                target_dir=target_dir,
+                item=outcome, # Pass the actual outcome object
+                session=session, # Pass the current session
                 parent_widget=self,
-                item_type_name="成果附件" # Specific name for messages
+                project=self.current_project, # Pass the current project object
+                item_type='outcome', # Pass the item type identifier
+                attachment_attr='attachment_path', # Pass the attribute name for the path
+                base_folder='outcomes' # Pass the base folder name
             )
 
-            # If a new path was set (add/replace), update the database
-            if new_path is not None and new_path != outcome.attachment_path:
-                outcome.attachment_path = new_path
-                session.commit()
-                print(f"Updated attachment path for outcome {outcome_id} to {new_path}")
-                # Refresh the button state in the table
-                # Re-create the button in the correct row
-                new_container = create_attachment_button(
-                    item_id=outcome.id,
-                    attachment_path=outcome.attachment_path, # Use updated path
-                    handle_attachment_func=lambda ev, b, item_id=outcome.id: self.handle_outcome_attachment(ev, b, item_id),
-                    parent_widget=self,
-                    item_type='outcome'
-                )
-                self.outcome_table.setCellWidget(row_index, 9, new_container) # Column 9 for attachment
+            # The handle_attachment function from attachment_utils now handles
+            # database updates, file operations, button state updates,
+            # and user feedback messages internally.
+            # No further action is needed in this wrapper function after calling handle_attachment.
+
+            # --- Add logic to update the in-memory list ---
+            # Get the potentially updated path from the button property
+            updated_path = btn.property("attachment_path")
+
+            # Find the corresponding outcome in the main list and update its path
+            for outcome_in_list in self.all_outcomes:
+                if outcome_in_list.id == outcome_id:
+                    outcome_in_list.attachment_path = updated_path
+                    break # Found and updated, exit loop
 
         except Exception as e:
             session.rollback()
@@ -639,7 +638,7 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
                 outcome.publish_date = dialog.publish_date.date().toPython()
                 outcome.journal = dialog.journal_edit.text()
                 outcome.description = dialog.description_edit.text()
-                outcome.remarks = dialog.remarks_edit.text()
+                # outcome.remarks = dialog.remarks_edit.text() # Removed remarks update
                 # Note: Attachment path is handled by handle_outcome_attachment
                 session.commit()
                 self.load_outcome() # Reload all outcomes
@@ -722,9 +721,9 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
             4: ('submit_date', 'date'),
             5: ('publish_date', 'date'),
             6: ('journal', 'str_none'),
-            7: ('description', 'str_none'),
-            8: ('remarks', 'str_none')
-            # Column 9 (attachment) is not sortable
+            7: ('description', 'str_none')
+            # 8: ('remarks', 'str_none') # Removed remarks column (was index 8)
+            # Column 8 (attachment) is not sortable (Index changed from 9 to 8)
         }
 
         if column not in column_map: return
