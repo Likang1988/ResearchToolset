@@ -154,13 +154,35 @@ class ProjectListWindow(QWidget):
                 item = QTableWidgetItem(project.financial_code)
                 item.setData(Qt.UserRole, project.id)  # 存储项目ID
                 self.project_table.setItem(row_position, 0, item)
-                self.project_table.setItem(row_position, 1, QTableWidgetItem(project.name))            
-                self.project_table.setItem(row_position, 2, QTableWidgetItem(project.project_code))
-                self.project_table.setItem(row_position, 3, QTableWidgetItem(project.project_type))
-                self.project_table.setItem(row_position, 4, QTableWidgetItem(str(project.start_date)))
-                self.project_table.setItem(row_position, 5, QTableWidgetItem(str(project.end_date)))
-                self.project_table.setItem(row_position, 6, QTableWidgetItem(str(project.total_budget)))
-                self.project_table.setItem(row_position, 7, QTableWidgetItem(str(project.director)))
+                # UIUtils.set_item_tooltip(item) # Removed tooltip call
+
+                item_name = QTableWidgetItem(project.name)
+                self.project_table.setItem(row_position, 1, item_name)
+                # UIUtils.set_item_tooltip(item_name) # Removed tooltip call
+
+                item_code = QTableWidgetItem(project.project_code)
+                self.project_table.setItem(row_position, 2, item_code)
+                # UIUtils.set_item_tooltip(item_code) # Removed tooltip call
+
+                item_type = QTableWidgetItem(project.project_type)
+                self.project_table.setItem(row_position, 3, item_type)
+                # UIUtils.set_item_tooltip(item_type) # Removed tooltip call
+
+                item_start_date = QTableWidgetItem(str(project.start_date))
+                self.project_table.setItem(row_position, 4, item_start_date)
+                # UIUtils.set_item_tooltip(item_start_date) # Tooltip might not be needed for dates
+
+                item_end_date = QTableWidgetItem(str(project.end_date))
+                self.project_table.setItem(row_position, 5, item_end_date)
+                # UIUtils.set_item_tooltip(item_end_date) # Tooltip might not be needed for dates
+
+                item_budget = QTableWidgetItem(str(project.total_budget))
+                self.project_table.setItem(row_position, 6, item_budget)
+                # UIUtils.set_item_tooltip(item_budget) # Tooltip might not be needed for numbers
+
+                item_director = QTableWidgetItem(str(project.director))
+                self.project_table.setItem(row_position, 7, item_director)
+                # UIUtils.set_item_tooltip(item_director) # Removed tooltip call
                 # 获取总预算执行率
                 total_budget = session.query(Budget).filter(
                     Budget.project_id == project.id,

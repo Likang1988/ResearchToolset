@@ -1,25 +1,33 @@
 import os
+import shutil # Added for file operations
 import sys # Needed for platform check in view_attachment (though it's in utils now)
 import subprocess # Needed for platform check in view_attachment (though it's in utils now)
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                                  QMessageBox, QStackedWidget, QSplitter,
-                                 QFileDialog, QFrame, QTableWidgetItem,
+                                 QFileDialog, QFrame, QTableWidgetItem, # Added QFileDialog here if not present
                                  QHeaderView)
 from PySide6.QtCore import Qt, Signal, QDate, QSize, QPoint # Added QPoint
+from PySide6.QtGui import QIcon # Added for button icon updates
 from qfluentwidgets import (FluentIcon, TableWidget, PushButton, ComboBox, CompactDateEdit,
-                           LineEdit, SpinBox, TableItemDelegate, TitleLabel, InfoBar, Dialog, RoundMenu, PrimaryPushButton, ToolButton, Action)
-from ...models.database import sessionmaker, Budget, BudgetCategory, Expense, BudgetItem, Activity
+                           LineEdit, SpinBox, TableItemDelegate, TitleLabel, InfoBar, Dialog, RoundMenu, PrimaryPushButton, ToolButton, Action) # Added Dialog, RoundMenu, Action, ToolButton
+from ...models.database import sessionmaker, Budget, BudgetCategory, Expense, BudgetItem, Activity # Import Expense
 from datetime import datetime
 from ...components.expense_dialog import ExpenseDialog
 from ...utils.ui_utils import UIUtils
 from ...utils.db_utils import DBUtils
 # Use attachment_utils for voucher handling
 # Import the specific functions needed from attachment_utils
-from ...utils.attachment_utils import create_attachment_button, handle_attachment, view_attachment
+# from ...utils.attachment_utils import create_attachment_button, handle_attachment, view_attachment # Keep create_attachment_button
+from ...utils.attachment_utils import (
+    create_attachment_button, # Keep this one
+    sanitize_filename, ensure_directory_exists, get_attachment_icon_path,
+    view_attachment, download_attachment, ROOT_DIR # Import necessary utils
+)
 from ...utils.filter_utils import FilterUtils # Import FilterUtils
 from collections import defaultdict
 import pandas as pd # For export
 import json # For storing activity data
+
 
 # Placeholder for current user - replace with actual user management later
 CURRENT_OPERATOR = "系统用户"
@@ -295,26 +303,31 @@ class ProjectExpenseWidget(QWidget):
             id_item.setTextAlignment(Qt.AlignCenter)
             id_item.setData(Qt.UserRole, expense.id) # Store ID for potential use elsewhere
             self.expense_table.setItem(row, 0, id_item)
+            # UIUtils.set_item_tooltip(id_item) # Tooltip likely not needed for ID
 
             # 费用类别 (Col 1)
             cat_item = QTableWidgetItem(expense.category.value)
             cat_item.setTextAlignment(Qt.AlignCenter)
             self.expense_table.setItem(row, 1, cat_item)
+            # UIUtils.set_item_tooltip(cat_item) # Removed tooltip call
 
             # 开支内容 (Col 2)
             cont_item = QTableWidgetItem(expense.content)
             cont_item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
             self.expense_table.setItem(row, 2, cont_item)
+            # UIUtils.set_item_tooltip(cont_item) # Removed tooltip call
 
             # 规格型号 (Col 3)
             spec_item = QTableWidgetItem(expense.specification or "")
             spec_item.setTextAlignment(Qt.AlignCenter)
             self.expense_table.setItem(row, 3, spec_item)
+            # UIUtils.set_item_tooltip(spec_item) # Removed tooltip call
 
             # 供应商 (Col 4)
             supp_item = QTableWidgetItem(expense.supplier or "")
             supp_item.setTextAlignment(Qt.AlignCenter)
             self.expense_table.setItem(row, 4, supp_item)
+            # UIUtils.set_item_tooltip(supp_item) # Removed tooltip call
 
             # 报账金额 (Col 5)
             amount_item = QTableWidgetItem(f"{expense.amount:.2f}")
@@ -322,6 +335,7 @@ class ProjectExpenseWidget(QWidget):
             # Store numeric amount for sorting if needed later, though direct object sort is preferred
             amount_item.setData(Qt.UserRole + 1, expense.amount)
             self.expense_table.setItem(row, 5, amount_item)
+            # UIUtils.set_item_tooltip(amount_item) # Tooltip likely not needed for amount
 
             # 报账日期 (Col 6)
             date_str = expense.date.strftime("%Y-%m-%d")
@@ -330,11 +344,13 @@ class ProjectExpenseWidget(QWidget):
             # Store date object for sorting
             date_item.setData(Qt.UserRole + 1, expense.date)
             self.expense_table.setItem(row, 6, date_item)
+            # UIUtils.set_item_tooltip(date_item) # Tooltip likely not needed for date
 
             # 备注 (Col 7)
             remark_item = QTableWidgetItem(expense.remarks or "")
             remark_item.setTextAlignment(Qt.AlignCenter)
             self.expense_table.setItem(row, 7, remark_item)
+            # UIUtils.set_item_tooltip(remark_item) # Removed tooltip call
 
             # --- Add Attachment Button (Col 8) ---
             container = create_attachment_button(
@@ -845,76 +861,248 @@ class ProjectExpenseWidget(QWidget):
             finally:
                 session.close()
 
-    def handle_voucher_wrapper(self, event, btn):
-        """Wraps the handle_attachment call specifically for vouchers."""
-        # Find the row this button belongs to
-        button_pos = btn.mapToGlobal(QPoint(0, 0))
-        row_index = self.expense_table.indexAt(self.expense_table.viewport().mapFromGlobal(button_pos)).row()
-        if row_index < 0: return # Button not found in table?
+    def _generate_voucher_path(self, expense, project, original_filename):
+        """Generates the specific path for an expense voucher based on business rules."""
+        if not expense or not project or not original_filename:
+            print("Error: Missing expense, project, or filename for path generation.")
+            return None # Or raise an error
 
-        # Get the expense ID from the first column of that row
-        id_item = self.expense_table.item(row_index, 0)
-        if not id_item: return
-        expense_id = id_item.data(Qt.UserRole)
+        base_folder = "vouchers"
+        # Use project's financial_code, handle if None
+        project_code = project.financial_code if project.financial_code else "unknown_project"
+        # Use expense's date year, handle if None
+        expense_year = str(expense.date.year) if expense.date else "unknown_year"
+        # Use expense's category value, handle if None
+        expense_category = expense.category.value if expense.category else "unknown_category"
+        # Sanitize category name as it might contain characters invalid for filenames/paths
+        sanitized_category = sanitize_filename(expense_category)
+        # Format amount, handle if None
+        expense_amount = f"{expense.amount:.2f}" if expense.amount is not None else "0.00"
+
+        # Sanitize original filename and split extension
+        original_basename = os.path.basename(original_filename)
+        base_name, ext = os.path.splitext(original_basename)
+        sanitized_base_name = sanitize_filename(base_name) # Sanitize only the base name
+
+        # Construct filename: <category>_<amount>_<sanitized_original_name>.ext
+        new_filename = f"{sanitized_category}_{expense_amount}_{sanitized_base_name}{ext}"
+
+        # Construct full path using ROOT_DIR from attachment_utils
+        target_dir = os.path.join(ROOT_DIR, base_folder, project_code, expense_year)
+        full_path = os.path.join(target_dir, new_filename)
+
+        # Normalize the path for the current OS
+        return os.path.normpath(full_path)
+
+    def handle_voucher_wrapper(self, event, btn):
+        """Handles voucher attachment actions directly within the expense widget."""
+        expense_id = btn.property("item_id")
+        if expense_id is None:
+            UIUtils.show_error(self, "错误", "无法获取支出项ID")
+            return
 
         Session = sessionmaker(bind=self.engine)
         session = Session()
         try:
-            # Fetch the actual Expense object
-            expense = session.query(Expense).get(expense_id)
-            if not expense:
-                UIUtils.show_error(self, "错误", "找不到对应的支出记录")
-                return
+            # Initial fetch to determine context menu or initial action
+            # Use a separate variable to avoid modifying 'expense' used later if action fails early
+            expense_check = session.query(Expense).get(expense_id)
+            if not expense_check:
+                UIUtils.show_error(self, "错误", f"找不到ID为 {expense_id} 的支出项")
+                return # Session closed in finally
 
-            # Define the target directory for vouchers relative to project root
-            # Assuming ROOT_DIR is defined in attachment_utils or globally accessible
-            # If not, define it here or pass it down. For now, assume relative path:
-            base_folder = "vouchers" # Base folder name
+            # Determine action based on event or button state
+            action_type = None
+            current_path_check = expense_check.voucher_path # Get current path from DB for menu logic
 
-            # Call the generic handler with the correct arguments
-            # Note: handle_attachment now expects the item object itself
-            handle_attachment(
-                event=event,
-                btn=btn,
-                item=expense, # Pass the Expense object
-                session=session, # Pass the session
-                parent_widget=self,
-                project=self.project, # Pass the project object
-                item_type='expense', # Pass item type string
-                attachment_attr='voucher_path', # Attribute name on Expense model
-                base_folder=base_folder # Base folder for storage
-            )
+            if event is None: # Left-click
+                button_path = btn.property("attachment_path") # Check button's state first
+                if button_path and os.path.exists(button_path):
+                    # Show menu if button indicates attachment exists
+                    menu = RoundMenu(parent=self)
+                    view_action = Action(FluentIcon.VIEW, "查看", self)
+                    download_action = Action(FluentIcon.DOWNLOAD, "下载", self)
+                    replace_action = Action(FluentIcon.SYNC, "替换", self)
+                    delete_action = Action(FluentIcon.DELETE, "删除", self)
 
-            # If handle_attachment modified the path, the session within it should commit.
-            # We might need to refresh the button state if handle_attachment doesn't do it.
-            # Check if the button's property was updated by handle_attachment
-            updated_path = btn.property("attachment_path")
-            if updated_path != expense.voucher_path: # Check if path actually changed
-                 # Recreate button to reflect new state (if handle_attachment didn't)
-                 # This might be redundant if handle_attachment already updates the button
-                 print(f"Refreshing button for expense {expense_id} after attachment change.")
-                 new_container = create_attachment_button(
-                     item_id=expense.id,
-                     attachment_path=updated_path, # Use the path from button property
-                     handle_attachment_func=self.handle_voucher_wrapper,
-                     parent_widget=self,
-                     item_type='expense'
-                 )
-                 self.expense_table.setCellWidget(row_index, 8, new_container) # Column 8 for voucher
+                    # Pass session to the action executor
+                    view_action.triggered.connect(lambda: self._execute_voucher_action("view", expense_id, btn, session))
+                    download_action.triggered.connect(lambda: self._execute_voucher_action("download", expense_id, btn, session))
+                    replace_action.triggered.connect(lambda: self._execute_voucher_action("replace", expense_id, btn, session))
+                    delete_action.triggered.connect(lambda: self._execute_voucher_action("delete", expense_id, btn, session))
+
+                    menu.addAction(view_action)
+                    menu.addAction(download_action)
+                    menu.addAction(replace_action)
+                    menu.addSeparator()
+                    menu.addAction(delete_action)
+                    menu.exec(btn.mapToGlobal(btn.rect().bottomLeft()))
+                    # Don't close session here, _execute_voucher_action might need it
+                    return # Menu handles the action, exit wrapper
+                else:
+                    # Trigger upload if no attachment according to button
+                    action_type = "upload"
+            elif isinstance(event, QPoint): # Right-click (Context menu request)
+                 # Show menu based on DB state at time of right-click
+                menu = RoundMenu(parent=self)
+                if current_path_check and os.path.exists(current_path_check):
+                    view_action = Action(FluentIcon.VIEW, "查看", self)
+                    download_action = Action(FluentIcon.DOWNLOAD, "下载", self)
+                    replace_action = Action(FluentIcon.SYNC, "替换", self)
+                    delete_action = Action(FluentIcon.DELETE, "删除", self)
+                    # Pass session to the action executor
+                    view_action.triggered.connect(lambda: self._execute_voucher_action("view", expense_id, btn, session))
+                    download_action.triggered.connect(lambda: self._execute_voucher_action("download", expense_id, btn, session))
+                    replace_action.triggered.connect(lambda: self._execute_voucher_action("replace", expense_id, btn, session))
+                    delete_action.triggered.connect(lambda: self._execute_voucher_action("delete", expense_id, btn, session))
+                    menu.addAction(view_action)
+                    menu.addAction(download_action)
+                    menu.addAction(replace_action)
+                    menu.addSeparator()
+                    menu.addAction(delete_action)
+                else:
+                    upload_action = Action(FluentIcon.ADD_TO, "上传附件", self)
+                    # Pass session to the action executor
+                    upload_action.triggered.connect(lambda: self._execute_voucher_action("upload", expense_id, btn, session))
+                    menu.addAction(upload_action)
+                menu.exec(btn.mapToGlobal(event))
+                # Don't close session here
+                return # Menu handles the action, exit wrapper
+
+            # If we reach here, it's likely an 'upload' triggered by left-click on empty button
+            if action_type:
+                 # Pass the existing session
+                 self._execute_voucher_action(action_type, expense_id, btn, session)
 
         except Exception as e:
-            # session.rollback() # Rollback might happen inside handle_attachment
-            UIUtils.show_error(self, "错误", f"处理凭证时出错: {e}")
-            print(f"Error in handle_voucher_wrapper: {e}") # Log for debugging
-        finally:
-            # Ensure session is closed, even if handled within handle_attachment
+            UIUtils.show_error(self, "处理附件时出错", f"发生意外错误: {e}")
             if session.is_active:
+                session.rollback() # Rollback on any exception during fetch or initial logic
+        finally:
+            # Session should be closed here after all potential actions are done or menu returned
+            if session.is_active: # Check if session is still active before closing
                 session.close()
 
-    def view_voucher(self, voucher_path):
-        """Opens the voucher file using the default system application via attachment_utils."""
-        # Directly use the view_attachment function from the utility module
-        view_attachment(voucher_path, self)
+
+    def _execute_voucher_action(self, action_type, expense_id, btn, session):
+        """Executes the specific voucher action (called by wrapper or menu)."""
+        # IMPORTANT: This function receives the session but should manage its own transaction scope
+        # for commit/rollback within the specific action.
+        try:
+            # Re-fetch expense within the action for data consistency using the passed session
+            expense = session.query(Expense).get(expense_id)
+            if not expense:
+                # Avoid showing error again if wrapper already did? Or keep for robustness? Keeping it.
+                UIUtils.show_error(self, "错误", f"执行操作时找不到ID为 {expense_id} 的支出项")
+                return # Session will be closed by the caller
+
+            current_path = expense.voucher_path
+
+            if action_type == "view":
+                if current_path and os.path.exists(current_path):
+                    view_attachment(current_path, self)
+                else:
+                    UIUtils.show_warning(self, "提示", "附件不存在")
+
+            elif action_type == "download":
+                if current_path and os.path.exists(current_path):
+                    download_attachment(current_path, self)
+                else:
+                    UIUtils.show_warning(self, "提示", "附件不存在")
+
+            elif action_type == "upload" or action_type == "replace":
+                source_file_path, _ = QFileDialog.getOpenFileName(self, "选择凭证文件", "", "图片文件 (*.png *.jpg *.jpeg *.bmp *.gif);;PDF文件 (*.pdf);;所有文件 (*.*)") # Filter added
+                if not source_file_path:
+                    return # User cancelled
+
+                old_path = current_path # Path before potential change
+                new_path = self._generate_voucher_path(expense, self.project, source_file_path)
+
+                if not new_path:
+                    UIUtils.show_error(self, "错误", "无法生成附件保存路径")
+                    return
+
+                # --- Transaction Start ---
+                try:
+                    ensure_directory_exists(os.path.dirname(new_path))
+                    shutil.copy2(source_file_path, new_path)
+
+                    # Update DB
+                    expense.voucher_path = new_path
+                    session.commit() # Commit this specific change
+
+                    # Delete old file if replacing and path changed
+                    if action_type == "replace" and old_path and os.path.exists(old_path) and os.path.normpath(old_path) != os.path.normpath(new_path):
+                        try:
+                            os.remove(old_path)
+                        except OSError as e:
+                            print(f"警告: 无法删除旧凭证 {old_path}: {e}") # Log warning
+
+                    # Update button
+                    btn.setIcon(QIcon(get_attachment_icon_path('attach.svg')))
+                    btn.setToolTip("管理附件")
+                    btn.setProperty("attachment_path", new_path)
+
+                    UIUtils.show_success(self, "成功", "凭证已更新")
+                    self.expense_updated.emit() # Notify budget window if needed
+                    self.load_statistics() # Update stats immediately
+
+                except Exception as e:
+                    session.rollback() # Rollback this specific transaction
+                    UIUtils.show_error(self, "错误", f"更新凭证失败: {e}")
+                    # Clean up potentially copied file if DB update failed
+                    # Check if the file exists and if the DB path wasn't updated
+                    if os.path.exists(new_path):
+                         # Re-fetch to be absolutely sure about the DB state after rollback
+                         session.expire(expense) # Mark expense as expired to force re-fetch
+                         db_path_after_rollback = getattr(session.query(Expense).get(expense_id), 'voucher_path', None)
+                         if db_path_after_rollback != new_path:
+                             try:
+                                 print(f"Attempting to remove orphaned file: {new_path}")
+                                 os.remove(new_path)
+                             except Exception as remove_err:
+                                 print(f"Error removing orphaned file {new_path}: {remove_err}")
+                # --- Transaction End ---
+
+            elif action_type == "delete":
+                if not current_path or not os.path.exists(current_path):
+                    UIUtils.show_warning(self, "提示", "没有可删除的凭证")
+                    return
+
+                confirm_dialog = Dialog('确认删除', '确定要删除此凭证吗？此操作不可恢复！', self)
+                if confirm_dialog.exec():
+                    # --- Transaction Start ---
+                    try:
+                        os.remove(current_path)
+                        expense.voucher_path = None
+                        session.commit() # Commit this specific change
+
+                        # Update button
+                        btn.setIcon(QIcon(get_attachment_icon_path('add_outline.svg')))
+                        btn.setToolTip("添加附件")
+                        btn.setProperty("attachment_path", None)
+
+                        UIUtils.show_success(self, "成功", "凭证已删除")
+                        self.expense_updated.emit() # Notify budget window if needed
+                        self.load_statistics() # Update stats immediately
+
+                    except Exception as e:
+                        session.rollback() # Rollback this specific transaction
+                        UIUtils.show_error(self, "错误", f"删除凭证失败: {e}")
+                    # --- Transaction End ---
+
+        except Exception as e:
+             # This catches errors during the re-fetch or initial logic within _execute_voucher_action
+             UIUtils.show_error(self, "处理附件操作时出错", f"发生意外错误: {e}")
+             # Ensure session is rolled back if the outer try didn't catch it and it's still active
+             # The caller (handle_voucher_wrapper) will close the session.
+             if session.is_active:
+                 try:
+                     session.rollback()
+                 except Exception as rb_err:
+                     print(f"Error during rollback in _execute_voucher_action: {rb_err}")
+
+    # Note: The old view_voucher method is removed by this replacement.
 
     def reset_filters(self):
         """重置所有筛选条件"""

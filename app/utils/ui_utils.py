@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import (QWidget, QTableWidget, QTreeWidget, QHeaderView, QVBoxLayout,
+from PySide6.QtWidgets import (QWidget, QTableWidget, QTableWidgetItem, QTreeWidget, QTreeWidgetItem, QHeaderView, QVBoxLayout, # Added QTreeWidgetItem
                              QHBoxLayout, QLabel)
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont # Import QFont
@@ -59,7 +59,11 @@ class UIUtils:
         # 设置选择模式
         table.setSelectionBehavior(QTableWidget.SelectRows)
         table.setSelectionMode(QTableWidget.ExtendedSelection)
-        
+
+        # Connect itemChanged signal to automatically set tooltips
+        # Note: This signal is emitted AFTER the item's data has changed.
+        table.itemChanged.connect(UIUtils.set_item_tooltip)
+
     @staticmethod
     def set_tree_style(tree):
         """设置树形控件通用样式"""
@@ -103,6 +107,16 @@ class UIUtils:
         # 设置选择模式
         tree.setSelectionBehavior(QTreeWidget.SelectRows)
         tree.setSelectionMode(QTreeWidget.ExtendedSelection)
+
+        # Connect itemChanged signal to automatically set tooltips
+        tree.itemChanged.connect(UIUtils.set_tree_item_tooltip)
+
+    @staticmethod
+    def set_tree_item_tooltip(item: QTreeWidgetItem, column: int):
+        """Sets the tooltip for a QTreeWidgetItem in a specific column."""
+        if item:
+            # Set tooltip for the specified column based on its text
+            item.setToolTip(column, item.text(column))
 
     @staticmethod
     def create_title_layout(title_text: str):
@@ -153,6 +167,12 @@ class UIUtils:
     def show_error(parent, title, content):
         """显示错误提示"""
         InfoBar.error(title=title, content=content, parent=parent, duration=UIUtils.DEFAULT_INFOBAR_DURATION)
+
+    @staticmethod
+    def set_item_tooltip(item: QTableWidgetItem):
+        """Sets the tooltip for a QTableWidgetItem to its full text content."""
+        if item:
+            item.setToolTip(item.text())
 
     @staticmethod
     def get_svg_icon_path(icon_name: str) -> str:

@@ -1,31 +1,38 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QDialog, QLabel, QHeaderView # Added QHeaderView
-from PySide6.QtCore import Qt, QSize, QPoint # Added QSize
-from PySide6.QtGui import QFont # 确保 QFont 已导入
+import os # Ensure os is imported
+import shutil # Add shutil
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QDialog, QLabel, QHeaderView, QFileDialog, QApplication # Added QHeaderView, QFileDialog, QApplication
+from PySide6.QtCore import Qt, QSize, QPoint # Added QSize and QPoint
+from PySide6.QtGui import QFont, QIcon # 确保 QFont 已导入, Add QIcon
 # Import BodyLabel and PushButton, remove PrimaryPushButton if no longer needed elsewhere
 # Also import TableItemDelegate
-from qfluentwidgets import TitleLabel, FluentIcon, LineEdit, ComboBox, DateEdit, InfoBar, BodyLabel, PushButton, TableWidget, TableItemDelegate
+from qfluentwidgets import TitleLabel, FluentIcon, LineEdit, ComboBox, DateEdit, InfoBar, BodyLabel, PushButton, TableWidget, TableItemDelegate, Dialog, RoundMenu, Action, PlainTextEdit
 # 需要在文件顶部导入
-from ...models.database import Project, sessionmaker
+# from ...models.database import Project, sessionmaker # Combined below
 from ...utils.ui_utils import UIUtils
-from ...models.database import Project, Base, get_engine, sessionmaker # Added sessionmaker import
+from ...models.database import Project, Base, get_engine, sessionmaker
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum as SQLEnum, Engine # Added Engine type hint
 from enum import Enum
 from datetime import datetime
-import os # Added os import
 # 假设存在 attachment_utils.py 用于处理附件按钮和逻辑
-from ...utils.attachment_utils import create_attachment_button, handle_attachment # Import attachment utils
-from qfluentwidgets import TitleLabel, FluentIcon, LineEdit, ComboBox, DateEdit, InfoBar, BodyLabel, PushButton, TableItemDelegate # Added TableItemDelegate
-from ...utils.ui_utils import UIUtils
-from ...models.database import Project, Base, get_engine, sessionmaker # Added sessionmaker import
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum as SQLEnum, Engine # Added Engine type hint
-from enum import Enum
-from datetime import datetime
-import os # Added os import
+# --- Removed commented out import of handle_attachment ---
+# from qfluentwidgets import TitleLabel, FluentIcon, LineEdit, ComboBox, DateEdit, InfoBar, BodyLabel, PushButton, TableItemDelegate # Added TableItemDelegate - Duplicate
+# from ...utils.ui_utils import UIUtils - Duplicate
+# from ...models.database import Project, Base, get_engine, sessionmaker # Added sessionmaker import - Duplicate
+# from sqlalchemy.orm import sessionmaker - Duplicate
+# from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum as SQLEnum, Engine # Added Engine type hint - Duplicate
+# from enum import Enum - Duplicate
+# from datetime import datetime - Duplicate
+# import os # Added os import - Duplicate
 # 假设存在 attachment_utils.py 用于处理附件按钮和逻辑
-from ...utils.attachment_utils import create_attachment_button, handle_attachment # Import attachment utils
+# --- Removed commented out import of handle_attachment ---
+from ...utils.attachment_utils import (
+    create_attachment_button, # Keep
+    sanitize_filename, ensure_directory_exists, get_timestamp_str, get_attachment_icon_path,
+    view_attachment, download_attachment, ROOT_DIR # Import necessary utils
+)
 from ...utils.filter_utils import FilterUtils # Import FilterUtils
+
 
 class OutcomeType(Enum):
     PAPER = "论文"
@@ -101,8 +108,9 @@ class OutcomeDialog(QDialog):
         # 作者/完成人
         authors_layout = QHBoxLayout()
         authors_layout.addWidget(BodyLabel("作者/完成人:"))
-        self.authors_edit = LineEdit()
+        self.authors_edit = PlainTextEdit() # Changed to PlainTextEdit
         self.authors_edit.setPlaceholderText("请输入作者或完成人")
+        self.authors_edit.setFixedHeight(80) # Set height for multi-line
         authors_layout.addWidget(self.authors_edit)
         layout.addLayout(authors_layout)
 
@@ -135,10 +143,12 @@ class OutcomeDialog(QDialog):
         # 成果描述
         description_layout = QHBoxLayout()
         description_layout.addWidget(BodyLabel("成果描述:"))
-        self.description_edit = LineEdit()
+        self.description_edit = PlainTextEdit() # Changed to PlainTextEdit
         self.description_edit.setPlaceholderText("请输入成果描述")
+        self.description_edit.setFixedHeight(120) # Set height for multi-line
         description_layout.addWidget(self.description_edit)
         layout.addLayout(description_layout)
+
 
         # 备注 (Removed)
         # remarks_layout = QHBoxLayout()
@@ -179,13 +189,13 @@ class OutcomeDialog(QDialog):
         self.name_edit.setText(self.outcome.name)
         self.type_combo.setCurrentText(self.outcome.type.value)
         self.status_combo.setCurrentText(self.outcome.status.value)
-        self.authors_edit.setText(self.outcome.authors)
+        self.authors_edit.setPlainText(self.outcome.authors or "") # Use setPlainText
         if self.outcome.submit_date:
             self.submit_date.setDate(self.outcome.submit_date)
         if self.outcome.publish_date:
             self.publish_date.setDate(self.outcome.publish_date)
-        self.journal_edit.setText(self.outcome.journal)
-        self.description_edit.setText(self.outcome.description)
+        self.journal_edit.setText(self.outcome.journal or "")
+        self.description_edit.setPlainText(self.outcome.description or "") # Use setPlainText
         # self.remarks_edit.setText(self.outcome.remarks) # Removed remarks
 
 class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
@@ -301,7 +311,7 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
         # 设置表格样式 (复用 expense 的样式设置)
         #self.outcome_table.setBorderVisible(True)
         #self.outcome_table.setBorderRadius(8)
-        self.outcome_table.setWordWrap(False) 
+        self.outcome_table.setWordWrap(False)
         self.outcome_table.setItemDelegate(TableItemDelegate(self.outcome_table))
         UIUtils.set_table_style(self.outcome_table) # 应用通用样式
 
@@ -362,6 +372,10 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
 
         self.main_layout.addLayout(search_layout)
 
+        # 添加右键菜单
+        self.outcome_table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.outcome_table.customContextMenuRequested.connect(self.show_outcome_context_menu)
+
     def _on_project_selected(self, index):
         """Handles project selection change."""
         selected_project = self.project_selector.itemData(index)
@@ -413,21 +427,25 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
             name_item = QTableWidgetItem(outcome.name)
             name_item.setData(Qt.UserRole, outcome.id) # Store ID here
             self.outcome_table.setItem(row, 0, name_item)
+            # UIUtils.set_item_tooltip(name_item) # Removed tooltip call
 
             # Col 1: Type
             type_item = QTableWidgetItem(outcome.type.value)
             type_item.setTextAlignment(Qt.AlignCenter)
             self.outcome_table.setItem(row, 1, type_item)
+            # UIUtils.set_item_tooltip(type_item) # Removed tooltip call
 
             # Col 2: Status
             status_item = QTableWidgetItem(outcome.status.value)
             status_item.setTextAlignment(Qt.AlignCenter)
             self.outcome_table.setItem(row, 2, status_item)
+            # UIUtils.set_item_tooltip(status_item) # Removed tooltip call
 
             # Col 3: Authors
             authors_item = QTableWidgetItem(outcome.authors or "")
             authors_item.setTextAlignment(Qt.AlignCenter)
             self.outcome_table.setItem(row, 3, authors_item)
+            # UIUtils.set_item_tooltip(authors_item) # Removed tooltip call
 
             # Col 4: Submit Date
             submit_date_str = str(outcome.submit_date) if outcome.submit_date else ""
@@ -435,6 +453,7 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
             submit_date_item.setTextAlignment(Qt.AlignCenter)
             submit_date_item.setData(Qt.UserRole + 1, outcome.submit_date) # Store date for sorting
             self.outcome_table.setItem(row, 4, submit_date_item)
+            # UIUtils.set_item_tooltip(submit_date_item) # Tooltip likely not needed for date
 
             # Col 5: Publish Date
             publish_date_str = str(outcome.publish_date) if outcome.publish_date else ""
@@ -442,14 +461,17 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
             publish_date_item.setTextAlignment(Qt.AlignCenter)
             publish_date_item.setData(Qt.UserRole + 1, outcome.publish_date) # Store date for sorting
             self.outcome_table.setItem(row, 5, publish_date_item)
+            # UIUtils.set_item_tooltip(publish_date_item) # Tooltip likely not needed for date
 
             # Col 6: Journal
             journal_item = QTableWidgetItem(outcome.journal or "")
             self.outcome_table.setItem(row, 6, journal_item)
+            # UIUtils.set_item_tooltip(journal_item) # Removed tooltip call
 
             # Col 7: Description
             description_item = QTableWidgetItem(outcome.description or "")
             self.outcome_table.setItem(row, 7, description_item)
+            # UIUtils.set_item_tooltip(description_item) # Removed tooltip call
 
             # Col 8: Remarks (Removed)
             # remarks_item = QTableWidgetItem(outcome.remarks or "")
@@ -460,7 +482,7 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
             container = create_attachment_button(
                 item_id=outcome.id,
                 attachment_path=outcome.attachment_path,
-                handle_attachment_func=self.handle_outcome_attachment, # Pass the method reference directly
+                handle_attachment_func=self._handle_outcome_attachment_new, # Pass the RENAMED method reference
                 parent_widget=self,
                 item_type='outcome'
             )
@@ -479,277 +501,395 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
 
         filter_criteria = {
             'keyword': keyword,
-            'keyword_attributes': ['name', 'authors', 'journal', 'description'], # Removed 'remarks'
+            'keyword_attributes': ['name', 'authors', 'journal', 'description'], # Attributes to search in
             'outcome_type': outcome_type_filter,
-            'status': outcome_status_filter
-            # No date or amount range here
+            'outcome_status': outcome_status_filter
         }
 
-        # Define how filter keys map to ProjectOutcome object attributes
         attribute_mapping = {
-            'outcome_type': 'type', # Filter key 'outcome_type' maps to ProjectOutcome.type
-            'status': 'status'      # Filter key 'status' maps to ProjectOutcome.status
+            'outcome_type': 'type', # Map filter key to object attribute
+            'outcome_status': 'status' # Map filter key to object attribute
         }
 
-        # Apply filters using FilterUtils
         self.current_outcomes = FilterUtils.apply_filters(
             self.all_outcomes,
             filter_criteria,
             attribute_mapping
         )
-
-        # Update the table with filtered data
         self._populate_table(self.current_outcomes)
 
     def reset_filters(self):
-        """Resets all filter inputs and reapplies filters."""
+        """Resets filter inputs and reapplies filters."""
         self.search_edit.clear()
         self.type_filter.setCurrentText("全部类型")
         self.status_filter.setCurrentText("全部状态")
         self.apply_filters() # Re-apply filters to show all items
+
+    def _generate_outcome_path(self, project, outcome_type_enum, original_filename):
+        """Generates the specific path for a project outcome based on business rules."""
+        if not project or not outcome_type_enum or not original_filename:
+            print("Error: Missing project, outcome type, or filename for path generation.")
+            return None
+
+        base_folder = "outcomes" # Changed base folder
+        project_code = project.financial_code if project.financial_code else "unknown_project"
+        # Use the enum value, sanitize it for path safety
+        outcome_type_str = sanitize_filename(outcome_type_enum.value)
+        timestamp = get_timestamp_str() # Get current timestamp string
+
+        # Sanitize original filename and split extension
+        original_basename = os.path.basename(original_filename)
+        base_name, ext = os.path.splitext(original_basename)
+        sanitized_base_name = sanitize_filename(base_name)
+
+        # Construct filename: <timestamp>_<sanitized_original_name>.ext
+        new_filename = f"{timestamp}_{sanitized_base_name}{ext}"
+
+        # Construct full path using ROOT_DIR
+        target_dir = os.path.join(ROOT_DIR, base_folder, project_code, outcome_type_str)
+        full_path = os.path.join(target_dir, new_filename)
+
+        # Normalize the path
+        return os.path.normpath(full_path)
 
     def add_outcome(self):
         if not self.current_project:
             UIUtils.show_warning(self, "警告", "请先选择一个项目")
             return
 
-        dialog = OutcomeDialog(self, project=self.current_project) # Pass current project if needed by dialog
+        dialog = OutcomeDialog(self, project=self.current_project)
         if dialog.exec():
-            # Use the stored engine
+            # No file selection in OutcomeDialog, so no file copy needed here.
+            # Attachment is handled separately.
+
+            # Add to database
             Session = sessionmaker(bind=self.engine)
             session = Session()
-
             try:
-                outcome = ProjectOutcome( # 使用新的模型类名
-                    project_id=self.current_project.id, # Use current_project.id
-                    name=dialog.name_edit.text(),
+                outcome = ProjectOutcome(
+                    project_id=self.current_project.id,
+                    name=dialog.name_edit.text().strip(),
                     type=OutcomeType(dialog.type_combo.currentText()),
                     status=OutcomeStatus(dialog.status_combo.currentText()),
-                    authors=dialog.authors_edit.text(),
+                    authors=dialog.authors_edit.toPlainText().strip(), # Use toPlainText
                     submit_date=dialog.submit_date.date().toPython(),
                     publish_date=dialog.publish_date.date().toPython(),
-                    journal=dialog.journal_edit.text(),
-                    description=dialog.description_edit.text(),
-                    # remarks=dialog.remarks_edit.text() # Removed remarks
+                    journal=dialog.journal_edit.text().strip(),
+                    description=dialog.description_edit.toPlainText().strip(), # Use toPlainText
+                    # remarks=dialog.remarks_edit.text().strip(), # Removed remarks
+                    # attachment_path is handled by the attachment button logic
                 )
                 session.add(outcome)
                 session.commit()
-                self.load_outcome() # Reload all outcomes
+                self.load_outcome() # Reload outcomes to show the new one
                 UIUtils.show_success(self, "成功", "成果添加成功")
-            except Exception as e: # Catch potential DB errors
-                 session.rollback()
-                 UIUtils.show_error(self, "数据库错误", f"保存成果信息失败：{e}")
+            except Exception as e:
+                session.rollback()
+                UIUtils.show_error(self, "错误", f"添加成果到数据库失败: {e}")
             finally:
                 session.close()
 
-    # --- 添加附件处理逻辑 ---
-    def handle_outcome_attachment(self, event, btn): # Removed outcome_id from signature
-        """Wraps the handle_attachment call specifically for outcomes."""
-        # Get the outcome ID from the button's property
+    # RENAMED function to avoid conflict if imported elsewhere
+    def _handle_outcome_attachment_new(self, event, btn):
+        """Handles clicks on the attachment button (add/view/download/delete)."""
         outcome_id = btn.property("item_id")
-        if outcome_id is None:
-            print("Error: Could not get outcome ID from button property.")
-            return
+        action_type = btn.property("action_type") # 'add', 'view', 'download', 'delete'
 
-        # Find the row this button belongs to (optional)
-        # button_pos = btn.mapToGlobal(self.mapToGlobal(QPoint(0, 0)))
-        # row_index = self.outcome_table.indexAt(self.outcome_table.viewport().mapFromGlobal(button_pos)).row()
-        # if row_index < 0: return
+        if not outcome_id:
+            print("Error: No outcome ID found on button.")
+            return
 
         Session = sessionmaker(bind=self.engine)
         session = Session()
         try:
-            outcome = session.query(ProjectOutcome).get(outcome_id) # Use ID fetched from button
-            if not outcome:
-                UIUtils.show_error(self, "错误", "找不到对应的成果记录")
-                return
+            # Special handling for 'add' action before fetching outcome
+            if action_type == 'add':
+                outcome = session.query(ProjectOutcome).filter(ProjectOutcome.id == outcome_id).first()
+                if not outcome:
+                     UIUtils.show_warning(self, "警告", "未找到关联的成果记录")
+                     return
 
-            # Call the generic handler from attachment_utils with correct parameters
-            handle_attachment(
-                event=event,
-                btn=btn,
-                item=outcome, # Pass the actual outcome object
-                session=session, # Pass the current session
-                parent_widget=self,
-                project=self.current_project, # Pass the current project object
-                item_type='outcome', # Pass the item type identifier
-                attachment_attr='attachment_path', # Pass the attribute name for the path
-                base_folder='outcomes' # Pass the base folder name
-            )
+                source_file_path, _ = QFileDialog.getOpenFileName(self, "选择成果附件")
+                if not source_file_path:
+                    return # User cancelled
 
-            # The handle_attachment function from attachment_utils now handles
-            # database updates, file operations, button state updates,
-            # and user feedback messages internally.
-            # No further action is needed in this wrapper function after calling handle_attachment.
+                # Generate new path
+                new_file_path = self._generate_outcome_path(
+                    project=self.current_project, # Assumes current_project is set
+                    outcome_type_enum=outcome.type,
+                    original_filename=source_file_path
+                )
+                if not new_file_path:
+                    UIUtils.show_error(self, "错误", "无法生成附件保存路径")
+                    return
 
-            # --- Add logic to update the in-memory list ---
-            # Get the potentially updated path from the button property
-            updated_path = btn.property("attachment_path")
+                # Ensure target directory exists
+                target_dir = os.path.dirname(new_file_path)
+                ensure_directory_exists(target_dir)
 
-            # Find the corresponding outcome in the main list and update its path
-            for outcome_in_list in self.all_outcomes:
-                if outcome_in_list.id == outcome_id:
-                    outcome_in_list.attachment_path = updated_path
-                    break # Found and updated, exit loop
+                # Copy file
+                try:
+                    shutil.copy2(source_file_path, new_file_path)
+                except Exception as e:
+                    UIUtils.show_error(self, "错误", f"复制附件失败: {e}")
+                    return
+
+                # Update database
+                outcome.attachment_path = new_file_path
+                session.commit()
+                # Update button state visually
+                btn.setIcon(FluentIcon.DOCUMENT)
+                btn.setToolTip(f"查看/下载: {os.path.basename(new_file_path)}")
+                btn.setProperty("action_type", "view") # Change action type for next click
+                UIUtils.show_success(self, "成功", "附件已添加")
+
+            elif action_type == 'delete':
+                 outcome = session.query(ProjectOutcome).filter(ProjectOutcome.id == outcome_id).first()
+                 if outcome and outcome.attachment_path:
+                     file_to_delete = outcome.attachment_path
+                     confirm_dialog = Dialog(
+                         '确认删除附件',
+                         f'确定要删除附件文件吗？\n{os.path.basename(file_to_delete)}\n此操作不可恢复！',
+                         self
+                     )
+                     if confirm_dialog.exec():
+                         try:
+                             os.remove(file_to_delete)
+                             outcome.attachment_path = None
+                             session.commit()
+                             # Update button state visually
+                             btn.setIcon(FluentIcon.ADD)
+                             btn.setToolTip("添加附件")
+                             btn.setProperty("action_type", "add")
+                             UIUtils.show_success(self, "成功", "附件已删除")
+                         except OSError as e:
+                             UIUtils.show_error(self, "错误", f"删除附件文件失败: {e}")
+                         except Exception as e:
+                             session.rollback()
+                             UIUtils.show_error(self, "错误", f"更新数据库失败: {e}")
+                 else:
+                      UIUtils.show_warning(self, "警告", "未找到附件或附件已被删除")
+
+            else: # Handle 'view' and 'download'
+                self._execute_outcome_action_new(action_type, outcome_id, btn, session)
 
         except Exception as e:
-            session.rollback()
-            UIUtils.show_error(self, "错误", f"处理成果附件时出错: {e}")
-            print(f"Error in handle_outcome_attachment: {e}")
+             UIUtils.show_error(self, "操作失败", f"处理成果附件时出错: {e}")
+             print(f"Error handling outcome attachment: {e}") # Log detailed error
         finally:
             session.close()
 
-    def edit_outcome(self):
-        if not self.current_project:
-            UIUtils.show_warning(self, "警告", "请先选择一个项目")
+    # RENAMED function to avoid conflict
+    def _execute_outcome_action_new(self, action_type, outcome_id, btn, session):
+        """Executes view or download action for an outcome."""
+        outcome = session.query(ProjectOutcome).filter(ProjectOutcome.id == outcome_id).first()
+        if not outcome or not outcome.attachment_path:
+            UIUtils.show_warning(self, "警告", "未找到成果附件或文件路径无效")
+            # Ensure button reflects missing state
+            btn.setIcon(FluentIcon.ADD)
+            btn.setToolTip("添加附件")
+            btn.setProperty("action_type", "add")
             return
+
+        file_path = outcome.attachment_path
+        if not os.path.exists(file_path):
+            UIUtils.show_error(self, "错误", f"附件文件不存在: {file_path}")
+            # Update DB and button if file is missing
+            try:
+                outcome.attachment_path = None
+                session.commit()
+                btn.setIcon(FluentIcon.ADD)
+                btn.setToolTip("添加附件")
+                btn.setProperty("action_type", "add")
+            except Exception as e:
+                 session.rollback()
+                 print(f"Error updating DB for missing file: {e}")
+            return
+
+        if action_type == 'view':
+            view_attachment(file_path, self)
+        elif action_type == 'download':
+            # Suggest a filename based on the outcome name and original extension
+            original_filename = os.path.basename(file_path)
+            _, ext = os.path.splitext(original_filename)
+            suggested_filename = f"{sanitize_filename(outcome.name)}_附件{ext}" # Add suffix
+
+            save_path, _ = QFileDialog.getSaveFileName(
+                self,
+                "下载成果附件",
+                suggested_filename,
+                f"文件 (*{ext})"
+            )
+            if save_path:
+                download_attachment(file_path, save_path, self)
+        else:
+            print(f"Unknown action type: {action_type}")
+
+
+    def edit_outcome(self):
         selected_items = self.outcome_table.selectedItems()
         if not selected_items:
-            UIUtils.show_warning(self, "警告", "请先选择要编辑的成果")
+            UIUtils.show_warning(self, "警告", "请选择要编辑的成果")
             return
 
         row = selected_items[0].row()
-        # Get ID from UserRole of the first column item
-        id_item = self.outcome_table.item(row, 0)
-        if not id_item: return
-        outcome_id = id_item.data(Qt.UserRole)
+        outcome_id = self.outcome_table.item(row, 0).data(Qt.UserRole)
 
-        # Use the stored engine
         Session = sessionmaker(bind=self.engine)
         session = Session()
-
         try:
             outcome = session.query(ProjectOutcome).filter(
-                ProjectOutcome.id == outcome_id,
-                ProjectOutcome.project_id == self.current_project.id
+                ProjectOutcome.id == outcome_id
             ).first()
+
             if not outcome:
-                UIUtils.show_error(self, "错误", "未找到选中的成果记录")
+                UIUtils.show_warning(self, "警告", "未找到选中的成果")
                 return
 
-            dialog = OutcomeDialog(self, outcome=outcome)
+            dialog = OutcomeDialog(self, outcome=outcome, project=self.current_project)
             if dialog.exec():
-                outcome.name = dialog.name_edit.text()
+                # Update outcome attributes
+                outcome.name = dialog.name_edit.text().strip()
                 outcome.type = OutcomeType(dialog.type_combo.currentText())
                 outcome.status = OutcomeStatus(dialog.status_combo.currentText())
-                outcome.authors = dialog.authors_edit.text()
+                outcome.authors = dialog.authors_edit.toPlainText().strip() # Use toPlainText
                 outcome.submit_date = dialog.submit_date.date().toPython()
                 outcome.publish_date = dialog.publish_date.date().toPython()
-                outcome.journal = dialog.journal_edit.text()
-                outcome.description = dialog.description_edit.text()
-                # outcome.remarks = dialog.remarks_edit.text() # Removed remarks update
-                # Note: Attachment path is handled by handle_outcome_attachment
+                outcome.journal = dialog.journal_edit.text().strip()
+                outcome.description = dialog.description_edit.toPlainText().strip() # Use toPlainText
+                # outcome.remarks = dialog.remarks_edit.text().strip() # Removed remarks
+                # attachment_path is not updated here
+
                 session.commit()
-                self.load_outcome() # Reload all outcomes
-                UIUtils.show_success(self, "成功", "成果编辑成功")
-        except Exception as e: # Catch potential DB errors
-             session.rollback()
-             UIUtils.show_error(self, "数据库错误", f"编辑成果信息失败：{e}")
+                self.load_outcome() # Reload to show changes
+                UIUtils.show_success(self, "成功", "成果信息更新成功")
+
+        except Exception as e:
+            session.rollback()
+            UIUtils.show_error(self, "错误", f"编辑成果失败: {e}")
         finally:
             session.close()
 
     def delete_outcome(self):
-        if not self.current_project:
-            UIUtils.show_warning(self, "警告", "请先选择一个项目")
-            return
-        selected_rows = sorted(list(set(item.row() for item in self.outcome_table.selectedItems())), reverse=True)
-        if not selected_rows:
-            UIUtils.show_warning(self, "警告", "请先选择要删除的成果")
+        selected_items = self.outcome_table.selectedItems()
+        if not selected_items:
+            UIUtils.show_warning(self, "警告", "请选择要删除的成果")
             return
 
-        outcome_ids_to_delete = []
-        for row in selected_rows:
-            id_item = self.outcome_table.item(row, 0)
-            if id_item:
-                outcome_ids_to_delete.append(id_item.data(Qt.UserRole))
-
-        if not outcome_ids_to_delete:
-             UIUtils.show_error(self, "错误", "无法获取选中的成果ID")
-             return
+        outcome_ids_to_delete = list(set(self.outcome_table.item(item.row(), 0).data(Qt.UserRole) for item in selected_items))
 
         confirm_dialog = Dialog(
-            title='确认删除',
-            content=f'确定要删除选中的 {len(outcome_ids_to_delete)} 条成果记录吗？相关附件也将被删除（如果存在）。此操作不可恢复。',
-            parent=self
+            '确认删除',
+            f'确定要删除选中的 {len(outcome_ids_to_delete)} 个成果吗？\n此操作将同时删除关联的附件文件（如果存在），且不可恢复！',
+            self
         )
-        confirm_dialog.cancelButton.setText('取消')
-        confirm_dialog.yesButton.setText('确认删除')
 
         if confirm_dialog.exec():
-            # Use the stored engine
             Session = sessionmaker(bind=self.engine)
             session = Session()
             deleted_count = 0
+            failed_files = []
             try:
                 for outcome_id in outcome_ids_to_delete:
                     outcome = session.query(ProjectOutcome).filter(
-                        ProjectOutcome.id == outcome_id,
-                        ProjectOutcome.project_id == self.current_project.id
+                        ProjectOutcome.id == outcome_id
                     ).first()
                     if outcome:
-                        # 删除附件文件
-                        if outcome.attachment_path and os.path.exists(outcome.attachment_path):
-                            try:
-                                os.remove(outcome.attachment_path)
-                            except OSError as e:
-                                print(f"Warning: Could not delete attachment file {outcome.attachment_path}: {e}")
-                                # Decide if deletion should proceed or stop
-
+                        file_path_to_delete = outcome.attachment_path
                         session.delete(outcome)
+                        session.flush() # Ensure delete happens before file removal attempt
+
+                        # Attempt to delete the associated file
+                        if file_path_to_delete and os.path.exists(file_path_to_delete):
+                            try:
+                                os.remove(file_path_to_delete)
+                            except OSError as e:
+                                print(f"Error deleting attachment file {file_path_to_delete}: {e}")
+                                failed_files.append(os.path.basename(file_path_to_delete))
+                                # Continue deleting DB entry even if file deletion fails
+
                         deleted_count += 1
+
                 session.commit()
-                self.load_outcome() # Reload all outcomes
-                UIUtils.show_success(self, "成功", f"成功删除 {deleted_count} 条成果记录")
-            except Exception as e: # Catch potential DB errors
-                 session.rollback()
-                 UIUtils.show_error(self, "数据库错误", f"删除成果失败：{e}")
+                self.load_outcome() # Refresh the table
+
+                if failed_files:
+                    UIUtils.show_warning(
+                        self, "删除部分失败",
+                        f"成功删除 {deleted_count} 个成果记录。\n但以下附件文件删除失败，请手动处理：\n{', '.join(failed_files)}"
+                    )
+                elif deleted_count > 0:
+                    UIUtils.show_success(self, "成功", f"成功删除 {deleted_count} 个成果及其关联附件")
+                else:
+                     UIUtils.show_warning(self, "未删除", "没有成果被删除（可能已被其他操作移除）")
+
+            except Exception as e:
+                session.rollback()
+                UIUtils.show_error(self, "错误", f"删除成果过程中发生数据库错误: {e}")
             finally:
                 session.close()
 
-    # Add sort_table method similar to ProjectExpenseWidget
+
     def sort_table(self, column):
         """根据点击的列对 self.current_outcomes 列表进行排序并更新表格"""
-        if not self.current_outcomes: return
+        current_order = self.outcome_table.horizontalHeader().sortIndicatorOrder()
+        order = Qt.AscendingOrder if current_order == Qt.DescendingOrder else Qt.DescendingOrder
 
-        # Map column index to attribute name and type
+        # Map visual column index to data attribute for sorting
         column_map = {
-            0: ('name', 'str'),
-            1: ('type', 'enum'),
-            2: ('status', 'enum'),
-            3: ('authors', 'str_none'),
-            4: ('submit_date', 'date'),
-            5: ('publish_date', 'date'),
-            6: ('journal', 'str_none'),
-            7: ('description', 'str_none')
-            # 8: ('remarks', 'str_none') # Removed remarks column (was index 8)
-            # Column 8 (attachment) is not sortable (Index changed from 9 to 8)
+            0: 'name',
+            1: 'type', # Sort by enum value
+            2: 'status', # Sort by enum value
+            3: 'authors',
+            4: 'submit_date', # Use the stored date object
+            5: 'publish_date', # Use the stored date object
+            6: 'journal',
+            7: 'description',
+            # Column 8 (Attachment) is not sortable
         }
 
-        if column not in column_map: return
+        sort_attribute = column_map.get(column)
+        if sort_attribute:
+            # Use a custom key function for sorting
+            def sort_key(outcome):
+                value = getattr(outcome, sort_attribute, None)
+                if isinstance(value, (OutcomeType, OutcomeStatus)):
+                    return value.value # Sort by enum string value
+                if value is None: # Handle None values for dates and strings
+                    # Return a value that sorts None appropriately (e.g., min date or empty string)
+                    attr_type = type(getattr(ProjectOutcome, sort_attribute).type.python_type)
+                    if attr_type is datetime.date:
+                        return datetime.min.date()
+                    else: # Assume string or similar
+                        return ""
+                if isinstance(value, str):
+                    return value.lower() # Case-insensitive string sort
+                return value # For dates, numbers, etc.
 
-        attr_name, sort_type = column_map[column]
-        current_order = self.outcome_table.horizontalHeader().sortIndicatorOrder()
-        reverse = (current_order == Qt.DescendingOrder)
+            reverse_sort = (order == Qt.DescendingOrder)
+            self.current_outcomes.sort(key=sort_key, reverse=reverse_sort)
+            self._populate_table(self.current_outcomes)
+            self.outcome_table.horizontalHeader().setSortIndicator(column, order)
 
-        def sort_key(outcome):
-            value = getattr(outcome, attr_name, None)
-            if sort_type == 'enum':
-                return value.value if value else ""
-            elif sort_type == 'str_none':
-                return value.lower() if value else ""
-            elif sort_type == 'str':
-                return value.lower()
-            elif sort_type == 'date':
-                 if isinstance(value, datetime): return value.date()
-                 # Use a very early date for None to sort them first/last depending on order
-                 return value if value else datetime.min.date()
-            return value if value is not None else ""
+    def show_outcome_context_menu(self, pos):
+        """显示成果表格的右键菜单"""
+        menu = RoundMenu(parent=self)
 
-        try:
-            self.current_outcomes.sort(key=sort_key, reverse=reverse)
-        except Exception as e:
-            print(f"Error during outcome sorting: {e}")
-            return
+        # 获取右键点击的单元格
+        item = self.outcome_table.itemAt(pos)
+        if item:
+            # 添加复制操作
+            copy_action = Action(FluentIcon.COPY, "复制", self)
+            copy_action.triggered.connect(lambda: self.copy_cell_content(item))
+            menu.addAction(copy_action)
 
-        self._populate_table(self.current_outcomes)
-        self.outcome_table.horizontalHeader().setSortIndicator(column, current_order)
+        # 显示菜单
+        menu.exec_(self.outcome_table.viewport().mapToGlobal(pos))
+
+    def copy_cell_content(self, item):
+        """复制单元格内容"""
+        if item:
+            # 获取单元格内容
+            content = item.text()
+            clipboard = QApplication.clipboard()
+            clipboard.setText(content)

@@ -1,8 +1,8 @@
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel)
-from PySide6.QtCore import Qt, QDate
+from PySide6.QtCore import Qt, QDate, QTimer # Import QTimer
 from PySide6.QtGui import QIcon
-from qfluentwidgets import (LineEdit, EditableComboBox, DateEdit, PushButton, InfoBar,
-                          FluentIcon, setTheme, Theme, setThemeColor)
+from qfluentwidgets import (LineEdit, ComboBox, DateEdit, PushButton, InfoBar, # Changed EditableComboBox to ComboBox
+                          FluentIcon, setTheme, Theme, setThemeColor, ToolButton) # Added ToolButton
 from app.models.database import Budget, BudgetItem
 from ..utils.ui_utils import UIUtils
 from sqlalchemy.orm import sessionmaker
@@ -60,7 +60,7 @@ class ProjectDialog(QDialog):
         
         # 财务编号
         financial_layout = QHBoxLayout()
-        financial_layout.addWidget(QLabel("简称/代号:"))
+        financial_layout.addWidget(QLabel("简称/代号\n财务编号:"))
         self.financial_code = LineEdit()
         self.financial_code.setPlaceholderText("请输入项目简称/代号/财务编号")
         financial_layout.addWidget(self.financial_code)
@@ -85,9 +85,9 @@ class ProjectDialog(QDialog):
         # 项目类别
         type_layout = QHBoxLayout()
         type_layout.addWidget(QLabel("项目类别:"))
-        self.project_type = EditableComboBox()
+        self.project_type = ComboBox() # Changed to standard ComboBox
         # 添加默认提示项
-        self.project_type.addItem("请输入或选择项目类别", userData=None)
+        self.project_type.addItem("请选择项目类别", userData=None) # Changed placeholder text slightly
         self.project_type.addItems([
             "国家自然科学基金",
             "国家重点研发计划", 
@@ -97,9 +97,14 @@ class ProjectDialog(QDialog):
             "校级科研项目",
             "其他科研项目"
         ])
-        type_layout.addWidget(self.project_type)
+        type_layout.addWidget(self.project_type, 1) # Give ComboBox stretch factor
+        # Add 'Add Custom Type' button
+        self.add_type_btn = ToolButton(FluentIcon.ADD_TO, self)
+        self.add_type_btn.setToolTip("添加自定义类别")
+        self.add_type_btn.clicked.connect(self.add_custom_type) # Connect to existing method
+        type_layout.addWidget(self.add_type_btn)
         layout.addLayout(type_layout)
-        
+
         # 开始日期
         start_layout = QHBoxLayout()
         start_layout.addWidget(QLabel("开始日期:"))
@@ -152,14 +157,16 @@ class ProjectDialog(QDialog):
         # 连接信号
         save_btn.clicked.connect(self.accept)
         cancel_btn.clicked.connect(self.reject)
-        
+
+    # Removed _remove_duplicate_project_type and _check_and_remove_last_duplicate methods
+
     def accept(self):
         """保存项目信息"""
         # 数据验证
         if not self.financial_code.text().strip():
             UIUtils.show_error(
                 title='错误',
-                content='请输入财务编号！',
+                content='请输入项目简称/代号/财务编号！',
                 parent=self
             )
             return

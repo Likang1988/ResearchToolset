@@ -1,21 +1,22 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QFileDialog, QDialog, QLabel, QHeaderView # Added QHeaderView
-from PySide6.QtCore import Qt, QSize, QPoint # Added QSize and QPoint
-from PySide6.QtGui import QFont # 确保 QFont 已导入
-# Import BodyLabel and PushButton, remove PrimaryPushButton if no longer needed elsewhere
-# Also import TableItemDelegate
-from qfluentwidgets import TitleLabel, FluentIcon, ComboBox, LineEdit, InfoBar, Dialog, BodyLabel, PushButton, TableWidget, TableItemDelegate
-# 需要在文件顶部导入
+import os # Ensure os is imported
+import shutil # Ensure shutil is imported
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QFileDialog, QDialog, QLabel, QHeaderView, QApplication # Import QApplication
+from PySide6.QtCore import Qt, QSize, QPoint
+from PySide6.QtGui import QFont, QIcon
+from qfluentwidgets import TitleLabel, FluentIcon, ComboBox, LineEdit, InfoBar, Dialog, BodyLabel, PushButton, TableWidget, TableItemDelegate, RoundMenu, Action, PlainTextEdit
 from ...models.database import Project, sessionmaker
 from ...utils.ui_utils import UIUtils
 from ...models.database import Base, get_engine # Project and sessionmaker already imported
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum as SQLEnum, DateTime, Engine # Added Engine type hint
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum as SQLEnum, DateTime, Engine
 from enum import Enum
 from datetime import datetime
-import os
-import shutil
-# 假设存在 attachment_utils.py 用于处理附件按钮和逻辑
-from ...utils.attachment_utils import create_attachment_button, handle_attachment # Import attachment utils
+from ...utils.attachment_utils import (
+    create_attachment_button, # Keep
+    sanitize_filename, ensure_directory_exists, get_timestamp_str, get_attachment_icon_path,
+    view_attachment, download_attachment, ROOT_DIR # Import necessary utils
+)
 from ...utils.filter_utils import FilterUtils # Import FilterUtils
+
 
 class DocumentType(Enum):
     APPLICATION = "申请材料"
@@ -82,7 +83,7 @@ class DocumentDialog(QDialog):
         self.version_edit = LineEdit()
         self.version_edit.setPlaceholderText("请输入版本号")
         version_layout.addWidget(self.version_edit)
-        layout.addLayout(version_layout)        
+        layout.addLayout(version_layout)
 
         # 关键词
         keywords_layout = QHBoxLayout()
@@ -95,8 +96,11 @@ class DocumentDialog(QDialog):
         # 文档描述
         description_layout = QHBoxLayout()
         description_layout.addWidget(BodyLabel("文档描述:"))
-        self.description_edit = LineEdit()
+        # Change LineEdit to PlainTextEdit for multi-line input
+        self.description_edit = PlainTextEdit()
         self.description_edit.setPlaceholderText("请输入文档描述")
+        # Set a reasonable minimum height for the text edit
+        self.description_edit.setFixedHeight(120)
         description_layout.addWidget(self.description_edit)
         layout.addLayout(description_layout)
 
@@ -156,7 +160,7 @@ class DocumentDialog(QDialog):
         self.name_edit.setText(self.document.name)
         self.type_combo.setCurrentText(self.document.doc_type.value)
         self.version_edit.setText(self.document.version)
-        self.description_edit.setText(self.document.description)
+        self.description_edit.setPlainText(self.document.description or "") # Use setPlainText and handle None
         self.keywords_edit.setText(self.document.keywords)
         # self.uploader_edit.setText(self.document.uploader) # Removed uploader
         self.file_path_edit.setText(self.document.file_path)
@@ -254,12 +258,12 @@ class ProjectDocumentWidget(QWidget):
         add_btn = UIUtils.create_action_button("添加文档", FluentIcon.ADD)
         edit_btn = UIUtils.create_action_button("编辑文档", FluentIcon.EDIT)
         delete_btn = UIUtils.create_action_button("删除文档", FluentIcon.DELETE)
-        
+
 
         add_btn.clicked.connect(self.add_document)
         edit_btn.clicked.connect(self.edit_document)
         delete_btn.clicked.connect(self.delete_document)
-        
+
 
         button_layout = UIUtils.create_button_layout(add_btn, edit_btn, delete_btn)
         self.main_layout.addLayout(button_layout)
@@ -323,8 +327,11 @@ class ProjectDocumentWidget(QWidget):
         reset_btn = PushButton("重置筛选")
         reset_btn.clicked.connect(self.reset_filters)
         search_layout.addWidget(reset_btn)
-
         self.main_layout.addLayout(search_layout)
+
+        # 添加右键菜单 (Correctly indented within setup_ui)
+        self.document_table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.document_table.customContextMenuRequested.connect(self.show_document_context_menu)
 
     def _on_project_selected(self, index):
         """Handles project selection change."""
@@ -373,19 +380,25 @@ class ProjectDocumentWidget(QWidget):
             name_item = QTableWidgetItem(doc.name)
             name_item.setData(Qt.UserRole, doc.id) # Store ID here
             self.document_table.setItem(row, 0, name_item)
+            # UIUtils.set_item_tooltip(name_item) # Removed tooltip call
             # Col 1: Type
             type_item = QTableWidgetItem(doc.doc_type.value); type_item.setTextAlignment(Qt.AlignCenter); self.document_table.setItem(row, 1, type_item)
+            # UIUtils.set_item_tooltip(type_item) # Removed tooltip call
             # Col 2: Version
             version_item = QTableWidgetItem(doc.version or ""); version_item.setTextAlignment(Qt.AlignCenter); self.document_table.setItem(row, 2, version_item)
+            # UIUtils.set_item_tooltip(version_item) # Removed tooltip call
             # Col 3: Keywords (Index changed from 4 to 3)
             keywords_item = QTableWidgetItem(doc.keywords or ""); self.document_table.setItem(row, 3, keywords_item)
+            # UIUtils.set_item_tooltip(keywords_item) # Removed tooltip call
             # Col 4: Upload Time (Index changed from 6 to 4)
             upload_time_str = doc.upload_time.strftime("%Y-%m-%d %H:%M") if doc.upload_time else ""
             upload_time_item = QTableWidgetItem(upload_time_str); upload_time_item.setTextAlignment(Qt.AlignCenter)
             upload_time_item.setData(Qt.UserRole + 1, doc.upload_time) # Store datetime for sorting
             self.document_table.setItem(row, 4, upload_time_item)
+            # UIUtils.set_item_tooltip(upload_time_item) # Tooltip likely not needed for date/time
             # Col 5: Description (Index changed from 3 to 5)
             description_item = QTableWidgetItem(doc.description or ""); self.document_table.setItem(row, 5, description_item)
+            # UIUtils.set_item_tooltip(description_item) # Removed tooltip call
             # Col 5: Uploader (Removed)
             # uploader_item = QTableWidgetItem(doc.uploader or ""); uploader_item.setTextAlignment(Qt.AlignCenter); self.document_table.setItem(row, 5, uploader_item)
             # Col 7: File Path (Removed)
@@ -433,6 +446,33 @@ class ProjectDocumentWidget(QWidget):
         self.type_filter.setCurrentText("全部类型")
         self.apply_filters() # Re-apply filters to show all items
 
+    def _generate_document_path(self, project, doc_type_enum, original_filename):
+        """Generates the specific path for a project document based on business rules."""
+        if not project or not doc_type_enum or not original_filename:
+            print("Error: Missing project, document type, or filename for path generation.")
+            return None
+
+        base_folder = "documents"
+        project_code = project.financial_code if project.financial_code else "unknown_project"
+        # Use the enum value, sanitize it for path safety
+        doc_type_str = sanitize_filename(doc_type_enum.value)
+        timestamp = get_timestamp_str() # Get current timestamp string
+
+        # Sanitize original filename and split extension
+        original_basename = os.path.basename(original_filename)
+        base_name, ext = os.path.splitext(original_basename)
+        sanitized_base_name = sanitize_filename(base_name)
+
+        # Construct filename: <timestamp>_<sanitized_original_name>.ext
+        new_filename = f"{timestamp}_{sanitized_base_name}{ext}"
+
+        # Construct full path using ROOT_DIR
+        target_dir = os.path.join(ROOT_DIR, base_folder, project_code, doc_type_str)
+        full_path = os.path.join(target_dir, new_filename)
+
+        # Normalize the path
+        return os.path.normpath(full_path)
+
     def add_document(self):
         if not self.current_project:
             UIUtils.show_warning(self, "警告", "请先选择一个项目")
@@ -440,295 +480,327 @@ class ProjectDocumentWidget(QWidget):
 
         dialog = DocumentDialog(self)
         if dialog.exec():
-            file_path = dialog.file_path_edit.text()
-            if not file_path:
+            source_file_path = dialog.file_path_edit.text() # Path selected by user
+            if not source_file_path:
+                # This case should be handled by Dialog's accept validation, but double-check
                 UIUtils.show_warning(self, "警告", "请选择要上传的文件")
                 return
 
-            # 复制文件到项目文档目录
-            project_doc_dir = os.path.join("documents", str(self.current_project.id))
-            os.makedirs(project_doc_dir, exist_ok=True)
+            doc_type_enum = DocumentType(dialog.type_combo.currentText())
 
-            new_file_path = os.path.join(project_doc_dir, os.path.basename(file_path))
+            # --- Generate new path using specific rule ---
+            new_file_path = self._generate_document_path(
+                project=self.current_project,
+                doc_type_enum=doc_type_enum,
+                original_filename=source_file_path
+            )
+            if not new_file_path:
+                 UIUtils.show_error(self, "错误", "无法生成文档保存路径")
+                 return
+            # --- End path generation ---
+
+            # Ensure target directory exists
+            target_dir = os.path.dirname(new_file_path)
+            ensure_directory_exists(target_dir)
+
+            # Copy file
             try:
-                shutil.copy2(file_path, new_file_path)
-            except (IOError, OSError) as e:
-                UIUtils.show_error(self, "文件复制错误", f"无法复制文件到项目目录：{e}")
-                return # Stop if copy fails
+                shutil.copy2(source_file_path, new_file_path) # Use copy2 to preserve metadata
+            except Exception as e:
+                UIUtils.show_error(self, "错误", f"复制文件失败: {e}")
+                return
 
-            # Use the stored engine
+            # Add to database
             Session = sessionmaker(bind=self.engine)
             session = Session()
             try:
                 document = ProjectDocument(
-                    project_id=self.current_project.id, # Use current_project.id
-                    name=dialog.name_edit.text(),
-                    doc_type=DocumentType(dialog.type_combo.currentText()),
-                    version=dialog.version_edit.text(),
-                    description=dialog.description_edit.text(),
-                    keywords=dialog.keywords_edit.text(),
-                    # uploader=dialog.uploader_edit.text(), # Removed uploader
-                    file_path=new_file_path
+                    project_id=self.current_project.id,
+                    name=dialog.name_edit.text().strip(),
+                    doc_type=doc_type_enum,
+                    version=dialog.version_edit.text().strip(),
+                    description=dialog.description_edit.toPlainText().strip(), # Use toPlainText()
+                    keywords=dialog.keywords_edit.text().strip(),
+                    # uploader=dialog.uploader_edit.text().strip(), # Removed uploader
+                    file_path=new_file_path # Store the new path
                 )
                 session.add(document)
                 session.commit()
-                self.load_documents()
-                UIUtils.show_success(self, "成功", "文档上传成功")
-            except Exception as db_err: # Catch potential DB errors
+                self.load_documents() # Reload documents to show the new one
+                UIUtils.show_success(self, "成功", "文档添加成功")
+            except Exception as e:
                 session.rollback()
-                UIUtils.show_error(self, "数据库错误", f"保存文档信息失败：{db_err}")
-                # Attempt to remove the copied file if DB save failed
+                UIUtils.show_error(self, "错误", f"添加文档到数据库失败: {e}")
+                # Attempt to delete the copied file if DB insert fails
                 try:
-                    if os.path.exists(new_file_path):
-                        os.remove(new_file_path)
-                except OSError as remove_err:
-                     print(f"Warning: Failed to remove copied file after DB error: {remove_err}") # Log or print warning
+                    os.remove(new_file_path)
+                except OSError:
+                    pass # Ignore error if file deletion fails
             finally:
                 session.close()
 
     def edit_document(self):
-        if not self.current_project:
-            UIUtils.show_warning(self, "警告", "请先选择一个项目")
-            return
         selected_items = self.document_table.selectedItems()
         if not selected_items:
-            UIUtils.show_warning(self, "警告", "请先选择要编辑的文档")
+            UIUtils.show_warning(self, "警告", "请选择要编辑的文档")
             return
 
         row = selected_items[0].row()
-        # Get ID from UserRole of the first column item
-        id_item = self.document_table.item(row, 0)
-        if not id_item: return
-        doc_id = id_item.data(Qt.UserRole)
+        doc_id = self.document_table.item(row, 0).data(Qt.UserRole)
 
-        # Use the stored engine
         Session = sessionmaker(bind=self.engine)
         session = Session()
-
         try:
             document = session.query(ProjectDocument).filter(
-                ProjectDocument.id == doc_id,
-                ProjectDocument.project_id == self.current_project.id
+                ProjectDocument.id == doc_id
             ).first()
+
             if not document:
-                UIUtils.show_error(self, "错误", "未找到选中的文档记录")
+                UIUtils.show_warning(self, "警告", "未找到选中的文档")
                 return
 
             dialog = DocumentDialog(self, document=document)
+            # Disable file selection during edit as we don't replace files this way
+            dialog.file_path_edit.setEnabled(False)
+            dialog.findChild(QPushButton, "选择文件").setEnabled(False) # Find button by name/type
+
             if dialog.exec():
-                document.name = dialog.name_edit.text()
+                # Update document attributes
+                document.name = dialog.name_edit.text().strip()
                 document.doc_type = DocumentType(dialog.type_combo.currentText())
-                document.version = dialog.version_edit.text()
-                document.description = dialog.description_edit.text()
-                document.keywords = dialog.keywords_edit.text()
-                # document.uploader = dialog.uploader_edit.text() # Removed uploader update
-                # File path is not edited here, only through attachment handling
+                document.version = dialog.version_edit.text().strip()
+                document.description = dialog.description_edit.toPlainText().strip() # Use toPlainText()
+                document.keywords = dialog.keywords_edit.text().strip()
+                # document.uploader = dialog.uploader_edit.text().strip() # Removed uploader
+                # file_path is not updated here
+
                 session.commit()
-                self.load_documents()
-                UIUtils.show_success(self, "成功", "文档信息编辑成功")
+                self.load_documents() # Reload to show changes
+                UIUtils.show_success(self, "成功", "文档信息更新成功")
+
         except Exception as e:
             session.rollback()
-            UIUtils.show_error(self, "数据库错误", f"编辑文档信息失败：{e}")
+            UIUtils.show_error(self, "错误", f"编辑文档失败: {e}")
         finally:
             session.close()
 
     def delete_document(self):
-        if not self.current_project:
-            UIUtils.show_warning(self, "警告", "请先选择一个项目")
-            return
-        selected_rows = sorted(list(set(item.row() for item in self.document_table.selectedItems())), reverse=True)
-        if not selected_rows:
-            UIUtils.show_warning(self, "警告", "请先选择要删除的文档")
+        selected_items = self.document_table.selectedItems()
+        if not selected_items:
+            UIUtils.show_warning(self, "警告", "请选择要删除的文档")
             return
 
-        doc_ids_to_delete = []
-        for row in selected_rows:
-            id_item = self.document_table.item(row, 0)
-            if id_item:
-                doc_ids_to_delete.append(id_item.data(Qt.UserRole))
-
-        if not doc_ids_to_delete:
-             UIUtils.show_error(self, "错误", "无法获取选中的文档ID")
-             return
+        doc_ids_to_delete = list(set(self.document_table.item(item.row(), 0).data(Qt.UserRole) for item in selected_items))
 
         confirm_dialog = Dialog(
-            title='确认删除',
-            content=f'确定要删除选中的 {len(doc_ids_to_delete)} 条文档记录吗？相关文件也将被删除。此操作不可恢复。',
-            parent=self
+            '确认删除',
+            f'确定要删除选中的 {len(doc_ids_to_delete)} 个文档吗？\n此操作将同时删除关联的文件，且不可恢复！',
+            self
         )
-        confirm_dialog.cancelButton.setText('取消')
-        confirm_dialog.yesButton.setText('确认删除')
 
         if confirm_dialog.exec():
             Session = sessionmaker(bind=self.engine)
             session = Session()
             deleted_count = 0
+            failed_files = []
             try:
                 for doc_id in doc_ids_to_delete:
                     document = session.query(ProjectDocument).filter(
-                        ProjectDocument.id == doc_id,
-                        ProjectDocument.project_id == self.current_project.id
+                        ProjectDocument.id == doc_id
                     ).first()
                     if document:
-                        # 删除文件
-                        if document.file_path and os.path.exists(document.file_path):
-                            try:
-                                os.remove(document.file_path)
-                            except OSError as e:
-                                print(f"Warning: Could not delete document file {document.file_path}: {e}")
-                                # Decide if deletion should proceed or stop
-
+                        file_path_to_delete = document.file_path
                         session.delete(document)
+                        session.flush() # Ensure delete happens before file removal attempt
+
+                        # Attempt to delete the associated file
+                        if file_path_to_delete and os.path.exists(file_path_to_delete):
+                            try:
+                                os.remove(file_path_to_delete)
+                            except OSError as e:
+                                print(f"Error deleting file {file_path_to_delete}: {e}")
+                                failed_files.append(os.path.basename(file_path_to_delete))
+                                # Continue deleting DB entry even if file deletion fails
+
                         deleted_count += 1
+
                 session.commit()
-                self.load_documents()
-                UIUtils.show_success(self, "成功", f"成功删除 {deleted_count} 条文档记录")
+                self.load_documents() # Refresh the table
+
+                if failed_files:
+                    UIUtils.show_warning(
+                        self, "删除部分失败",
+                        f"成功删除 {deleted_count} 个文档记录。\n但以下文件删除失败，请手动处理：\n{', '.join(failed_files)}"
+                    )
+                elif deleted_count > 0:
+                    UIUtils.show_success(self, "成功", f"成功删除 {deleted_count} 个文档及其关联文件")
+                else:
+                     UIUtils.show_warning(self, "未删除", "没有文档被删除（可能已被其他操作移除）")
+
+
             except Exception as e:
                 session.rollback()
-                UIUtils.show_error(self, "数据库错误", f"删除文档失败：{e}")
+                UIUtils.show_error(self, "错误", f"删除文档过程中发生数据库错误: {e}")
             finally:
                 session.close()
 
     def download_document(self):
         selected_items = self.document_table.selectedItems()
         if not selected_items:
-            UIUtils.show_warning(self, "警告", "请先选择要下载的文档")
+            UIUtils.show_warning(self, "警告", "请选择要下载的文档")
             return
+        if len(selected_items) > 1:
+             UIUtils.show_warning(self, "警告", "一次只能下载一个文档")
+             return
 
         row = selected_items[0].row()
-        id_item = self.document_table.item(row, 0)
-        if not id_item: return
-        doc_id = id_item.data(Qt.UserRole)
+        doc_id = self.document_table.item(row, 0).data(Qt.UserRole)
 
         Session = sessionmaker(bind=self.engine)
         session = Session()
         try:
-            document = session.query(ProjectDocument).get(doc_id)
-            if not document or not document.file_path or not os.path.exists(document.file_path):
-                UIUtils.show_error(self, "错误", "找不到文档文件或文件路径无效")
+            document = session.query(ProjectDocument).filter(ProjectDocument.id == doc_id).first()
+            if not document or not document.file_path:
+                UIUtils.show_warning(self, "警告", "未找到文档文件或文件路径无效")
                 return
 
-            # 获取原始文件名
-            original_filename = os.path.basename(document.file_path)
-            # 建议保存的文件名（可以包含文档名等信息）
-            suggested_filename = f"{document.name}_{original_filename}"
+            source_path = document.file_path
+            if not os.path.exists(source_path):
+                 UIUtils.show_error(self, "错误", f"文件不存在: {source_path}")
+                 return
 
-            # 打开文件保存对话框
+            # Suggest a filename based on the document name and original extension
+            original_filename = os.path.basename(source_path)
+            _, ext = os.path.splitext(original_filename)
+            suggested_filename = f"{sanitize_filename(document.name)}{ext}"
+
             save_path, _ = QFileDialog.getSaveFileName(
                 self,
                 "保存文档",
-                suggested_filename, # 建议的文件名
-                f"All Files (*)" # 文件类型过滤器
+                suggested_filename, # Suggest filename
+                f"文件 (*{ext})" # Filter by original extension
             )
 
             if save_path:
                 try:
-                    shutil.copy2(document.file_path, save_path)
-                    UIUtils.show_success(self, "成功", f"文档已成功下载到：\n{save_path}")
+                    shutil.copy2(source_path, save_path)
+                    UIUtils.show_success(self, "成功", f"文档已保存到: {save_path}")
                 except Exception as e:
-                    UIUtils.show_error(self, "下载错误", f"下载文件失败：{e}")
+                    UIUtils.show_error(self, "错误", f"保存文件失败: {e}")
+
+        except Exception as e:
+            UIUtils.show_error(self, "错误", f"下载文档时出错: {e}")
         finally:
             session.close()
 
-    def handle_document_attachment(self, event, btn): # Removed doc_id from signature
-        """Wraps the handle_attachment call specifically for documents."""
-        # Get the document ID from the button's property
+    def handle_document_attachment(self, event, btn):
+        """Handles clicks on the attachment button (view/download)."""
         doc_id = btn.property("item_id")
-        if doc_id is None:
-            print("Error: Could not get document ID from button property.")
-            return
+        action_type = btn.property("action_type") # 'view' or 'download'
 
-        # Find the row this button belongs to (optional, might not be needed if handle_attachment updates btn directly)
-        # button_pos = btn.mapToGlobal(self.mapToGlobal(QPoint(0, 0)))
-        # row_index = self.document_table.indexAt(self.document_table.viewport().mapFromGlobal(button_pos)).row()
-        # if row_index < 0: return
+        if not doc_id:
+            print("Error: No document ID found on button.")
+            return
 
         Session = sessionmaker(bind=self.engine)
         session = Session()
         try:
-            document = session.query(ProjectDocument).get(doc_id) # Use ID fetched from button
-            if not document:
-                UIUtils.show_error(self, "错误", "找不到对应的文档记录")
-                return
-
-            # Call the generic handler from attachment_utils with correct parameters
-            handle_attachment(
-                event=event,
-                btn=btn,
-                item=document, # Pass the actual document object
-                session=session, # Pass the current session
-                parent_widget=self,
-                project=self.current_project, # Pass the current project object
-                item_type='document', # Pass the item type identifier
-                attachment_attr='file_path', # Pass the attribute name for the path
-                base_folder='documents' # Pass the base folder name
-            )
-
-            # The handle_attachment function from attachment_utils now handles
-            # database updates, file operations, button state updates,
-            # and user feedback messages internally.
-            # No further action is needed in this wrapper function after calling handle_attachment.
-
-            # --- Add logic to update the in-memory list ---
-            # Get the potentially updated path from the button property
-            updated_path = btn.property("attachment_path")
-
-            # Find the corresponding document in the main list and update its path
-            for doc_in_list in self.all_documents:
-                if doc_in_list.id == doc_id:
-                    doc_in_list.file_path = updated_path
-                    break # Found and updated, exit loop
-
-            # Note: We don't need to explicitly update self.current_documents here,
-            # as filtering/sorting operations typically rebuild it from self.all_documents.
-
+            self._execute_document_action(action_type, doc_id, btn, session)
         except Exception as e:
-            session.rollback()
-            UIUtils.show_error(self, "错误", f"处理文档附件时出错: {e}")
-            print(f"Error in handle_document_attachment: {e}")
+             UIUtils.show_error(self, "操作失败", f"处理文档附件时出错: {e}")
         finally:
             session.close()
 
-    def sort_table(self, column):
-        """Sorts the table based on the clicked column."""
-        if not self.current_documents: return
 
-        # Map column index to attribute name and type
-        column_map = {
-            0: ('name', 'str'),
-            1: ('doc_type', 'enum'),
-            2: ('version', 'str_none'),
-            3: ('keywords', 'str_none'),    # Index changed from 4 to 3
-            4: ('upload_time', 'datetime'), # Index changed from 6 to 4
-            5: ('description', 'str_none'), # Index changed from 3 to 5
-            # 6: ('attachment', None) # Not sortable (Index changed from 7 to 6)
-            # Removed 'uploader' (was index 5)
-        }
-
-        if column not in column_map: return
-
-        attr_name, sort_type = column_map[column]
-        current_order = self.document_table.horizontalHeader().sortIndicatorOrder()
-        reverse = (current_order == Qt.DescendingOrder)
-
-        def sort_key(doc):
-            value = getattr(doc, attr_name, None)
-            if sort_type == 'enum':
-                return value.value if value else ""
-            elif sort_type == 'str_none':
-                return value.lower() if value else ""
-            elif sort_type == 'str':
-                return value.lower()
-            elif sort_type == 'datetime':
-                 # Use epoch for None datetimes to sort them consistently
-                 return value.timestamp() if value else 0
-            return value if value is not None else "" # Fallback for other types
-
-        try:
-            self.current_documents.sort(key=sort_key, reverse=reverse)
-        except Exception as e:
-            print(f"Error during document sorting: {e}")
+    def _execute_document_action(self, action_type, doc_id, btn, session):
+        """Executes view or download action for a document."""
+        document = session.query(ProjectDocument).filter(ProjectDocument.id == doc_id).first()
+        if not document or not document.file_path:
+            UIUtils.show_warning(self, "警告", "未找到文档文件或文件路径无效")
             return
 
-        self._populate_table(self.current_documents)
-        self.document_table.horizontalHeader().setSortIndicator(column, current_order)
+        file_path = document.file_path
+        if not os.path.exists(file_path):
+            UIUtils.show_error(self, "错误", f"文件不存在: {file_path}")
+            # Optionally update button state if file is missing
+            btn.setIcon(FluentIcon.REMOVE_FROM)
+            btn.setToolTip("文件丢失")
+            btn.setEnabled(False)
+            return
+
+        if action_type == 'view':
+            view_attachment(file_path, self)
+        elif action_type == 'download':
+            # Suggest a filename based on the document name and original extension
+            original_filename = os.path.basename(file_path)
+            _, ext = os.path.splitext(original_filename)
+            suggested_filename = f"{sanitize_filename(document.name)}{ext}"
+
+            save_path, _ = QFileDialog.getSaveFileName(
+                self,
+                "下载文档附件",
+                suggested_filename,
+                f"文件 (*{ext})"
+            )
+            if save_path:
+                download_attachment(file_path, save_path, self)
+        else:
+            print(f"Unknown action type: {action_type}")
+
+
+    def sort_table(self, column):
+        """Sorts the table based on the clicked column."""
+        current_order = self.document_table.horizontalHeader().sortIndicatorOrder()
+        order = Qt.AscendingOrder if current_order == Qt.DescendingOrder else Qt.DescendingOrder
+
+        # Map visual column index to data attribute for sorting
+        column_map = {
+            0: 'name',
+            1: 'doc_type', # Sort by enum value
+            2: 'version',
+            3: 'keywords',
+            4: 'upload_time', # Use the stored datetime object
+            5: 'description',
+            # Column 6 (Attachment) is not sortable
+        }
+
+        sort_attribute = column_map.get(column)
+        if sort_attribute:
+            # Use a custom key function for sorting
+            def sort_key(doc):
+                value = getattr(doc, sort_attribute, None)
+                if isinstance(value, DocumentType):
+                    return value.value # Sort by enum string value
+                if value is None: # Handle None values
+                    return "" if isinstance(getattr(ProjectDocument, sort_attribute).type, String) else datetime.min
+                if isinstance(value, str):
+                    return value.lower() # Case-insensitive string sort
+                return value # For dates, numbers, etc.
+
+            reverse_sort = (order == Qt.DescendingOrder)
+            self.current_documents.sort(key=sort_key, reverse=reverse_sort)
+            self._populate_table(self.current_documents)
+            self.document_table.horizontalHeader().setSortIndicator(column, order)
+
+    def show_document_context_menu(self, pos):
+        """显示文档表格的右键菜单"""
+        menu = RoundMenu(parent=self)
+
+        # 获取右键点击的单元格
+        item = self.document_table.itemAt(pos)
+        if item:
+            # 添加复制操作
+            copy_action = Action(FluentIcon.COPY, "复制", self)
+            copy_action.triggered.connect(lambda: self.copy_cell_content(item))
+            menu.addAction(copy_action)
+
+        # 显示菜单
+        menu.exec_(self.document_table.viewport().mapToGlobal(pos))
+
+    def copy_cell_content(self, item):
+        """复制单元格内容"""
+        if item:
+            # 获取单元格内容
+            content = item.text()
+            clipboard = QApplication.clipboard()
+            clipboard.setText(content)

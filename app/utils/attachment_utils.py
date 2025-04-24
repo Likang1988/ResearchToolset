@@ -6,11 +6,44 @@ from PySide6.QtWidgets import QWidget, QHBoxLayout, QFileDialog, QApplication
 from PySide6.QtCore import Qt, QSize, QPoint
 from PySide6.QtGui import QIcon
 from qfluentwidgets import ToolButton, RoundMenu, Action, FluentIcon, Dialog
+import re # Import regex for sanitization
+import datetime # Import datetime for timestamp
 from ..utils.ui_utils import UIUtils # Assuming UIUtils is in the parent directory
 
 # Define base directories relative to the utils directory
 UTILS_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.abspath(os.path.join(UTILS_DIR, '..', '..')) # Go up two levels to project root
+
+# --- NEW UTILITY FUNCTIONS START ---
+
+def sanitize_filename(filename):
+    """Removes or replaces characters that are invalid in file paths."""
+    # Remove leading/trailing whitespace
+    filename = filename.strip()
+    # Replace potentially problematic characters with underscores
+    filename = re.sub(r'[\\/*?:"<>|]', '_', filename)
+    # Optionally, limit filename length (e.g., to 200 characters)
+    # max_len = 200
+    # if len(filename) > max_len:
+    #     name, ext = os.path.splitext(filename)
+    #     filename = name[:max_len - len(ext) - 1] + '_' + ext
+    return filename
+
+def ensure_directory_exists(dir_path):
+    """Ensures that the specified directory exists, creating it if necessary."""
+    if not os.path.exists(dir_path):
+        try:
+            os.makedirs(dir_path, exist_ok=True)
+        except OSError as e:
+            print(f"Error creating directory {dir_path}: {e}")
+            # Optionally re-raise or handle the error appropriately
+            raise
+
+def get_timestamp_str():
+    """Returns the current timestamp as a string in YYYYMMDDHHMMSS format."""
+    return datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+
+# --- NEW UTILITY FUNCTIONS END ---
 
 def get_attachment_icon_path(icon_name):
     """Helper function to get the absolute path for an icon."""
@@ -82,65 +115,7 @@ def create_attachment_menu(parent, attachment_path, item_id, handle_attachment_f
 
     return menu
 
-def handle_attachment(event, btn, item, session, parent_widget, project, item_type, attachment_attr, base_folder):
-    """
-    Handles attachment actions (view, upload, replace, delete) via context menu or direct click.
-
-    Args:
-        event: The event triggering the handler (QPoint for context menu, None for click).
-        btn: The ToolButton that was clicked or requested context menu.
-        item: The database object (e.g., ProjectDocument, ProjectOutcome).
-        session: The SQLAlchemy session.
-        parent_widget: The parent widget for dialogs.
-        project: The current project object.
-        item_type: String identifier ('document', 'outcome').
-        attachment_attr: The name of the attribute storing the path (e.g., 'file_path', 'attachment_path').
-        base_folder: The base directory name for storing attachments (e.g., 'documents', 'outcomes').
-    """
-    item_id = btn.property("item_id")
-    # For context menu (right-click), we still need the item's state initially to build the correct menu
-    context_menu_path = getattr(item, attachment_attr, None)
-
-    if event is None: # Direct click (left-click)
-        # --- CRITICAL CHANGE for left-click behavior ---
-        # Use the button's property, which is updated immediately after actions
-        button_path = btn.property("attachment_path")
-        if button_path and os.path.exists(button_path):
-            # If button property indicates an existing attachment, show menu
-            # Pass the button_path to create_attachment_menu for consistency
-            # Pass button_path as path_to_use for view/download actions triggered from this menu
-            menu = create_attachment_menu(parent_widget, button_path, item_id,
-                                          lambda action_type, id, path=button_path: handle_attachment_action(action_type, id, item, session, parent_widget, project, item_type, attachment_attr, base_folder, btn, path))
-            menu.exec(btn.mapToGlobal(btn.rect().bottomLeft()))
-        else:
-            # If button property indicates no attachment, trigger upload. Upload doesn't need path_to_use.
-            # We can pass None or an empty string, or adjust handle_attachment_action if needed, but current implementation handles it.
-            handle_attachment_action("upload", item_id, item, session, parent_widget, project, item_type, attachment_attr, base_folder, btn, None) # Pass None for path_to_use
-    elif isinstance(event, QPoint): # Context menu request (right-click)
-        # Build the context menu based on the item's state at the time of the right-click
-        # Use context_menu_path here which was fetched from the item earlier
-        # Pass context_menu_path as path_to_use for view/download actions triggered from this menu
-        menu = create_attachment_menu(parent_widget, context_menu_path, item_id,
-                                      lambda action_type, id, path=context_menu_path: handle_attachment_action(action_type, id, item, session, parent_widget, project, item_type, attachment_attr, base_folder, btn, path))
-        menu.exec(btn.mapToGlobal(event))
-
-def handle_attachment_action(action_type, item_id, item, session, parent_widget, project, item_type, attachment_attr, base_folder, btn, path_to_use):
-    """Executes the specific attachment action."""
-    # Note: 'item' might hold outdated path info immediately after an action via the menu.
-    # 'path_to_use' holds the path that was valid when the menu was created/clicked.
-
-    if action_type == "view":
-        # Use the path that was valid when the menu action was triggered
-        view_attachment(path_to_use, parent_widget)
-    elif action_type == "download":
-        # Use the path that was valid when the menu action was triggered
-        download_attachment(path_to_use, parent_widget)
-    elif action_type == "upload" or action_type == "replace":
-        # Upload/Replace needs the item to update the DB and generate new path
-        replace_attachment(item, session, parent_widget, project, item_type, attachment_attr, base_folder, btn)
-    elif action_type == "delete":
-        # Delete needs the item to update the DB
-        delete_attachment(item, session, parent_widget, attachment_attr, btn)
+# --- Removed obsolete handle_attachment and handle_attachment_action functions ---
 
 import sys # Add sys import if not already present at the top
 import subprocess # Add subprocess import if not already present at the top
