@@ -590,9 +590,8 @@ function showBaselineInfo (event,element){
       <button onclick="saveGanttOnServer();" class="button first big requireWrite" title="保存">保存</button>
 
 
-      <button onclick='ge.exportGantt();' class='button requireWrite exportproject'><em>导出</em></button>
-      <button class="button login" title="登录/注册" onclick="loginEnroll($(this));" style="display:none;">登录/注册</button>
-      <button class="button opt collab" title="Start with Twproject" onclick="collaborate($(this));" style="display:none;"><em>协作</em></button>
+      <button onclick='ge.exportGantt();' class='button requireWrite exportproject'title="导出">导出</button>
+    
       &nbsp; &nbsp; &nbsp; &nbsp;
       <span class="ganttButtonSeparator"></span>
       <button onclick="$('#workSpace').trigger('undo.gantt');return false;" class="button textual icon requireCanWrite" title="撤销"><span class="teamworkIcon">'</span></button>

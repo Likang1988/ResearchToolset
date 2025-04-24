@@ -30,7 +30,7 @@ from ...utils.filter_utils import FilterUtils # Import FilterUtils
 class OutcomeType(Enum):
     PAPER = "论文"
     PATENT = "专利"
-    SOFTWARE = "软件著作权"
+    SOFTWARE = "软著"
     STANDARD = "标准"
     AWARD = "获奖"
     OTHER = "其他"
@@ -315,15 +315,14 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
         #self.outcome_table.verticalHeader().setVisible(False)
 
         # 设置初始列宽 (需要调整以适应新列)
-        header.resizeSection(0, 150) # 成果名称
-        header.resizeSection(1, 100) # 类型
-        header.resizeSection(2, 100) # 状态
-        header.resizeSection(3, 120) # 作者/完成人
-        header.resizeSection(4, 100) # 投稿/申请日期
-        header.resizeSection(5, 100) # 发表/授权日期
+        header.resizeSection(0, 200) # 成果名称
+        header.resizeSection(1, 60) # 类型
+        header.resizeSection(2, 80) # 状态
+        header.resizeSection(3, 150) # 作者/完成人
+        header.resizeSection(4, 92) # 投稿/申请日期
+        header.resizeSection(5, 92) # 发表/授权日期
         header.resizeSection(6, 120) # 期刊/授权单位
-        header.resizeSection(7, 150) # 描述
-        # header.resizeSection(8, 100) # 移除备注列宽设置
+        header.resizeSection(7, 200) # 描述
         header.resizeSection(8, 80)  # 附件列 (索引从9改为8)
 
     # 允许用户调整列宽和移动列

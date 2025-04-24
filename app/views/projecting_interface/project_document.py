@@ -18,10 +18,14 @@ from ...utils.attachment_utils import create_attachment_button, handle_attachmen
 from ...utils.filter_utils import FilterUtils # Import FilterUtils
 
 class DocumentType(Enum):
-    APPLICATION = "申请书"
+    APPLICATION = "申请材料"
+    INITIATION = "开题材料"
     CONTRACT = "合同/任务书"
     RESEARCH_DATA = "研究数据"
-    RESULT = "成果文件"
+    PROGRESS = "进展报告"
+    OUTSOURCING = "外协材料"
+    QUALITY = "质量管理"
+    FINALIZATION = "结题材料"
     MEETING = "会议纪要"
     OTHER = "其他"
 
@@ -36,7 +40,6 @@ class ProjectDocument(Base):
     description = Column(String(500))  # 文档描述
     file_path = Column(String(500))  # 文件路径
     upload_time = Column(DateTime, default=datetime.now)  # 上传时间
-    uploader = Column(String(50))  # 上传人
     keywords = Column(String(200))  # 关键词，用于检索
 
 class DocumentDialog(QDialog):
@@ -96,14 +99,6 @@ class DocumentDialog(QDialog):
         self.description_edit.setPlaceholderText("请输入文档描述")
         description_layout.addWidget(self.description_edit)
         layout.addLayout(description_layout)
-
-        # 上传人 (Removed)
-        # uploader_layout = QHBoxLayout()
-        # uploader_layout.addWidget(BodyLabel("上 传 人 :")) # Align label width
-        # self.uploader_edit = LineEdit()
-        # self.uploader_edit.setPlaceholderText("请输入上传人")
-        # uploader_layout.addWidget(self.uploader_edit)
-        # layout.addLayout(uploader_layout)
 
         # 文件选择
         file_layout = QHBoxLayout()
@@ -293,13 +288,12 @@ class ProjectDocumentWidget(QWidget):
         #self.document_table.verticalHeader().setVisible(False)
 
         # 设置初始列宽 (需要调整以适应新列)
-        header.resizeSection(0, 200) # 文档名称
+        header.resizeSection(0, 310) # 文档名称
         header.resizeSection(1, 100) # 类型
         header.resizeSection(2, 80)  # 版本
         header.resizeSection(3, 120) # 关键词 (索引改为3)
-        header.resizeSection(4, 120) # 上传时间 (索引改为4)
-        header.resizeSection(5, 200) # 描述 (索引改为5)
-        # header.resizeSection(5, 80)  # 移除上传人列宽设置
+        header.resizeSection(4, 125) # 上传时间 (索引改为4)
+        header.resizeSection(5, 250) # 描述 (索引改为5)
         header.resizeSection(6, 80)  # 附件列 (索引改为6)
 
     # 允许用户调整列宽和移动列

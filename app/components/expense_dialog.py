@@ -201,8 +201,6 @@ class ExpenseDialog(QDialog):
              self.voucher_btn.setText("选择凭证文件")
              self.voucher_btn.setToolTip("")
 
-
-    # This method seems out of place here, it belongs in the parent widget (ProjectExpenseWidget)
-    # def add_expenses(self, expenses_data):
-    #     """批量添加支出"""
-    #     self.parent().add_expenses(expenses_data)
+    def add_expenses(self, expenses_data):
+        """批量添加支出"""
+        self.parent().add_expenses(expenses_data)
