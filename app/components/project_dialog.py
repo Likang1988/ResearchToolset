@@ -26,7 +26,6 @@ class ProjectDialog(QDialog):
         """从数据库加载历史数据"""
         from ..models.database import sessionmaker, Project
         try:
-            # 遍历父窗口链，找到包含engine属性的窗口
             parent = self.parent()
             while parent:
                 if hasattr(parent, 'engine'):
@@ -98,7 +97,6 @@ class ProjectDialog(QDialog):
             "其他科研项目"
         ])
         type_layout.addWidget(self.project_type, 1) # Give ComboBox stretch factor
-        # Add 'Add Custom Type' button
         self.add_type_btn = ToolButton(FluentIcon.ADD_TO, self)
         self.add_type_btn.setToolTip("添加自定义类别")
         self.add_type_btn.clicked.connect(self.add_custom_type) # Connect to existing method
@@ -109,7 +107,6 @@ class ProjectDialog(QDialog):
         start_layout = QHBoxLayout()
         start_layout.addWidget(QLabel("开始日期:"))
         self.start_date = DateEdit()
-#        self.start_date.setCalendarPopup(True)
         self.start_date.setDate(QDate.currentDate())
         start_layout.addWidget(self.start_date)
         layout.addLayout(start_layout)
@@ -118,7 +115,6 @@ class ProjectDialog(QDialog):
         end_layout = QHBoxLayout()
         end_layout.addWidget(QLabel("结束日期:"))
         self.end_date = DateEdit()
-#        self.end_date.setCalendarPopup(True)
         self.end_date.setDate(QDate.currentDate())
         end_layout.addWidget(self.end_date)
         layout.addLayout(end_layout)
@@ -158,7 +154,6 @@ class ProjectDialog(QDialog):
         save_btn.clicked.connect(self.accept)
         cancel_btn.clicked.connect(self.reject)
 
-    # Removed _remove_duplicate_project_type and _check_and_remove_last_duplicate methods
 
     def accept(self):
         """保存项目信息"""

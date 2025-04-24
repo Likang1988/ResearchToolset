@@ -9,7 +9,6 @@ import shutil # 导入 shutil 模块
 from ...components.project_dialog import ProjectDialog
 from .project_budget import ProjectBudgetWidget
 from ...models.database import init_db, add_project_to_db, sessionmaker, Project, Budget, Expense, Activity, GanttTask, GanttDependency # 导入 GanttTask 和 GanttDependency
-# from ...models.achievements import ProjectAchievement # 如果有成果模型，取消注释并导入
 from ...utils.ui_utils import UIUtils
 from ...utils.db_utils import DBUtils
 from sqlalchemy import func
@@ -33,7 +32,6 @@ class ProjectListWindow(QWidget):
         # 创建主布局
         main_layout = QVBoxLayout(self)
         
-        # 创建QStackedWidget
         self.stacked_widget = QStackedWidget()
         main_layout.addWidget(self.stacked_widget)
         
@@ -49,7 +47,6 @@ class ProjectListWindow(QWidget):
 
     def setup_project_page(self):
         layout = QVBoxLayout(self.project_page)
-        #layout.setContentsMargins(9, 9, 9, 9)  # 统一设置边距为12像素
         layout.setSpacing(10)  # 设置组件之间的垂直间距为10像素
         
         # 标题
@@ -142,7 +139,6 @@ class ProjectListWindow(QWidget):
         session = Session()
         
         try:
-            # 按ID升序排序，使新添加的项目显示在最下方
             projects = session.query(Project).order_by(Project.id.asc()).all()
             
             # 填充表格数据
@@ -154,35 +150,27 @@ class ProjectListWindow(QWidget):
                 item = QTableWidgetItem(project.financial_code)
                 item.setData(Qt.UserRole, project.id)  # 存储项目ID
                 self.project_table.setItem(row_position, 0, item)
-                # UIUtils.set_item_tooltip(item) # Removed tooltip call
 
                 item_name = QTableWidgetItem(project.name)
                 self.project_table.setItem(row_position, 1, item_name)
-                # UIUtils.set_item_tooltip(item_name) # Removed tooltip call
 
                 item_code = QTableWidgetItem(project.project_code)
                 self.project_table.setItem(row_position, 2, item_code)
-                # UIUtils.set_item_tooltip(item_code) # Removed tooltip call
 
                 item_type = QTableWidgetItem(project.project_type)
                 self.project_table.setItem(row_position, 3, item_type)
-                # UIUtils.set_item_tooltip(item_type) # Removed tooltip call
 
                 item_start_date = QTableWidgetItem(str(project.start_date))
                 self.project_table.setItem(row_position, 4, item_start_date)
-                # UIUtils.set_item_tooltip(item_start_date) # Tooltip might not be needed for dates
 
                 item_end_date = QTableWidgetItem(str(project.end_date))
                 self.project_table.setItem(row_position, 5, item_end_date)
-                # UIUtils.set_item_tooltip(item_end_date) # Tooltip might not be needed for dates
 
                 item_budget = QTableWidgetItem(str(project.total_budget))
                 self.project_table.setItem(row_position, 6, item_budget)
-                # UIUtils.set_item_tooltip(item_budget) # Tooltip might not be needed for numbers
 
                 item_director = QTableWidgetItem(str(project.director))
                 self.project_table.setItem(row_position, 7, item_director)
-                # UIUtils.set_item_tooltip(item_director) # Removed tooltip call
                 # 获取总预算执行率
                 total_budget = session.query(Budget).filter(
                     Budget.project_id == project.id,
@@ -190,9 +178,7 @@ class ProjectListWindow(QWidget):
                 ).first()
                 
                 # 移除添加项目管理和经费管理按钮的代码
-                # if total_budget and total_budget.total_amount > 0:
                 #     ... (代码已移除) ...
-                # else:
                 #     ... (代码已移除) ...
                 #
                 # # 经费管理按钮
@@ -291,7 +277,6 @@ class ProjectListWindow(QWidget):
                 session.add(project)
                 session.flush()  # 获取项目ID
                 
-                # 保存项目ID供后续使用
                 self.project_id = project.id
                 
                 # 记录添加项目的活动
@@ -413,7 +398,6 @@ class ProjectListWindow(QWidget):
         row = selected_rows[0].row()
         project_id = self.project_table.item(row, 0).data(Qt.UserRole)
         
-        # 使用InfoBar显示确认对话框
         confirm_dialog = Dialog(
             '确认删除',
             '确定要删除该项目吗？此操作不可恢复！',
@@ -439,7 +423,6 @@ class ProjectListWindow(QWidget):
                 project_name_for_log = project.name
                 project_code_for_log = project.financial_code
 
-                # 获取项目根目录 (假设 project_list.py 在 app/views/projecting_interface/ 下)
                 current_dir = os.path.dirname(os.path.abspath(__file__))
                 root_dir = os.path.abspath(os.path.join(current_dir, '..', '..', '..'))
 
@@ -452,8 +435,6 @@ class ProjectListWindow(QWidget):
                     if expense.voucher_path and os.path.isabs(expense.voucher_path) and os.path.exists(expense.voucher_path):
                         voucher_files_to_delete.append(expense.voucher_path)
                     elif expense.voucher_path:
-                        # 尝试构建绝对路径 (假设 voucher_path 存储的是相对路径或不完整路径)
-                        # 这里需要根据 voucher_path 的实际存储格式调整
                         potential_path = os.path.join(root_dir, expense.voucher_path) # 示例：假设相对根目录
                         if os.path.exists(potential_path):
                              voucher_files_to_delete.append(potential_path)
@@ -472,17 +453,11 @@ class ProjectListWindow(QWidget):
                 )
                 session.add(activity)
 
-                # 删除无 cascade 或需要优先处理的关联记录
                 session.query(GanttTask).filter(GanttTask.project_id == project_id).delete(synchronize_session='fetch')
                 session.query(GanttDependency).filter(GanttDependency.project_id == project_id).delete(synchronize_session='fetch')
-                # 注意：Activity 记录与 Project 的关系没有 cascade，需要手动删除
-                # 但我们刚添加了一条删除记录，所以不能直接删 project_id 的所有记录
                 # 如果需要删除项目相关的 *其他* 活动记录，需要更复杂的查询逻辑，这里暂时保留刚添加的删除记录
 
-                # 如果有 ProjectAchievement 模型，在这里添加删除逻辑
-                # session.query(ProjectAchievement).filter(ProjectAchievement.project_id == project_id).delete(synchronize_session='fetch')
 
-                # 删除项目本身 (会自动级联删除 Budget, BudgetItem, Expense)
                 session.delete(project)
                 session.commit() # 提交数据库事务
 
@@ -494,7 +469,6 @@ class ProjectListWindow(QWidget):
                         try:
                             os.remove(file_path)
                             deleted_files_count += 1
-                            # print(f"已删除凭证文件: {file_path}")
                         except OSError as e:
                             print(f"删除凭证文件失败 {file_path}: {e}")
                     if deleted_files_count > 0:
@@ -618,7 +592,6 @@ class ProjectListWindow(QWidget):
             )
             return
         
-        # 获取选中行的项目ID
         row = selected_items[0].row()
         project_id = self.project_table.item(row, 0).data(Qt.UserRole)
         
@@ -802,7 +775,6 @@ class ProjectListWindow(QWidget):
                 # 导入预算数据
                 for budget_data in import_data['budgets']:
                     try:
-                        # 检查是否存在相同的项目ID和年度组合
                         existing_budget = session.query(Budget).filter(
                             Budget.project_id == project.id,
                             Budget.year == budget_data['year']
@@ -845,13 +817,11 @@ class ProjectListWindow(QWidget):
                             
                         session.add(budget_item)
                 
-                # 创建预算ID映射表
                 budget_id_map = {}
                 
                 # 导入支出数据
                 for expense_data in import_data['expenses']:
                     try:
-                        # 根据年份找到对应的新预算ID
                         expense_date = datetime.fromisoformat(expense_data['date'])
                         expense_year = expense_date.year
                         

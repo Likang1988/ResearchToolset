@@ -12,7 +12,7 @@ def build_app():
     
     # 设置输出目录
     if is_windows:
-        dist_dir = 'C:\\Compile'
+        dist_dir = 'D:\\Compile'
     elif is_macos:
         dist_dir = '/Users/Data/Compile'
     else:  # Linux系统
@@ -31,7 +31,6 @@ def build_app():
     else:
         icon_path = os.path.join(root_dir, 'app', 'assets', 'icon.icns')
     
-    # PyInstaller参数配置
     pyinstaller_args = [
         'run.py',  # 主程序入口
         '--name=ResearchToolset',  # 输出文件名
@@ -40,13 +39,12 @@ def build_app():
         '--clean',  # 清理临时文件
         '--windowed',  # 不显示控制台窗口
         f'--add-data={os.path.join(root_dir, "app", "assets")}{";"}app/assets' if is_windows else f'--add-data={os.path.join(root_dir, "app", "assets")}:app/assets',  # 添加资源文件
-        f'--add-data={os.path.join(root_dir, "app", "views", "projecting_interface", "jQueryGantt")}{";"}app/views/projecting_interface/jQueryGantt' if is_windows else f'--add-data={os.path.join(root_dir, "app", "views", "projecting_interface", "jQueryGantt")}:app/views/projecting_interface/jQueryGantt', # 添加jQueryGantt资源
+        f'--add-data={os.path.join(root_dir, "app", "integration", "jQueryGantt")}{";"}app/integration/jQueryGantt' if is_windows else f'--add-data={os.path.join(root_dir, "app", "integration", "jQueryGantt")}:app/integration/jQueryGantt', # 添加jQueryGantt资源
         '--distpath=' + dist_dir,  # 指定输出目录
         '--workpath=' + build_dir,  # 指定构建目录
         '--specpath=' + dist_dir,  # spec文件位置
     ]
     
-    # 运行PyInstaller
     run(pyinstaller_args)
     
     exe_dir = os.path.join(dist_dir, 'ResearchToolset')

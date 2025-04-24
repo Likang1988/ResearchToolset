@@ -23,15 +23,12 @@ class ProjectBudgetWidget(QWidget):
     # 添加信号用于通知项目清单窗口更新数据
     budget_updated = Signal()
 
-    # Modify __init__ to remove project argument
     def __init__(self, engine: Engine, parent=None):
         super().__init__(parent)
         self.engine = engine
-        # self.project = project # Removed
         self.current_project = None # Track selected project
         self.budget = None # Keep this? Might relate to selected budget row
         self.setup_ui()
-        # self.load_budgets() # Don't load initially
 
     def showEvent(self, event):
         """在窗口显示时连接信号"""
@@ -103,7 +100,6 @@ class ProjectBudgetWidget(QWidget):
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(18, 18, 18, 18) # Add some margins
 
-        # --- Add Project Selector ---
         selector_layout = QHBoxLayout()        
         selector_label = TitleLabel("项目经费-", self)
         self.project_selector = UIUtils.create_project_selector(self.engine, self)
@@ -111,19 +107,13 @@ class ProjectBudgetWidget(QWidget):
         selector_layout.addWidget(self.project_selector)
         selector_layout.addStretch()
         main_layout.addLayout(selector_layout)
-        # Connect signal after UI setup
         self.project_selector.currentIndexChanged.connect(self._on_project_selected)
-        # --- Project Selector End ---
 
-        # Modify Title - Make it generic or update later
         self.title_label = TitleLabel("项目预算管理") # Store title label reference
         title_layout = QHBoxLayout()
         title_layout.addWidget(self.title_label)
         title_layout.addStretch()
-        # title_layout = UIUtils.create_title_layout("项目预算管理") # Original way
-        #main_layout.addLayout(title_layout)
 
-        # Remove internal QStackedWidget logic, apply layout directly to main_layout
         layout = main_layout # Use main_layout directly
 
         # 按钮栏
@@ -222,7 +212,6 @@ class ProjectBudgetWidget(QWidget):
         if selected_project and isinstance(selected_project, Project):
             self.current_project = selected_project
             print(f"BudgetWidget: Project selected - {self.current_project.name}")
-            # Update title
             self.title_label.setText(f"预算管理 - {self.current_project.financial_code}")
             self.load_budgets() # Load budgets for the selected project
         else:
@@ -267,8 +256,6 @@ class ProjectBudgetWidget(QWidget):
             print("BudgetWidget: No project selected, cannot load budgets.")
             return
 
-        # 发送预算更新信号 (Consider if still needed/where it should go)
-        # self.budget_updated.emit()
 
         Session = sessionmaker(bind=self.engine)
         session = Session()
@@ -484,8 +471,6 @@ class ProjectBudgetWidget(QWidget):
             # 默认折叠所有项
             self.budget_tree.collapseAll()
             # 禁用自动调整列宽，使用手动设置的列宽
-            # for i in range(self.budget_tree.columnCount()):
-            #     self.budget_tree.resizeColumnToContents(i)
             # 预算加载完成后发射信号，通知主页等更新
             self.budget_updated.emit()
 
@@ -524,13 +509,9 @@ class ProjectBudgetWidget(QWidget):
                     content="请先设置总预算！",
                     parent=self
                     )
-                # Ensure session is closed before returning
                 session.close()
                 return
 
-            # 创建临时的BudgetDialog实例来计算总结余
-            # Pass current_project to BudgetDialog if it needs it for validation
-            # Note: BudgetDialog might need internal adjustments to use the passed project
             temp_dialog = BudgetDialog(project=self.current_project, engine=self.engine, parent=self) # Pass project and engine
             temp_dialog.update_balance_amounts() # This might need adjustment
             total_balance_text = temp_dialog.total_balance_label.text().replace(' 万元', '').replace(',', '')
@@ -551,10 +532,8 @@ class ProjectBudgetWidget(QWidget):
                 session.close()
                 return
 
-            # 关闭当前会话，让dialog使用自己的会话进行验证
             session.close()
 
-            # Pass current_project to BudgetDialog
             dialog = BudgetDialog(project=self.current_project, engine=self.engine, parent=self) # Pass project and engine
             if dialog.exec():
                 # 重新打开会话进行后续操作
@@ -576,8 +555,6 @@ class ProjectBudgetWidget(QWidget):
                         )
                         return # Keep session open for potential next action? No, close it.
 
-                    # 重新检查预算限额（使用总结余） - Re-fetch total balance just before saving
-                    # Need a fresh session for this calculation
                     temp_session = Session()
                     try:
                         # 获取总预算信息
@@ -609,7 +586,6 @@ class ProjectBudgetWidget(QWidget):
                             parent=self
                             )
                         # 不再阻止保存，仅弹出警告
-                        # return # 移除 return
 
                     # 创建年度预算
                     budget = Budget(
@@ -650,13 +626,11 @@ class ProjectBudgetWidget(QWidget):
                     session.rollback()
                     UIUtils.show_error(self, "错误", f"添加预算失败: {e}")
                 finally:
-                    # Ensure session is closed after dialog interaction
                     if session.is_active:
                          session.close()
         except Exception as e:
             UIUtils.show_error(self, "错误", f"添加预算时发生错误: {e}")
         finally:
-            # Ensure session is closed even if initial checks fail
             if 'session' in locals() and session.is_active:
                 session.close()
 
@@ -756,14 +730,12 @@ class ProjectBudgetWidget(QWidget):
                     else:
                         UIUtils.show_error(self, "错误", f"未找到{year}年度预算")
                 else:
-                    # Handle case where it's a category item (cannot delete directly)
                     UIUtils.show_warning(self, "警告", "不能直接删除预算科目，请编辑对应的年度或总预算。")
 
             except Exception as e:
                 session.rollback()
                 UIUtils.show_error(self, "错误", f"删除预算失败: {e}")
             finally:
-                # Ensure session is closed after delete attempt
                 if session.is_active:
                     session.close()
 
@@ -791,14 +763,12 @@ class ProjectBudgetWidget(QWidget):
 
                 if not budget:
                     UIUtils.show_error(self, "错误", "未找到总预算")
-                    # Ensure session is closed before returning
                     session.close()
                     return
 
                 # 获取总预算子项
                 budget_items = session.query(BudgetItem).filter_by(budget_id=budget.id).all()
 
-                # Pass current_project if TotalBudgetDialog needs it
                 dialog = TotalBudgetDialog(project=self.current_project, engine=self.engine, parent=self, budget=budget) # Pass project and engine
                 if dialog.exec():
                     data = dialog.get_data()
@@ -811,7 +781,6 @@ class ProjectBudgetWidget(QWidget):
                             content=f"总预算({data['total_amount']}万元)不能小于已分配的年度预算总和({annual_total:.2f}万元)！",
                             parent=self
                         )
-                        # Ensure session is closed before returning
                         session.close()
                         return
 
@@ -853,7 +822,6 @@ class ProjectBudgetWidget(QWidget):
                     year = int(budget_type.strip()[:-2]) # 去掉"年度"后缀并去除空格
                 except ValueError:
                     UIUtils.show_error(self, "错误", "无法解析预算年度")
-                    # Ensure session is closed before returning
                     session.close()
                     return
 
@@ -864,14 +832,12 @@ class ProjectBudgetWidget(QWidget):
 
                 if not budget:
                     UIUtils.show_error(self, "错误", f"未找到{year}年度预算")
-                    # Ensure session is closed before returning
                     session.close()
                     return
 
                 # 获取年度预算子项
                 budget_items = session.query(BudgetItem).filter_by(budget_id=budget.id).all()
 
-                # Pass current_project if BudgetDialog needs it
                 dialog = BudgetDialog(project=self.current_project, engine=self.engine, parent=self, budget=budget) # Pass project and engine
                 if dialog.exec():
                     data = dialog.get_data()
@@ -884,7 +850,6 @@ class ProjectBudgetWidget(QWidget):
 
                     if not total_budget:
                         UIUtils.show_error(self, "错误", "未找到总预算，无法校验额度")
-                        # Ensure session is closed before returning
                         session.close()
                         return
 
@@ -899,8 +864,6 @@ class ProjectBudgetWidget(QWidget):
                             parent=self
                         )
                         # 不再阻止保存，仅弹出警告
-                        # session.close() # 不需要关闭会话
-                        # return # 移除 return
 
                     # 检查修改后的年度预算是否小于已支出金额
                     if data['total_amount'] < budget.spent_amount:
@@ -910,8 +873,6 @@ class ProjectBudgetWidget(QWidget):
                             parent=self
                         )
                         # 不再阻止保存，仅弹出警告
-                        # session.close() # 不需要关闭会话
-                        # return # 移除 return
 
                     budget.total_amount = data['total_amount']
 
@@ -927,8 +888,6 @@ class ProjectBudgetWidget(QWidget):
                                     parent=self
                                 )
                                 # 不再阻止保存，仅弹出警告
-                                # session.close() # 不需要关闭会话
-                                # return # 移除 return
                             item.amount = amount
                         else:
                             # 如果年度预算子项不存在，则创建它
@@ -955,14 +914,12 @@ class ProjectBudgetWidget(QWidget):
                     self.load_budgets()
                     UIUtils.show_success(self, "成功", f"{year}年度预算更新成功")
             else:
-                # Handle case where it's a category item (cannot edit directly)
                  UIUtils.show_warning(self, "警告", "不能直接编辑预算科目，请编辑对应的年度或总预算。")
 
         except Exception as e:
             session.rollback()
             UIUtils.show_error(self, "错误", f"编辑预算失败: {e}")
         finally:
-            # Ensure session is closed after edit attempt
             if session.is_active:
                 session.close()
 
@@ -1014,6 +971,5 @@ class ProjectBudgetWidget(QWidget):
             print(f"Error updating charts on selection change: {e}")
             self.chart_widget.clear_charts()
         finally:
-            # Ensure session is closed after chart update attempt
             if session.is_active:
                 session.close()

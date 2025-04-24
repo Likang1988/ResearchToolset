@@ -15,9 +15,6 @@ from datetime import datetime
 from ...components.expense_dialog import ExpenseDialog
 from ...utils.ui_utils import UIUtils
 from ...utils.db_utils import DBUtils
-# Use attachment_utils for voucher handling
-# Import the specific functions needed from attachment_utils
-# from ...utils.attachment_utils import create_attachment_button, handle_attachment, view_attachment # Keep create_attachment_button
 from ...utils.attachment_utils import (
     create_attachment_button, # Keep this one
     sanitize_filename, ensure_directory_exists, get_attachment_icon_path,
@@ -29,7 +26,6 @@ import pandas as pd # For export
 import json # For storing activity data
 
 
-# Placeholder for current user - replace with actual user management later
 CURRENT_OPERATOR = "系统用户"
 
 class ProjectExpenseWidget(QWidget):
@@ -184,14 +180,12 @@ class ProjectExpenseWidget(QWidget):
         filter_layout.addWidget(QLabel("日期范围:"))
         self.start_date = CompactDateEdit()
         self.end_date = CompactDateEdit()
-        # 将datetime.date对象转换为QDate对象
         start_qdate = QDate(self.project.start_date.year, self.project.start_date.month, self.project.start_date.day)
         self.start_date.setDate(start_qdate)
         self.end_date.setDate(QDate.currentDate())
         # 清空金额输入框
         self.min_amount.clear()
         self.max_amount.clear()
-        # self.apply_filters() # Don't apply filters initially, load_expenses does the first population
 
         self.start_date.dateChanged.connect(self.apply_filters) # Connect after setting initial dates
         self.end_date.dateChanged.connect(self.apply_filters)
@@ -261,12 +255,10 @@ class ProjectExpenseWidget(QWidget):
 
     def back_to_budget(self):
         """返回到预算管理页面"""
-        # 获取父窗口（预算管理窗口）的QStackedWidget
         budget_widget = self.parent()
         if isinstance(budget_widget, QStackedWidget):
             # 切换到预算管理页面（第一个页面）
             budget_widget.setCurrentWidget(budget_widget.widget(0))
-            # 从QStackedWidget中移除当前支出管理页面
             budget_widget.removeWidget(self)
 
     def load_expenses(self):
@@ -278,7 +270,6 @@ class ProjectExpenseWidget(QWidget):
                 self.all_expenses = session.query(Expense).filter(
                     Expense.budget_id == self.budget.id
                 ).order_by(Expense.date.desc()).all()
-                # Make a shallow copy for the initial display/filtering/sorting
                 self.current_expenses = self.all_expenses[:]
                 self._populate_table(self.current_expenses)
 
@@ -297,62 +288,42 @@ class ProjectExpenseWidget(QWidget):
         for row, expense in enumerate(expenses_list):
             self.expense_table.insertRow(row)
 
-            # --- Populate Cells ---
-            # 支出ID (Col 0)
             id_item = QTableWidgetItem(str(expense.id))
             id_item.setTextAlignment(Qt.AlignCenter)
             id_item.setData(Qt.UserRole, expense.id) # Store ID for potential use elsewhere
             self.expense_table.setItem(row, 0, id_item)
-            # UIUtils.set_item_tooltip(id_item) # Tooltip likely not needed for ID
 
-            # 费用类别 (Col 1)
             cat_item = QTableWidgetItem(expense.category.value)
             cat_item.setTextAlignment(Qt.AlignCenter)
             self.expense_table.setItem(row, 1, cat_item)
-            # UIUtils.set_item_tooltip(cat_item) # Removed tooltip call
 
-            # 开支内容 (Col 2)
             cont_item = QTableWidgetItem(expense.content)
             cont_item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
             self.expense_table.setItem(row, 2, cont_item)
-            # UIUtils.set_item_tooltip(cont_item) # Removed tooltip call
 
-            # 规格型号 (Col 3)
             spec_item = QTableWidgetItem(expense.specification or "")
             spec_item.setTextAlignment(Qt.AlignCenter)
             self.expense_table.setItem(row, 3, spec_item)
-            # UIUtils.set_item_tooltip(spec_item) # Removed tooltip call
 
-            # 供应商 (Col 4)
             supp_item = QTableWidgetItem(expense.supplier or "")
             supp_item.setTextAlignment(Qt.AlignCenter)
             self.expense_table.setItem(row, 4, supp_item)
-            # UIUtils.set_item_tooltip(supp_item) # Removed tooltip call
 
-            # 报账金额 (Col 5)
             amount_item = QTableWidgetItem(f"{expense.amount:.2f}")
             amount_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-            # Store numeric amount for sorting if needed later, though direct object sort is preferred
             amount_item.setData(Qt.UserRole + 1, expense.amount)
             self.expense_table.setItem(row, 5, amount_item)
-            # UIUtils.set_item_tooltip(amount_item) # Tooltip likely not needed for amount
 
-            # 报账日期 (Col 6)
             date_str = expense.date.strftime("%Y-%m-%d")
             date_item = QTableWidgetItem(date_str)
             date_item.setTextAlignment(Qt.AlignCenter)
-            # Store date object for sorting
             date_item.setData(Qt.UserRole + 1, expense.date)
             self.expense_table.setItem(row, 6, date_item)
-            # UIUtils.set_item_tooltip(date_item) # Tooltip likely not needed for date
 
-            # 备注 (Col 7)
             remark_item = QTableWidgetItem(expense.remarks or "")
             remark_item.setTextAlignment(Qt.AlignCenter)
             self.expense_table.setItem(row, 7, remark_item)
-            # UIUtils.set_item_tooltip(remark_item) # Removed tooltip call
 
-            # --- Add Attachment Button (Col 8) ---
             container = create_attachment_button(
                 item_id=expense.id, # Pass correct ID from the expense object
                 attachment_path=expense.voucher_path, # Pass correct path
@@ -376,7 +347,6 @@ class ProjectExpenseWidget(QWidget):
             # 添加年度预算行
             budget_item = QTableWidgetItem("预算(万元)")
             budget_item.setTextAlignment(Qt.AlignCenter)
-            #budget_item.setBackground(Qt.lightGray)
             budget_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)  # 不可编辑
             self.stats_table.setItem(0, 0, budget_item)
 
@@ -405,7 +375,6 @@ class ProjectExpenseWidget(QWidget):
             # 在预算行的合计列显示总预算金额
             total_budget_item = QTableWidgetItem(f"{total_budget:.2f}")
             total_budget_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-            #total_budget_item.setBackground(Qt.lightGray)   # 设置背景颜色
             total_budget_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)  # 不可编辑
             # 计算合计列的位置（间接费列索引+2）
             total_col = list(BudgetCategory).index(BudgetCategory.INDIRECT) + 2
@@ -420,7 +389,6 @@ class ProjectExpenseWidget(QWidget):
 
             header.setStretchLastSection(True)  # 最后一列自动填充剩余空间
 
-            # 确保headers在load_statistics方法中可用
             if not hasattr(self, 'headers'):
                 categories = list(BudgetCategory)
                 indirect_index = categories.index(BudgetCategory.INDIRECT)
@@ -433,7 +401,6 @@ class ProjectExpenseWidget(QWidget):
             # 创建分类支出小计行
             subtotal_item = QTableWidgetItem("支出(万元)")
             subtotal_item.setTextAlignment(Qt.AlignCenter)
-            #subtotal_item.setBackground(Qt.lightGray)
             subtotal_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)  # 不可编辑
             self.stats_table.setItem(1, 0, subtotal_item)
 
@@ -462,7 +429,6 @@ class ProjectExpenseWidget(QWidget):
             # 在分类支出小计行的合计列显示总金额
             total_amount_item = QTableWidgetItem(f"{total_amount:.2f}")
             total_amount_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-            #total_amount_item.setBackground(Qt.lightGray)   # 设置背景颜色
             total_amount_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)  # 不可编辑
             # 计算合计列的位置（间接费列索引+2）
             total_col = list(BudgetCategory).index(BudgetCategory.INDIRECT) + 2
@@ -539,7 +505,6 @@ class ProjectExpenseWidget(QWidget):
 
     def add_expense(self):
         """添加单个支出"""
-        # Corrected call to ExpenseDialog
         dialog = ExpenseDialog(engine=self.engine, budget=self.budget, parent=self)
         if dialog.exec():
             data = dialog.get_data()
@@ -562,7 +527,6 @@ class ProjectExpenseWidget(QWidget):
                 session.add(expense)
                 session.flush() # Flush to get expense ID
 
-                # 添加活动记录 - Corrected arguments
                 activity = Activity(
                     project_id=self.project.id,
                     budget_id=self.budget.id,
@@ -574,7 +538,6 @@ class ProjectExpenseWidget(QWidget):
                     category=expense.category.value,
                     amount=expense.amount,
                     related_info=f"项目: {self.project.financial_code}, 预算: {self.budget.year}"
-                    # old_data and new_data can be added if needed
                 )
                 session.add(activity)
 
@@ -622,7 +585,6 @@ class ProjectExpenseWidget(QWidget):
             )
             return
 
-        # 获取选中行的支出ID (假设ID存储在第0列的UserRole中)
         row = selected_items[0].row()
         expense_id_item = self.expense_table.item(row, 0)
         if not expense_id_item: return # Should not happen if row is selected
@@ -641,7 +603,6 @@ class ProjectExpenseWidget(QWidget):
                 )
                 return
 
-            # 记录旧数据用于 Activity log
             old_data_dict = {
                 'category': expense.category.value,
                 'content': expense.content,
@@ -655,7 +616,6 @@ class ProjectExpenseWidget(QWidget):
             old_amount = expense.amount
             old_category = expense.category
 
-            # Corrected call to ExpenseDialog
             dialog = ExpenseDialog(engine=self.engine, budget=self.budget, expense=expense, parent=self)
             if dialog.exec():
                 data = dialog.get_data()
@@ -670,7 +630,6 @@ class ProjectExpenseWidget(QWidget):
                 expense.remarks = data['remarks']
                 expense.voucher_path = data.get('voucher_path') # Update voucher path
 
-                # 记录新数据用于 Activity log
                 new_data_dict = {
                     'category': expense.category.value,
                     'content': expense.content,
@@ -682,7 +641,6 @@ class ProjectExpenseWidget(QWidget):
                     'voucher_path': expense.voucher_path
                 }
 
-                # 添加活动记录 - Corrected arguments
                 activity = Activity(
                     project_id=self.project.id,
                     budget_id=self.budget.id,
@@ -758,7 +716,6 @@ class ProjectExpenseWidget(QWidget):
             )
             return
 
-        # 获取选中行的支出ID列表
         expense_ids_to_delete = []
         for row in selected_rows:
             id_item = self.expense_table.item(row, 0)
@@ -791,7 +748,6 @@ class ProjectExpenseWidget(QWidget):
                     if expense:
                         amount_deleted = expense.amount
                         category_deleted = expense.category
-                        # Store data before deletion for activity log
                         old_data_dict = {
                             'category': expense.category.value,
                             'content': expense.content,
@@ -799,7 +755,6 @@ class ProjectExpenseWidget(QWidget):
                             'date': str(expense.date)
                         }
 
-                        # 添加活动记录 - Corrected arguments
                         activity = Activity(
                             project_id=self.project.id,
                             budget_id=self.budget.id,
@@ -821,7 +776,6 @@ class ProjectExpenseWidget(QWidget):
                                 os.remove(expense.voucher_path)
                             except OSError as e:
                                 print(f"Warning: Could not delete voucher file {expense.voucher_path}: {e}")
-                                # Optionally inform the user, but proceed with DB deletion
 
                         session.delete(expense)
                         deleted_count += 1
@@ -868,30 +822,21 @@ class ProjectExpenseWidget(QWidget):
             return None # Or raise an error
 
         base_folder = "vouchers"
-        # Use project's financial_code, handle if None
         project_code = project.financial_code if project.financial_code else "unknown_project"
-        # Use expense's date year, handle if None
         expense_year = str(expense.date.year) if expense.date else "unknown_year"
-        # Use expense's category value, handle if None
         expense_category = expense.category.value if expense.category else "unknown_category"
-        # Sanitize category name as it might contain characters invalid for filenames/paths
         sanitized_category = sanitize_filename(expense_category)
-        # Format amount, handle if None
         expense_amount = f"{expense.amount:.2f}" if expense.amount is not None else "0.00"
 
-        # Sanitize original filename and split extension
         original_basename = os.path.basename(original_filename)
         base_name, ext = os.path.splitext(original_basename)
         sanitized_base_name = sanitize_filename(base_name) # Sanitize only the base name
 
-        # Construct filename: <category>_<amount>_<sanitized_original_name>.ext
         new_filename = f"{sanitized_category}_{expense_amount}_{sanitized_base_name}{ext}"
 
-        # Construct full path using ROOT_DIR from attachment_utils
         target_dir = os.path.join(ROOT_DIR, base_folder, project_code, expense_year)
         full_path = os.path.join(target_dir, new_filename)
 
-        # Normalize the path for the current OS
         return os.path.normpath(full_path)
 
     def handle_voucher_wrapper(self, event, btn):
@@ -904,28 +849,23 @@ class ProjectExpenseWidget(QWidget):
         Session = sessionmaker(bind=self.engine)
         session = Session()
         try:
-            # Initial fetch to determine context menu or initial action
-            # Use a separate variable to avoid modifying 'expense' used later if action fails early
             expense_check = session.query(Expense).get(expense_id)
             if not expense_check:
                 UIUtils.show_error(self, "错误", f"找不到ID为 {expense_id} 的支出项")
                 return # Session closed in finally
 
-            # Determine action based on event or button state
             action_type = None
             current_path_check = expense_check.voucher_path # Get current path from DB for menu logic
 
             if event is None: # Left-click
                 button_path = btn.property("attachment_path") # Check button's state first
                 if button_path and os.path.exists(button_path):
-                    # Show menu if button indicates attachment exists
                     menu = RoundMenu(parent=self)
                     view_action = Action(FluentIcon.VIEW, "查看", self)
                     download_action = Action(FluentIcon.DOWNLOAD, "下载", self)
                     replace_action = Action(FluentIcon.SYNC, "替换", self)
                     delete_action = Action(FluentIcon.DELETE, "删除", self)
 
-                    # Pass session to the action executor
                     view_action.triggered.connect(lambda: self._execute_voucher_action("view", expense_id, btn, session))
                     download_action.triggered.connect(lambda: self._execute_voucher_action("download", expense_id, btn, session))
                     replace_action.triggered.connect(lambda: self._execute_voucher_action("replace", expense_id, btn, session))
@@ -937,20 +877,16 @@ class ProjectExpenseWidget(QWidget):
                     menu.addSeparator()
                     menu.addAction(delete_action)
                     menu.exec(btn.mapToGlobal(btn.rect().bottomLeft()))
-                    # Don't close session here, _execute_voucher_action might need it
                     return # Menu handles the action, exit wrapper
                 else:
-                    # Trigger upload if no attachment according to button
                     action_type = "upload"
             elif isinstance(event, QPoint): # Right-click (Context menu request)
-                 # Show menu based on DB state at time of right-click
                 menu = RoundMenu(parent=self)
                 if current_path_check and os.path.exists(current_path_check):
                     view_action = Action(FluentIcon.VIEW, "查看", self)
                     download_action = Action(FluentIcon.DOWNLOAD, "下载", self)
                     replace_action = Action(FluentIcon.SYNC, "替换", self)
                     delete_action = Action(FluentIcon.DELETE, "删除", self)
-                    # Pass session to the action executor
                     view_action.triggered.connect(lambda: self._execute_voucher_action("view", expense_id, btn, session))
                     download_action.triggered.connect(lambda: self._execute_voucher_action("download", expense_id, btn, session))
                     replace_action.triggered.connect(lambda: self._execute_voucher_action("replace", expense_id, btn, session))
@@ -962,16 +898,12 @@ class ProjectExpenseWidget(QWidget):
                     menu.addAction(delete_action)
                 else:
                     upload_action = Action(FluentIcon.ADD_TO, "上传附件", self)
-                    # Pass session to the action executor
                     upload_action.triggered.connect(lambda: self._execute_voucher_action("upload", expense_id, btn, session))
                     menu.addAction(upload_action)
                 menu.exec(btn.mapToGlobal(event))
-                # Don't close session here
                 return # Menu handles the action, exit wrapper
 
-            # If we reach here, it's likely an 'upload' triggered by left-click on empty button
             if action_type:
-                 # Pass the existing session
                  self._execute_voucher_action(action_type, expense_id, btn, session)
 
         except Exception as e:
@@ -979,20 +911,15 @@ class ProjectExpenseWidget(QWidget):
             if session.is_active:
                 session.rollback() # Rollback on any exception during fetch or initial logic
         finally:
-            # Session should be closed here after all potential actions are done or menu returned
             if session.is_active: # Check if session is still active before closing
                 session.close()
 
 
     def _execute_voucher_action(self, action_type, expense_id, btn, session):
         """Executes the specific voucher action (called by wrapper or menu)."""
-        # IMPORTANT: This function receives the session but should manage its own transaction scope
-        # for commit/rollback within the specific action.
         try:
-            # Re-fetch expense within the action for data consistency using the passed session
             expense = session.query(Expense).get(expense_id)
             if not expense:
-                # Avoid showing error again if wrapper already did? Or keep for robustness? Keeping it.
                 UIUtils.show_error(self, "错误", f"执行操作时找不到ID为 {expense_id} 的支出项")
                 return # Session will be closed by the caller
 
@@ -1022,23 +949,19 @@ class ProjectExpenseWidget(QWidget):
                     UIUtils.show_error(self, "错误", "无法生成附件保存路径")
                     return
 
-                # --- Transaction Start ---
                 try:
                     ensure_directory_exists(os.path.dirname(new_path))
                     shutil.copy2(source_file_path, new_path)
 
-                    # Update DB
                     expense.voucher_path = new_path
                     session.commit() # Commit this specific change
 
-                    # Delete old file if replacing and path changed
                     if action_type == "replace" and old_path and os.path.exists(old_path) and os.path.normpath(old_path) != os.path.normpath(new_path):
                         try:
                             os.remove(old_path)
                         except OSError as e:
                             print(f"警告: 无法删除旧凭证 {old_path}: {e}") # Log warning
 
-                    # Update button
                     btn.setIcon(QIcon(get_attachment_icon_path('attach.svg')))
                     btn.setToolTip("管理附件")
                     btn.setProperty("attachment_path", new_path)
@@ -1050,10 +973,7 @@ class ProjectExpenseWidget(QWidget):
                 except Exception as e:
                     session.rollback() # Rollback this specific transaction
                     UIUtils.show_error(self, "错误", f"更新凭证失败: {e}")
-                    # Clean up potentially copied file if DB update failed
-                    # Check if the file exists and if the DB path wasn't updated
                     if os.path.exists(new_path):
-                         # Re-fetch to be absolutely sure about the DB state after rollback
                          session.expire(expense) # Mark expense as expired to force re-fetch
                          db_path_after_rollback = getattr(session.query(Expense).get(expense_id), 'voucher_path', None)
                          if db_path_after_rollback != new_path:
@@ -1062,7 +982,6 @@ class ProjectExpenseWidget(QWidget):
                                  os.remove(new_path)
                              except Exception as remove_err:
                                  print(f"Error removing orphaned file {new_path}: {remove_err}")
-                # --- Transaction End ---
 
             elif action_type == "delete":
                 if not current_path or not os.path.exists(current_path):
@@ -1071,13 +990,11 @@ class ProjectExpenseWidget(QWidget):
 
                 confirm_dialog = Dialog('确认删除', '确定要删除此凭证吗？此操作不可恢复！', self)
                 if confirm_dialog.exec():
-                    # --- Transaction Start ---
                     try:
                         os.remove(current_path)
                         expense.voucher_path = None
                         session.commit() # Commit this specific change
 
-                        # Update button
                         btn.setIcon(QIcon(get_attachment_icon_path('add_outline.svg')))
                         btn.setToolTip("添加附件")
                         btn.setProperty("attachment_path", None)
@@ -1089,25 +1006,19 @@ class ProjectExpenseWidget(QWidget):
                     except Exception as e:
                         session.rollback() # Rollback this specific transaction
                         UIUtils.show_error(self, "错误", f"删除凭证失败: {e}")
-                    # --- Transaction End ---
 
         except Exception as e:
-             # This catches errors during the re-fetch or initial logic within _execute_voucher_action
              UIUtils.show_error(self, "处理附件操作时出错", f"发生意外错误: {e}")
-             # Ensure session is rolled back if the outer try didn't catch it and it's still active
-             # The caller (handle_voucher_wrapper) will close the session.
              if session.is_active:
                  try:
                      session.rollback()
                  except Exception as rb_err:
                      print(f"Error during rollback in _execute_voucher_action: {rb_err}")
 
-    # Note: The old view_voucher method is removed by this replacement.
 
     def reset_filters(self):
         """重置所有筛选条件"""
         self.category_combo.setCurrentText("全部")
-        # 将datetime.date对象转换为QDate对象
         start_date = QDate(self.project.start_date.year, self.project.start_date.month, self.project.start_date.day)
         self.start_date.setDate(start_date)
         self.end_date.setDate(QDate.currentDate())
@@ -1124,7 +1035,6 @@ class ProjectExpenseWidget(QWidget):
         start_date = self.start_date.date().toPython() # Convert QDate to datetime.date
         end_date = self.end_date.date().toPython() # Convert QDate to datetime.date
 
-        # Validate and convert amount inputs
         min_amount = None
         max_amount = None
         try:
@@ -1133,8 +1043,6 @@ class ProjectExpenseWidget(QWidget):
             if max_amount_text:
                 max_amount = float(max_amount_text)
         except ValueError:
-            # Show warning but allow filtering to proceed with None for invalid amount
-            # Only show warning if text was actually entered
             if min_amount_text or max_amount_text:
                  UIUtils.show_warning(self, "输入错误", "金额输入无效，将忽略该金额筛选条件。")
 
@@ -1145,27 +1053,20 @@ class ProjectExpenseWidget(QWidget):
             'end_date': end_date,
             'min_amount': min_amount,
             'max_amount': max_amount,
-            # 'keyword': None, # No keyword search in this widget
-            # 'keyword_attributes': [],
         }
 
-        # Define how filter keys map to Expense object attributes
-        # Note: 'date' and 'amount' keys are implicitly used by FilterUtils
-        # for date/amount range checks based on 'start_date'/'end_date' and 'min_amount'/'max_amount'
         attribute_mapping = {
             'category': 'category', # Filter key 'category' maps to Expense.category
             'date': 'date',         # Explicitly map 'date' for clarity if needed by FilterUtils internals
             'amount': 'amount'      # Explicitly map 'amount' for clarity if needed by FilterUtils internals
         }
 
-        # Apply filters using FilterUtils
         self.current_expenses = FilterUtils.apply_filters(
             self.all_expenses,
             filter_criteria,
             attribute_mapping
         )
 
-        # Update the table with filtered data
         self._populate_table(self.current_expenses)
 
     def export_expense_excel(self):
@@ -1182,7 +1083,6 @@ class ProjectExpenseWidget(QWidget):
             return
 
         try:
-            # 获取当前显示的支出记录（基于 self.current_expenses）
             expenses_to_export = []
             for expense in self.current_expenses: # Use the currently displayed list
                 expense_data = {
@@ -1200,19 +1100,15 @@ class ProjectExpenseWidget(QWidget):
                 UIUtils.show_info(self, "提示", "没有可导出的支出记录。")
                 return
 
-            # 创建DataFrame
             df = pd.DataFrame(expenses_to_export)
 
-            # 生成Excel文件名
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             excel_filename = f"支出记录_{self.project.financial_code}_{self.budget.year}_{timestamp}.xlsx"
             excel_path = os.path.join(export_dir, excel_filename)
 
-            # 保存Excel文件，设置工作表名称为'支出信息'，并设置日期格式
             with pd.ExcelWriter(excel_path, engine='openpyxl', datetime_format='YYYY-MM-DD') as writer:
                 df.to_excel(writer, sheet_name='支出信息', index=False)
 
-                # 添加数据有效性（下拉列表） - Requires openpyxl
                 try:
                     from openpyxl.worksheet.datavalidation import DataValidation
                     workbook = writer.book
@@ -1230,7 +1126,6 @@ class ProjectExpenseWidget(QWidget):
                     dv.promptTitle = '选择类别'
 
                     # 应用到“费用类别”列的所有数据行（从第二行开始）
-                    # Adjust range based on actual data size + header
                     dv.add(f'A2:A{len(df) + 1}') # Assuming '费用类别' is the first column (A)
                     worksheet.add_data_validation(dv)
 
@@ -1312,23 +1207,19 @@ class ProjectExpenseWidget(QWidget):
         sender = self.sender() # Get the LineEdit that triggered the signal
         if not sender: return # Should not happen
         text = sender.text()
-        # Reset style first
         sender.setStyleSheet("")
         if not text: # Allow empty input
             return
 
         try:
             float(text)
-            # Valid number
         except ValueError:
-            # Invalid number, provide visual feedback
             sender.setStyleSheet("border: 1px solid red;") # Example: red border
 
     def sort_table(self, column):
         """根据点击的列对 self.current_expenses 列表进行排序并更新表格"""
         if not self.current_expenses: return # Nothing to sort
 
-        # Map column index to attribute name and type
         column_map = {
             0: ('id', 'int'),
             1: ('category', 'enum'), # Sort by enum value
@@ -1338,7 +1229,6 @@ class ProjectExpenseWidget(QWidget):
             5: ('amount', 'float'),
             6: ('date', 'date'),
             7: ('remarks', 'str_none')       # Handle None values
-            # Column 8 (voucher) is not sortable
         }
 
         if column not in column_map: return # Clicked on non-sortable column
@@ -1346,10 +1236,8 @@ class ProjectExpenseWidget(QWidget):
         attr_name, sort_type = column_map[column]
         current_order = self.expense_table.horizontalHeader().sortIndicatorOrder()
 
-        # Determine reverse flag
         reverse = (current_order == Qt.DescendingOrder)
 
-        # Define sort key function
         def sort_key(expense):
             value = getattr(expense, attr_name, None)
             if sort_type == 'enum':
@@ -1359,25 +1247,17 @@ class ProjectExpenseWidget(QWidget):
             elif sort_type == 'str':
                 return value.lower() # Assume non-None string
             elif sort_type == 'date':
-                 # Ensure comparison between date objects
                  if isinstance(value, datetime): return value.date()
-                 # Use a very early date for None to sort them first/last depending on order
                  return value if value else datetime.min.date()
-            # For 'int' and 'float', None might need specific handling if possible
-            # For now, assume they are present or handle potential errors if None occurs
             return value if value is not None else (0 if sort_type in ['int', 'float'] else "")
 
 
-        # Sort the current_expenses list
         try:
             self.current_expenses.sort(key=sort_key, reverse=reverse)
         except Exception as e:
             print(f"Error during sorting: {e}") # Catch potential comparison errors
-            # Optionally show an error to the user
             return
 
-        # Repopulate the table with the sorted list
         self._populate_table(self.current_expenses)
 
-        # Update sort indicator
         self.expense_table.horizontalHeader().setSortIndicator(column, current_order)

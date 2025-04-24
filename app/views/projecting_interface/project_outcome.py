@@ -3,29 +3,14 @@ import shutil # Add shutil
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QDialog, QLabel, QHeaderView, QFileDialog, QApplication # Added QHeaderView, QFileDialog, QApplication
 from PySide6.QtCore import Qt, QSize, QPoint # Added QSize and QPoint
 from PySide6.QtGui import QFont, QIcon # 确保 QFont 已导入, Add QIcon
-# Import BodyLabel and PushButton, remove PrimaryPushButton if no longer needed elsewhere
-# Also import TableItemDelegate
 from qfluentwidgets import TitleLabel, FluentIcon, LineEdit, ComboBox, DateEdit, InfoBar, BodyLabel, PushButton, TableWidget, TableItemDelegate, Dialog, RoundMenu, Action, PlainTextEdit
 # 需要在文件顶部导入
-# from ...models.database import Project, sessionmaker # Combined below
 from ...utils.ui_utils import UIUtils
 from ...models.database import Project, Base, get_engine, sessionmaker
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum as SQLEnum, Engine # Added Engine type hint
 from enum import Enum
 from datetime import datetime
-# 假设存在 attachment_utils.py 用于处理附件按钮和逻辑
-# --- Removed commented out import of handle_attachment ---
-# from qfluentwidgets import TitleLabel, FluentIcon, LineEdit, ComboBox, DateEdit, InfoBar, BodyLabel, PushButton, TableItemDelegate # Added TableItemDelegate - Duplicate
-# from ...utils.ui_utils import UIUtils - Duplicate
-# from ...models.database import Project, Base, get_engine, sessionmaker # Added sessionmaker import - Duplicate
-# from sqlalchemy.orm import sessionmaker - Duplicate
-# from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum as SQLEnum, Engine # Added Engine type hint - Duplicate
-# from enum import Enum - Duplicate
-# from datetime import datetime - Duplicate
-# import os # Added os import - Duplicate
-# 假设存在 attachment_utils.py 用于处理附件按钮和逻辑
-# --- Removed commented out import of handle_attachment ---
 from ...utils.attachment_utils import (
     create_attachment_button, # Keep
     sanitize_filename, ensure_directory_exists, get_timestamp_str, get_attachment_icon_path,
@@ -150,20 +135,12 @@ class OutcomeDialog(QDialog):
         layout.addLayout(description_layout)
 
 
-        # 备注 (Removed)
-        # remarks_layout = QHBoxLayout()
-        # remarks_layout.addWidget(BodyLabel("备       注:")) # Align label width
-        # self.remarks_edit = LineEdit()
-        # self.remarks_edit.setPlaceholderText("请输入备注")
-        # remarks_layout.addWidget(self.remarks_edit)
-        # layout.addLayout(remarks_layout)
 
         layout.addStretch() # Add stretch before buttons
 
         # 按钮
         button_layout = QHBoxLayout()
         button_layout.setSpacing(12)
-        # Use PushButton and add icons, push to the right
         save_btn = PushButton("保存", self, FluentIcon.SAVE)
         cancel_btn = PushButton("取消", self, FluentIcon.CLOSE)
         save_btn.clicked.connect(self.accept) # Connect accept for validation
@@ -173,7 +150,6 @@ class OutcomeDialog(QDialog):
         button_layout.addWidget(cancel_btn)
         layout.addLayout(button_layout)
 
-    # Add accept method for validation like in ExpenseDialog
     def accept(self):
         """Validate input before accepting the dialog."""
         if not self.name_edit.text().strip():
@@ -196,19 +172,15 @@ class OutcomeDialog(QDialog):
             self.publish_date.setDate(self.outcome.publish_date)
         self.journal_edit.setText(self.outcome.journal or "")
         self.description_edit.setPlainText(self.outcome.description or "") # Use setPlainText
-        # self.remarks_edit.setText(self.outcome.remarks) # Removed remarks
 
 class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
-    # Modify __init__ to accept engine and remove project
     def __init__(self, engine: Engine, parent=None):
         super().__init__(parent=parent)
-        # self.project = project # Removed
         self.engine = engine # Store engine
         self.current_project = None # Track selected project
         self.all_outcomes = [] # Store all loaded outcomes
         self.current_outcomes = [] # Store currently displayed outcomes
         self.setup_ui()
-        # self.load_outcome() # Don't load initially, wait for selection
 
     def showEvent(self, event):
         """在窗口显示时连接信号"""
@@ -277,7 +249,6 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
     def setup_ui(self):
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(18, 18, 18, 18) # Add some margins
-        # --- Add Project Selector ---
         selector_layout = QHBoxLayout()
         selector_label = TitleLabel("项目成果-", self)
         self.project_selector = UIUtils.create_project_selector(self.engine, self)
@@ -285,9 +256,7 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
         selector_layout.addWidget(self.project_selector)
         selector_layout.addStretch()
         self.main_layout.addLayout(selector_layout)
-        # Connect signal after UI setup
         self.project_selector.currentIndexChanged.connect(self._on_project_selected)
-        # --- Project Selector End ---
 
         # 按钮栏
         add_btn = UIUtils.create_action_button("添加成果", FluentIcon.ADD)
@@ -308,9 +277,6 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
             "成果名称", "类型", "状态", "作者/完成人", "投稿/申请日期",
             "发表/授权日期", "期刊/授权单位", "描述", "成果附件" # 移除备注，调整附件列标题
         ])
-        # 设置表格样式 (复用 expense 的样式设置)
-        #self.outcome_table.setBorderVisible(True)
-        #self.outcome_table.setBorderRadius(8)
         self.outcome_table.setWordWrap(False)
         self.outcome_table.setItemDelegate(TableItemDelegate(self.outcome_table))
         UIUtils.set_table_style(self.outcome_table) # 应用通用样式
@@ -322,7 +288,6 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
         header.sectionClicked.connect(self.sort_table) # 连接排序信号
 
         # 隐藏行号
-        #self.outcome_table.verticalHeader().setVisible(False)
 
         # 设置初始列宽 (需要调整以适应新列)
         header.resizeSection(0, 200) # 成果名称
@@ -337,7 +302,6 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
 
     # 允许用户调整列宽和移动列
         header.setSectionsMovable(True)
-        # header.setStretchLastSection(True) # 取消最后一列拉伸，手动设置附件列宽度
 
         self.outcome_table.setSelectionMode(TableWidget.ExtendedSelection)
         self.outcome_table.setSelectionBehavior(TableWidget.SelectRows)
@@ -365,7 +329,6 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
         self.status_filter.currentTextChanged.connect(self.apply_filters) # Connect to apply_filters
         search_layout.addWidget(self.status_filter)
 
-        # Add reset button
         reset_btn = PushButton("重置筛选")
         reset_btn.clicked.connect(self.reset_filters)
         search_layout.addWidget(reset_btn)
@@ -397,7 +360,6 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
             print("OutcomeWidget: No project selected, cannot load outcome.")
             return
 
-        # Use the stored engine
         Session = sessionmaker(bind=self.engine)
         session = Session()
 
@@ -422,63 +384,41 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
         for row, outcome in enumerate(outcomes_list):
             self.outcome_table.insertRow(row)
 
-            # --- Populate Cells ---
-            # Col 0: Name
             name_item = QTableWidgetItem(outcome.name)
             name_item.setData(Qt.UserRole, outcome.id) # Store ID here
             self.outcome_table.setItem(row, 0, name_item)
-            # UIUtils.set_item_tooltip(name_item) # Removed tooltip call
 
-            # Col 1: Type
             type_item = QTableWidgetItem(outcome.type.value)
             type_item.setTextAlignment(Qt.AlignCenter)
             self.outcome_table.setItem(row, 1, type_item)
-            # UIUtils.set_item_tooltip(type_item) # Removed tooltip call
 
-            # Col 2: Status
             status_item = QTableWidgetItem(outcome.status.value)
             status_item.setTextAlignment(Qt.AlignCenter)
             self.outcome_table.setItem(row, 2, status_item)
-            # UIUtils.set_item_tooltip(status_item) # Removed tooltip call
 
-            # Col 3: Authors
             authors_item = QTableWidgetItem(outcome.authors or "")
             authors_item.setTextAlignment(Qt.AlignCenter)
             self.outcome_table.setItem(row, 3, authors_item)
-            # UIUtils.set_item_tooltip(authors_item) # Removed tooltip call
 
-            # Col 4: Submit Date
             submit_date_str = str(outcome.submit_date) if outcome.submit_date else ""
             submit_date_item = QTableWidgetItem(submit_date_str)
             submit_date_item.setTextAlignment(Qt.AlignCenter)
             submit_date_item.setData(Qt.UserRole + 1, outcome.submit_date) # Store date for sorting
             self.outcome_table.setItem(row, 4, submit_date_item)
-            # UIUtils.set_item_tooltip(submit_date_item) # Tooltip likely not needed for date
 
-            # Col 5: Publish Date
             publish_date_str = str(outcome.publish_date) if outcome.publish_date else ""
             publish_date_item = QTableWidgetItem(publish_date_str)
             publish_date_item.setTextAlignment(Qt.AlignCenter)
             publish_date_item.setData(Qt.UserRole + 1, outcome.publish_date) # Store date for sorting
             self.outcome_table.setItem(row, 5, publish_date_item)
-            # UIUtils.set_item_tooltip(publish_date_item) # Tooltip likely not needed for date
 
-            # Col 6: Journal
             journal_item = QTableWidgetItem(outcome.journal or "")
             self.outcome_table.setItem(row, 6, journal_item)
-            # UIUtils.set_item_tooltip(journal_item) # Removed tooltip call
 
-            # Col 7: Description
             description_item = QTableWidgetItem(outcome.description or "")
             self.outcome_table.setItem(row, 7, description_item)
-            # UIUtils.set_item_tooltip(description_item) # Removed tooltip call
 
-            # Col 8: Remarks (Removed)
-            # remarks_item = QTableWidgetItem(outcome.remarks or "")
-            # remarks_item.setTextAlignment(Qt.AlignCenter)
-            # self.outcome_table.setItem(row, 8, remarks_item)
 
-            # Col 8: Attachment Button (Index changed from 9 to 8)
             container = create_attachment_button(
                 item_id=outcome.id,
                 attachment_path=outcome.attachment_path,
@@ -533,23 +473,18 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
 
         base_folder = "outcomes" # Changed base folder
         project_code = project.financial_code if project.financial_code else "unknown_project"
-        # Use the enum value, sanitize it for path safety
         outcome_type_str = sanitize_filename(outcome_type_enum.value)
         timestamp = get_timestamp_str() # Get current timestamp string
 
-        # Sanitize original filename and split extension
         original_basename = os.path.basename(original_filename)
         base_name, ext = os.path.splitext(original_basename)
         sanitized_base_name = sanitize_filename(base_name)
 
-        # Construct filename: <timestamp>_<sanitized_original_name>.ext
         new_filename = f"{timestamp}_{sanitized_base_name}{ext}"
 
-        # Construct full path using ROOT_DIR
         target_dir = os.path.join(ROOT_DIR, base_folder, project_code, outcome_type_str)
         full_path = os.path.join(target_dir, new_filename)
 
-        # Normalize the path
         return os.path.normpath(full_path)
 
     def add_outcome(self):
@@ -559,10 +494,7 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
 
         dialog = OutcomeDialog(self, project=self.current_project)
         if dialog.exec():
-            # No file selection in OutcomeDialog, so no file copy needed here.
-            # Attachment is handled separately.
 
-            # Add to database
             Session = sessionmaker(bind=self.engine)
             session = Session()
             try:
@@ -576,8 +508,6 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
                     publish_date=dialog.publish_date.date().toPython(),
                     journal=dialog.journal_edit.text().strip(),
                     description=dialog.description_edit.toPlainText().strip(), # Use toPlainText
-                    # remarks=dialog.remarks_edit.text().strip(), # Removed remarks
-                    # attachment_path is handled by the attachment button logic
                 )
                 session.add(outcome)
                 session.commit()
@@ -589,7 +519,6 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
             finally:
                 session.close()
 
-    # RENAMED function to avoid conflict if imported elsewhere
     def _handle_outcome_attachment_new(self, event, btn):
         """Handles clicks on the attachment button (add/view/download/delete)."""
         outcome_id = btn.property("item_id")
@@ -602,7 +531,6 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
         Session = sessionmaker(bind=self.engine)
         session = Session()
         try:
-            # Special handling for 'add' action before fetching outcome
             if action_type == 'add':
                 outcome = session.query(ProjectOutcome).filter(ProjectOutcome.id == outcome_id).first()
                 if not outcome:
@@ -613,7 +541,6 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
                 if not source_file_path:
                     return # User cancelled
 
-                # Generate new path
                 new_file_path = self._generate_outcome_path(
                     project=self.current_project, # Assumes current_project is set
                     outcome_type_enum=outcome.type,
@@ -623,21 +550,17 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
                     UIUtils.show_error(self, "错误", "无法生成附件保存路径")
                     return
 
-                # Ensure target directory exists
                 target_dir = os.path.dirname(new_file_path)
                 ensure_directory_exists(target_dir)
 
-                # Copy file
                 try:
                     shutil.copy2(source_file_path, new_file_path)
                 except Exception as e:
                     UIUtils.show_error(self, "错误", f"复制附件失败: {e}")
                     return
 
-                # Update database
                 outcome.attachment_path = new_file_path
                 session.commit()
-                # Update button state visually
                 btn.setIcon(FluentIcon.DOCUMENT)
                 btn.setToolTip(f"查看/下载: {os.path.basename(new_file_path)}")
                 btn.setProperty("action_type", "view") # Change action type for next click
@@ -657,7 +580,6 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
                              os.remove(file_to_delete)
                              outcome.attachment_path = None
                              session.commit()
-                             # Update button state visually
                              btn.setIcon(FluentIcon.ADD)
                              btn.setToolTip("添加附件")
                              btn.setProperty("action_type", "add")
@@ -679,13 +601,11 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
         finally:
             session.close()
 
-    # RENAMED function to avoid conflict
     def _execute_outcome_action_new(self, action_type, outcome_id, btn, session):
         """Executes view or download action for an outcome."""
         outcome = session.query(ProjectOutcome).filter(ProjectOutcome.id == outcome_id).first()
         if not outcome or not outcome.attachment_path:
             UIUtils.show_warning(self, "警告", "未找到成果附件或文件路径无效")
-            # Ensure button reflects missing state
             btn.setIcon(FluentIcon.ADD)
             btn.setToolTip("添加附件")
             btn.setProperty("action_type", "add")
@@ -694,7 +614,6 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
         file_path = outcome.attachment_path
         if not os.path.exists(file_path):
             UIUtils.show_error(self, "错误", f"附件文件不存在: {file_path}")
-            # Update DB and button if file is missing
             try:
                 outcome.attachment_path = None
                 session.commit()
@@ -709,7 +628,6 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
         if action_type == 'view':
             view_attachment(file_path, self)
         elif action_type == 'download':
-            # Suggest a filename based on the outcome name and original extension
             original_filename = os.path.basename(file_path)
             _, ext = os.path.splitext(original_filename)
             suggested_filename = f"{sanitize_filename(outcome.name)}_附件{ext}" # Add suffix
@@ -748,7 +666,6 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
 
             dialog = OutcomeDialog(self, outcome=outcome, project=self.current_project)
             if dialog.exec():
-                # Update outcome attributes
                 outcome.name = dialog.name_edit.text().strip()
                 outcome.type = OutcomeType(dialog.type_combo.currentText())
                 outcome.status = OutcomeStatus(dialog.status_combo.currentText())
@@ -757,8 +674,6 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
                 outcome.publish_date = dialog.publish_date.date().toPython()
                 outcome.journal = dialog.journal_edit.text().strip()
                 outcome.description = dialog.description_edit.toPlainText().strip() # Use toPlainText
-                # outcome.remarks = dialog.remarks_edit.text().strip() # Removed remarks
-                # attachment_path is not updated here
 
                 session.commit()
                 self.load_outcome() # Reload to show changes
@@ -799,14 +714,12 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
                         session.delete(outcome)
                         session.flush() # Ensure delete happens before file removal attempt
 
-                        # Attempt to delete the associated file
                         if file_path_to_delete and os.path.exists(file_path_to_delete):
                             try:
                                 os.remove(file_path_to_delete)
                             except OSError as e:
                                 print(f"Error deleting attachment file {file_path_to_delete}: {e}")
                                 failed_files.append(os.path.basename(file_path_to_delete))
-                                # Continue deleting DB entry even if file deletion fails
 
                         deleted_count += 1
 
@@ -835,7 +748,6 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
         current_order = self.outcome_table.horizontalHeader().sortIndicatorOrder()
         order = Qt.AscendingOrder if current_order == Qt.DescendingOrder else Qt.DescendingOrder
 
-        # Map visual column index to data attribute for sorting
         column_map = {
             0: 'name',
             1: 'type', # Sort by enum value
@@ -845,18 +757,15 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
             5: 'publish_date', # Use the stored date object
             6: 'journal',
             7: 'description',
-            # Column 8 (Attachment) is not sortable
         }
 
         sort_attribute = column_map.get(column)
         if sort_attribute:
-            # Use a custom key function for sorting
             def sort_key(outcome):
                 value = getattr(outcome, sort_attribute, None)
                 if isinstance(value, (OutcomeType, OutcomeStatus)):
                     return value.value # Sort by enum string value
                 if value is None: # Handle None values for dates and strings
-                    # Return a value that sorts None appropriately (e.g., min date or empty string)
                     attr_type = type(getattr(ProjectOutcome, sort_attribute).type.python_type)
                     if attr_type is datetime.date:
                         return datetime.min.date()

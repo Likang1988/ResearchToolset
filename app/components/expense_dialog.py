@@ -8,16 +8,13 @@ from ..models.database import BudgetCategory, Expense, Budget # Import Expense a
 from ..utils.ui_utils import UIUtils
 
 class ExpenseDialog(QDialog):
-    # Update __init__ signature
     def __init__(self, engine, budget: Budget, expense: Expense = None, parent=None):
         super().__init__(parent)
         self.engine = engine # Store engine if needed, though not used in current methods
         self.budget = budget # Store budget object
         self.expense = expense # Store expense object if editing
-        # self.project_id = budget.project_id # Get project_id from budget if needed elsewhere
         self.setWindowTitle("支出信息" if not expense else "编辑支出信息")
         self.setup_ui()
-        # If editing, populate the dialog
         if self.expense:
             self.set_data(self.expense) # Pass the actual expense object
 
@@ -82,7 +79,6 @@ class ExpenseDialog(QDialog):
         remarks_layout.addWidget(self.remarks)
         layout.addLayout(remarks_layout)
 
-        # 支出凭证 - Keep existing logic, path stored in self.voucher_path
         voucher_layout = QHBoxLayout()
         voucher_layout.addWidget(BodyLabel("支出凭证:"))
         self.voucher_path = None # Initialize voucher path storage
@@ -97,7 +93,6 @@ class ExpenseDialog(QDialog):
         button_layout = QHBoxLayout()
         button_layout.addStretch() # Push buttons to the right
 
-        # Hide batch import button when editing
         if not self.expense:
             import_btn = PushButton("批量导入", self, FluentIcon.DICTIONARY_ADD)
             import_btn.clicked.connect(self.show_import_dialog)
@@ -138,12 +133,8 @@ class ExpenseDialog(QDialog):
 
     def show_import_dialog(self):
         """显示批量导入对话框"""
-        # Pass budget object instead of project_id if needed by BatchImportDialog
-        # Assuming BatchImportDialog needs project_id, get it from budget
         dialog = BatchImportDialog(self.budget.project_id, self)
         dialog.exec()
-        # Potentially trigger an update in the parent widget after import
-        # self.parent().load_expenses() # Or use a signal
 
     def select_voucher(self):
         """选择凭证文件"""
@@ -155,14 +146,12 @@ class ExpenseDialog(QDialog):
         )
         if file_path:
             self.voucher_path = file_path
-            # Provide visual feedback, e.g., change button text or show path
             filename = os.path.basename(file_path)
             self.voucher_btn.setText(f"已选: {filename[:15]}..." if len(filename) > 15 else f"已选: {filename}")
             self.voucher_btn.setToolTip(file_path)
 
     def get_data(self):
         """获取表单数据"""
-        # Ensure amount is float, handle potential empty string during validation
         amount_val = 0.0
         try:
             amount_val = float(self.amount.text())
@@ -177,11 +166,9 @@ class ExpenseDialog(QDialog):
             'amount': amount_val,
             'date': self.date.date().toPython(),
             'remarks': self.remarks.text().strip(),
-            # Return the currently selected path, or the original path if editing and no new file selected
             'voucher_path': self.voucher_path if self.voucher_path is not None else (self.expense.voucher_path if self.expense else None)
         }
 
-    # Modify set_data to accept an Expense object
     def set_data(self, expense_data: Expense):
         """设置表单数据"""
         self.category.setCurrentText(expense_data.category.value)
@@ -191,7 +178,6 @@ class ExpenseDialog(QDialog):
         self.amount.setText(str(expense_data.amount))
         self.date.setDate(QDate(expense_data.date)) # Convert date to QDate
         self.remarks.setText(expense_data.remarks or '')
-        # Store the original voucher path when setting data
         self.voucher_path = expense_data.voucher_path
         if self.voucher_path and os.path.exists(self.voucher_path):
              filename = os.path.basename(self.voucher_path)

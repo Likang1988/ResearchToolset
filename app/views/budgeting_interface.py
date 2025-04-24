@@ -280,7 +280,6 @@ class BudgetingInterface(QWidget):
             )
             return
             
-        # 使用Dialog显示确认对话框
         confirm_dialog = Dialog(
             '确认删除',
             '确定要删除该预算项吗？此操作不可恢复！',

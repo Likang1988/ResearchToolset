@@ -1,7 +1,6 @@
 import json
 from datetime import datetime, timezone
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog # Added QHBoxLayout, QLabel, QFileDialog
-# from PySide6.QtWebEngineWidgets import QWebEngineView # Already commented out/replaced
 from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtCore import QUrl, Signal, QObject, Slot, QCoreApplication, Qt # Ensure Qt is imported
 from PySide6.QtGui import QIcon, QFont, QPixmap # 确保 QFont, QPixmap 已导入 # QPixmap no longer needed
@@ -22,7 +21,6 @@ class ProjectProgressWidget(QWidget):
     # 定义信号
     progress_updated = Signal()
 
-    # Modify __init__ to remove project argument
     def __init__(self, engine=None, parent=None):
         super().__init__(parent)        
         self.engine = engine
@@ -98,13 +96,11 @@ class ProjectProgressWidget(QWidget):
 
     def setup_ui(self):
         """初始化界面"""
-        # --- Enable Remote Debugging ---
         os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "8081" # 设置一个端口，例如 8081
         # -------------------------------
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(18, 18, 18, 18) # Add some margins
 
-        # --- Add Project Selector ---
         selector_layout = QHBoxLayout()
         selector_label = TitleLabel("项目进度-", self)
         self.project_selector = UIUtils.create_project_selector(self.engine, self)
@@ -112,16 +108,11 @@ class ProjectProgressWidget(QWidget):
         selector_layout.addWidget(self.project_selector)
         selector_layout.addStretch()
         self.layout.addLayout(selector_layout)
-        # --- Project Selector End ---
 
-        # 创建WebEngineView并设置样式
-        # Use FramelessWebEngineView
         self.web_view = FramelessWebEngineView(self)
         self.layout.addWidget(self.web_view) # Add web_view *after* selector
 
-        # --- 设置 QWebChannel ---
         self.channel = QWebChannel(self.web_view.page())
-        # Initialize GanttBridge, passing the web_view instance
         self.gantt_bridge = GanttBridge(self.engine, self.web_view, parent=self) # Pass web_view
         self.channel.registerObject("ganttBridge", self.gantt_bridge) # 注册对象，JS端将通过 'ganttBridge' 访问
         self.web_view.page().setWebChannel(self.channel)
@@ -132,7 +123,6 @@ class ProjectProgressWidget(QWidget):
         # 加载本地甘特图资源
         self.load_gantt()
 
-        # Connect project selector signal
         self.project_selector.currentIndexChanged.connect(self._on_project_selected)
 
     def _on_project_selected(self, index):
@@ -142,13 +132,10 @@ class ProjectProgressWidget(QWidget):
             self.current_project = selected_project
             print(f"Project selected in widget: {self.current_project.name}")
             self.gantt_bridge.set_project(self.current_project)
-            # Trigger data loading in JavaScript
             self.web_view.page().runJavaScript("loadInitialData();")
         else:
-            # Handle "请选择项目..." or error case
             self.current_project = None
             self.gantt_bridge.set_project(None)
-            # Optionally clear the Gantt chart in JS
             self.web_view.page().runJavaScript("clearGantt();")
             print("No valid project selected.")
 
@@ -158,7 +145,6 @@ class ProjectProgressWidget(QWidget):
         try:
             # 获取当前文件所在目录
             current_dir = os.path.dirname(os.path.abspath(__file__))
-            # 构建新的 jQueryGantt 基础目录路径 (向上两级到 app/, 再进入 integration/jQueryGantt/)
             gantt_base_dir = os.path.abspath(os.path.join(current_dir, '..', '..', 'integration', 'jQueryGantt'))
             gantt_path = os.path.join(gantt_base_dir, "gantt.html")
             libs_dir = os.path.join(gantt_base_dir, "libs") # 获取新的libs目录
@@ -170,10 +156,8 @@ class ProjectProgressWidget(QWidget):
                  # 尝试从标准位置复制（如果需要）
                  # 或者提示用户手动放置
                  print(f"Warning: qwebchannel.js not found at {self.qwebchannel_js_path}. QWebChannel might not work.")
-                 # raise FileNotFoundError(f"qwebchannel.js not found at {self.qwebchannel_js_path}")
 
 
-            # 转换为file:// URL格式并设置基础URL
             gantt_url = QUrl.fromLocalFile(gantt_path)
             self.web_view.setUrl(gantt_url)
 
@@ -186,12 +170,10 @@ class ProjectProgressWidget(QWidget):
         """甘特图加载完成回调"""
         if success:
             print("jQueryGantt HTML loaded successfully. Initializing QWebChannel...")
-            # 注入 qwebchannel.js 并初始化连接
             try:
                 with open(self.qwebchannel_js_path, 'r', encoding='utf-8') as f:
                     qwebchannel_js = f.read()
 
-                # Use triple quotes and escape JS braces for f-string compatibility
                 init_script = f"""
                 {qwebchannel_js}
 
@@ -249,9 +231,6 @@ class ProjectProgressWidget(QWidget):
 
         else:
             print("Failed to load jQueryGantt HTML")
-    # 移除旧的 init_gantt_data 和 update_progress_data 方法
-    # def init_gantt_data(self): ...
-    # def update_progress_data(self, data): ...
 
     @Slot(bool, str)
     def show_save_status(self, success, message):
@@ -273,12 +252,10 @@ class ProjectProgressWidget(QWidget):
                 parent=self
             )            
 
-# --- GanttBridge Class for Python-JS Communication ---
 class GanttBridge(QObject):
     """用于在Python和JavaScript之间通过QWebChannel通信的桥梁类"""
     data_saved = Signal(bool, str) # 信号：保存是否成功，消息
 
-    # Modify __init__ to accept web_view
     def __init__(self, engine, web_view, parent=None): # Added web_view parameter
         super().__init__(parent)
         self.engine = engine
@@ -296,7 +273,6 @@ class GanttBridge(QObject):
         """从数据库加载指定项目的甘特图数据"""
         if not self.project:
             print("GanttBridge: No project selected, returning empty data.")
-            # Return empty structure if no project is selected
             return json.dumps({
                 "tasks": [], "selectedRow": -1, "deletedTaskIds": [],
                 "resources": [], "roles": [], "canWrite": False, "canDelete": False,
@@ -311,8 +287,6 @@ class GanttBridge(QObject):
 
             tasks_json = []
             for task in tasks_db:
-                # 将数据库时间转换为毫秒时间戳 (jQueryGantt需要)
-                # 确保时间是aware的，假设数据库存储的是UTC
                 start_ms = int(task.start_date.replace(tzinfo=timezone.utc).timestamp() * 1000) if task.start_date else None
                 end_ms = int(task.end_date.replace(tzinfo=timezone.utc).timestamp() * 1000) if task.end_date else None
 
@@ -340,7 +314,6 @@ class GanttBridge(QObject):
                     "hasChild": task.has_child
                 })
 
-            # 构建jQueryGantt期望的完整项目结构
             project_data = {
                 "tasks": tasks_json,
                 "selectedRow": 0 if tasks_json else -1, # 选中第一行或不选
@@ -358,7 +331,6 @@ class GanttBridge(QObject):
         except Exception as e:
             print(f"Error loading Gantt data: {e}")
             session.rollback()
-            # 返回一个空的或默认的项目结构，防止JS出错
             return json.dumps({
                 "tasks": [], "selectedRow": -1, "deletedTaskIds": [],
                 "resources": [], "roles": [], "canWrite": True, "canDelete": True,
@@ -372,11 +344,9 @@ class GanttBridge(QObject):
         deps = []
         for dep in all_dependencies:
             if dep.successor_gantt_id == task_gantt_id:
-                # jQueryGantt 依赖格式通常是 "前置任务ID[:类型]"，这里简化为仅ID
                 deps.append(str(dep.predecessor_gantt_id))
         return ",".join(deps)
 
-    # 修改 Slot 返回类型为 str，以包含 ID 映射
     @Slot(str, result=str) # 接收JSON字符串，返回包含ID映射的JSON字符串或错误信息
     def save_gantt_data(self, project_json_str):
         """
@@ -438,7 +408,6 @@ class GanttBridge(QObject):
                 gantt_id = str(task_data["id"]) # 确保是字符串
                 depends_str = task_data.get("depends", "")
 
-                # 转换时间戳回datetime (确保是UTC)
                 start_dt = datetime.fromtimestamp(task_data["start"] / 1000, tz=timezone.utc) if task_data.get("start") is not None else None
                 end_dt = datetime.fromtimestamp(task_data["end"] / 1000, tz=timezone.utc) if task_data.get("end") is not None else None
 
@@ -465,34 +434,24 @@ class GanttBridge(QObject):
 
                 if is_new_task:
                     # 新任务：插入数据库
-                    # 1. 创建对象时，先使用临时ID填充gantt_id，避免NOT NULL错误
                     new_task = GanttTask(gantt_id=gantt_id, **task_obj_data)
-                    # 2. 添加到 session
                     session.add(new_task)
-                    # 3. Flush 获取数据库生成的真实 ID
                     session.flush()
-                    # 4. 生成持久化 ID (使用数据库ID)
                     persistent_gantt_id = str(new_task.id)
-                    # 5. 更新任务对象的 gantt_id 为持久化 ID
                     new_task.gantt_id = persistent_gantt_id
-                    # 6. 记录临时ID到持久化ID的映射
                     new_task_id_map[gantt_id] = persistent_gantt_id
                     print(f"Added new task: {gantt_id} -> {persistent_gantt_id}")
                     current_gantt_id = persistent_gantt_id
                     processed_gantt_ids.add(current_gantt_id)
-                    # 注意：新任务的依赖关系需要在所有任务处理完、ID映射确定后再处理
                 elif gantt_id in existing_task_map:
                     # 现有任务：更新数据库
                     existing_task = existing_task_map.pop(gantt_id) # 从map中取出并移除，表示已处理
                     for key, value in task_obj_data.items():
                         setattr(existing_task, key, value)
-                    # existing_task 对象已在 session 中，修改后会自动更新，无需 merge
                     print(f"Updated task: {gantt_id}")
                     current_gantt_id = gantt_id
                     processed_gantt_ids.add(current_gantt_id)
                 else:
-                    # 可能是从其他地方导入的持久化ID，但不在当前数据库中
-                    # 尝试作为新任务插入，但使用提供的ID
                     print(f"Task with persistent id {gantt_id} not found in DB, attempting to insert.")
                     new_task = GanttTask(gantt_id=gantt_id, **task_obj_data)
                     try:
@@ -506,7 +465,6 @@ class GanttBridge(QObject):
                         session.rollback() # 回滚单条插入错误，继续处理其他任务
                         continue # 跳过此任务的依赖处理
 
-                # 处理依赖关系 (需要在此任务处理完后进行，以确保ID已更新)
                 if current_gantt_id and depends_str:
                     predecessor_ids = depends_str.split(',')
                     for pred_id_raw in predecessor_ids:
@@ -528,10 +486,8 @@ class GanttBridge(QObject):
                 pred_id = dep_data["predecessor"]
                 succ_id = dep_data["successor"] # 这个ID应该是持久化的
 
-                # 如果前置任务是新创建的，使用映射后的新ID
                 final_pred_id = new_task_id_map.get(pred_id, pred_id)
 
-                # 检查ID是否存在于已处理的任务集合中，防止无效依赖
                 if final_pred_id in processed_gantt_ids and succ_id in processed_gantt_ids:
                     # 检查是否已存在相同的依赖（理论上不会，因为先清空了）
                     existing_dep = session.query(GanttDependency).filter_by(
@@ -557,17 +513,14 @@ class GanttBridge(QObject):
             session.query(GanttDependency).filter(GanttDependency.project_id == self.project.id).delete(synchronize_session=False)
             print("Cleared old dependencies.")
 
-            # 添加新的依赖关系 (使用最终的ID)
             added_deps_count = 0
             for dep_data in all_dependencies_to_save:
                 pred_id_orig = dep_data["predecessor"]
                 succ_id_orig = dep_data["successor"] # 这个ID应该是持久化的
 
-                # 使用映射转换ID
                 final_pred_id = new_task_id_map.get(pred_id_orig, pred_id_orig)
                 final_succ_id = new_task_id_map.get(succ_id_orig, succ_id_orig) # 后继ID也可能来自新任务
 
-                # 检查ID是否存在于已处理的任务集合中
                 if final_pred_id in processed_gantt_ids and final_succ_id in processed_gantt_ids:
                     new_dependency = GanttDependency(
                         project_id=self.project.id,
@@ -584,7 +537,6 @@ class GanttBridge(QObject):
             session.commit()
             print(f"Saved/Updated {len(processed_gantt_ids)} tasks and added {added_deps_count} dependencies.")
             self.data_saved.emit(True, "甘特图数据保存成功！")
-            # 返回包含ID映射的JSON
             return json.dumps({"success": True, "id_map": new_task_id_map})
 
         except Exception as e:
@@ -592,7 +544,6 @@ class GanttBridge(QObject):
             print(f"Error saving Gantt data: {e}")
             error_message = f"保存失败: {e}"
             self.data_saved.emit(False, error_message)
-            # 返回包含错误的JSON
             return json.dumps({"success": False, "error": error_message})
         finally:
             session.close()
@@ -619,7 +570,6 @@ class GanttBridge(QObject):
             base_filename = f"项目_{self.project.financial_code}_甘特图_{now_str}"
             default_dir = os.path.expanduser("~") # 用户主目录
 
-            # Define filters for the Save As dialog
             filters = {
                 "Excel 文件 (*.xlsx)": "XLSX",
                 "JSON 文件 (*.json)": "JSON",
@@ -645,7 +595,6 @@ class GanttBridge(QObject):
                 self.data_saved.emit(False, "导出已取消")
                 return
 
-            # Determine the actual format based on the selected filter
             export_format = filters.get(selectedFilter, "JSON") # Default to JSON if filter unknown
             if export_format == "ALL": # If user selected "All files", try to guess from extension or default
                 ext = os.path.splitext(filePath)[1].lower()
@@ -655,7 +604,6 @@ class GanttBridge(QObject):
                 elif ext == ".txt": export_format = "TXT"
                 else: export_format = "XLSX" # Default to Excel if extension is missing or unknown
 
-            # Ensure the correct extension is added based on the determined format
             file_base, file_ext = os.path.splitext(filePath)
             required_ext = ""
             if export_format == "XLSX": required_ext = ".xlsx"
@@ -720,12 +668,10 @@ class GanttBridge(QObject):
                     for task in tasks:
                         start_str = pd.to_datetime(task["start"] / 1000, unit='s').strftime('%Y-%m-%d') if task.get("start") else None
                         end_str = pd.to_datetime(task["end"] / 1000, unit='s').strftime('%Y-%m-%d') if task.get("end") else None
-                        # Add indentation to name based on level for visual hierarchy
                         indent = "  " * task.get("level", 0)
                         tasks_for_df.append({
                             "ID": task.get("id", ""),
                             "名称": indent + task.get("name", ""), # Add indentation
-                            # "层级": task.get("level", ""), # Maybe redundant if name is indented
                             "开始日期": start_str,
                             "结束日期": end_str,
                             "工期(天)": task.get("duration", ""),
@@ -735,9 +681,7 @@ class GanttBridge(QObject):
                             "描述": task.get("description", "")
                         })
                     df = pd.DataFrame(tasks_for_df)
-                    # Reorder columns if needed
                     df = df[["ID", "名称", "开始日期", "结束日期", "工期(天)", "进度(%)", "依赖项", "状态", "描述"]]
-                    # Write to Excel
                     df.to_excel(filePath, index=False, engine='openpyxl')
 
 
@@ -759,9 +703,6 @@ class GanttBridge(QObject):
             self.data_saved.emit(False, error_message)
 
 
-    # 移除旧的 init_gantt_data 和 update_progress_data 方法
-    # def init_gantt_data(self): ...
-    # def update_progress_data(self, data): ...
 
     @Slot(bool, str)
     def show_save_status(self, success, message):

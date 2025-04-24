@@ -52,13 +52,9 @@ class DocumentDialog(QDialog):
         if document:
             self.load_document_data()
 
-    # This setup_ui method seems correct based on the previous successful application.
-    # No changes needed here unless there was an unseen modification.
-    # The diff will focus on adding the accept method correctly.
     def setup_ui(self):
         layout = QVBoxLayout(self)
         layout.setSpacing(10) # Adjust spacing to match ExpenseDialog
-        # layout.setContentsMargins(24, 24, 24, 24) # Keep original margins or adjust as needed
 
         # 文档名称
         name_layout = QHBoxLayout()
@@ -96,10 +92,8 @@ class DocumentDialog(QDialog):
         # 文档描述
         description_layout = QHBoxLayout()
         description_layout.addWidget(BodyLabel("文档描述:"))
-        # Change LineEdit to PlainTextEdit for multi-line input
         self.description_edit = PlainTextEdit()
         self.description_edit.setPlaceholderText("请输入文档描述")
-        # Set a reasonable minimum height for the text edit
         self.description_edit.setFixedHeight(120)
         description_layout.addWidget(self.description_edit)
         layout.addLayout(description_layout)
@@ -121,7 +115,6 @@ class DocumentDialog(QDialog):
         # 按钮
         button_layout = QHBoxLayout()
         button_layout.setSpacing(12)
-        # Use PushButton and add icons, push to the right
         save_btn = PushButton("保存", self, FluentIcon.SAVE) # Already PushButton, ensure correct icon
         cancel_btn = PushButton("取消", self, FluentIcon.CLOSE) # Already PushButton, ensure correct icon
         save_btn.clicked.connect(self.accept) # Connect accept for validation
@@ -136,7 +129,6 @@ class DocumentDialog(QDialog):
         if file_path:
             self.file_path_edit.setText(file_path)
 
-    # Add accept method for validation like in ExpenseDialog
     def accept(self):
         """Validate input before accepting the dialog."""
         if not self.name_edit.text().strip():
@@ -146,7 +138,6 @@ class DocumentDialog(QDialog):
                 parent=self
             )
             return
-        # Check if a file is selected when adding a new document
         if not self.document and not self.file_path_edit.text():
              UIUtils.show_warning(
                 title='警告',
@@ -162,11 +153,9 @@ class DocumentDialog(QDialog):
         self.version_edit.setText(self.document.version)
         self.description_edit.setPlainText(self.document.description or "") # Use setPlainText and handle None
         self.keywords_edit.setText(self.document.keywords)
-        # self.uploader_edit.setText(self.document.uploader) # Removed uploader
         self.file_path_edit.setText(self.document.file_path)
 
 class ProjectDocumentWidget(QWidget):
-    # Modify __init__ to accept engine and remove project
     def __init__(self, engine: Engine, parent=None):
         super().__init__(parent=parent)
         self.engine = engine
@@ -242,7 +231,6 @@ class ProjectDocumentWidget(QWidget):
     def setup_ui(self):
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(18, 18, 18, 18) # Add some margins
-        # --- Add Project Selector ---
         selector_layout = QHBoxLayout()
         selector_label = TitleLabel("项目文档-", self)
         self.project_selector = UIUtils.create_project_selector(self.engine, self)
@@ -250,9 +238,7 @@ class ProjectDocumentWidget(QWidget):
         selector_layout.addWidget(self.project_selector)
         selector_layout.addStretch()
         self.main_layout.addLayout(selector_layout)
-        # Connect signal after UI setup
         self.project_selector.currentIndexChanged.connect(self._on_project_selected)
-        # --- Project Selector End ---
 
         # 按钮栏
         add_btn = UIUtils.create_action_button("添加文档", FluentIcon.ADD)
@@ -276,8 +262,6 @@ class ProjectDocumentWidget(QWidget):
             "上传时间", "描述", "文档附件" # 调整顺序，移除上传人
         ])
         # 设置表格样式
-        #self.document_table.setBorderVisible(True)
-        #self.document_table.setBorderRadius(8)
         self.document_table.setWordWrap(False)
         self.document_table.setItemDelegate(TableItemDelegate(self.document_table))
         UIUtils.set_table_style(self.document_table) # 应用通用样式
@@ -289,7 +273,6 @@ class ProjectDocumentWidget(QWidget):
         header.sectionClicked.connect(self.sort_table) # 连接排序信号
 
         # 隐藏行号
-        #self.document_table.verticalHeader().setVisible(False)
 
         # 设置初始列宽 (需要调整以适应新列)
         header.resizeSection(0, 310) # 文档名称
@@ -302,7 +285,6 @@ class ProjectDocumentWidget(QWidget):
 
     # 允许用户调整列宽和移动列
         header.setSectionsMovable(True)
-        # header.setStretchLastSection(True) # 取消最后一列拉伸
 
         self.document_table.setSelectionMode(TableWidget.ExtendedSelection)
         self.document_table.setSelectionBehavior(TableWidget.SelectRows)
@@ -323,13 +305,11 @@ class ProjectDocumentWidget(QWidget):
         self.type_filter.currentTextChanged.connect(self.apply_filters) # Connect to new filter method
         search_layout.addWidget(self.type_filter)
 
-        # Add reset button
         reset_btn = PushButton("重置筛选")
         reset_btn.clicked.connect(self.reset_filters)
         search_layout.addWidget(reset_btn)
         self.main_layout.addLayout(search_layout)
 
-        # 添加右键菜单 (Correctly indented within setup_ui)
         self.document_table.setContextMenuPolicy(Qt.CustomContextMenu)
         self.document_table.customContextMenuRequested.connect(self.show_document_context_menu)
 
@@ -354,7 +334,6 @@ class ProjectDocumentWidget(QWidget):
             print("DocumentWidget: No project selected, cannot load documents.")
             return
 
-        # Use the stored engine
         Session = sessionmaker(bind=self.engine)
         session = Session()
 
@@ -376,35 +355,18 @@ class ProjectDocumentWidget(QWidget):
         for row, doc in enumerate(documents_list):
             self.document_table.insertRow(row)
 
-            # Col 0: Name
             name_item = QTableWidgetItem(doc.name)
             name_item.setData(Qt.UserRole, doc.id) # Store ID here
             self.document_table.setItem(row, 0, name_item)
-            # UIUtils.set_item_tooltip(name_item) # Removed tooltip call
-            # Col 1: Type
             type_item = QTableWidgetItem(doc.doc_type.value); type_item.setTextAlignment(Qt.AlignCenter); self.document_table.setItem(row, 1, type_item)
-            # UIUtils.set_item_tooltip(type_item) # Removed tooltip call
-            # Col 2: Version
             version_item = QTableWidgetItem(doc.version or ""); version_item.setTextAlignment(Qt.AlignCenter); self.document_table.setItem(row, 2, version_item)
-            # UIUtils.set_item_tooltip(version_item) # Removed tooltip call
-            # Col 3: Keywords (Index changed from 4 to 3)
             keywords_item = QTableWidgetItem(doc.keywords or ""); self.document_table.setItem(row, 3, keywords_item)
-            # UIUtils.set_item_tooltip(keywords_item) # Removed tooltip call
-            # Col 4: Upload Time (Index changed from 6 to 4)
             upload_time_str = doc.upload_time.strftime("%Y-%m-%d %H:%M") if doc.upload_time else ""
             upload_time_item = QTableWidgetItem(upload_time_str); upload_time_item.setTextAlignment(Qt.AlignCenter)
             upload_time_item.setData(Qt.UserRole + 1, doc.upload_time) # Store datetime for sorting
             self.document_table.setItem(row, 4, upload_time_item)
-            # UIUtils.set_item_tooltip(upload_time_item) # Tooltip likely not needed for date/time
-            # Col 5: Description (Index changed from 3 to 5)
             description_item = QTableWidgetItem(doc.description or ""); self.document_table.setItem(row, 5, description_item)
-            # UIUtils.set_item_tooltip(description_item) # Removed tooltip call
-            # Col 5: Uploader (Removed)
-            # uploader_item = QTableWidgetItem(doc.uploader or ""); uploader_item.setTextAlignment(Qt.AlignCenter); self.document_table.setItem(row, 5, uploader_item)
-            # Col 7: File Path (Removed)
-            # file_path_item = QTableWidgetItem(doc.file_path or ""); self.document_table.setItem(row, 7, file_path_item) # 移除文件路径列
 
-            # Col 6: Attachment Button (Index changed from 7 to 6)
             container = create_attachment_button(
                 item_id=doc.id,
                 attachment_path=doc.file_path,
@@ -418,7 +380,6 @@ class ProjectDocumentWidget(QWidget):
 
     def apply_filters(self):
         """Applies filters based on search keyword and type, updates the table."""
-        # from ...utils.filter_utils import FilterUtils # Import moved to top
 
         keyword = self.search_edit.text() # Keep original case for potential future needs, FilterUtils handles lowercasing
         doc_type_filter = self.type_filter.currentText()
@@ -454,23 +415,18 @@ class ProjectDocumentWidget(QWidget):
 
         base_folder = "documents"
         project_code = project.financial_code if project.financial_code else "unknown_project"
-        # Use the enum value, sanitize it for path safety
         doc_type_str = sanitize_filename(doc_type_enum.value)
         timestamp = get_timestamp_str() # Get current timestamp string
 
-        # Sanitize original filename and split extension
         original_basename = os.path.basename(original_filename)
         base_name, ext = os.path.splitext(original_basename)
         sanitized_base_name = sanitize_filename(base_name)
 
-        # Construct filename: <timestamp>_<sanitized_original_name>.ext
         new_filename = f"{timestamp}_{sanitized_base_name}{ext}"
 
-        # Construct full path using ROOT_DIR
         target_dir = os.path.join(ROOT_DIR, base_folder, project_code, doc_type_str)
         full_path = os.path.join(target_dir, new_filename)
 
-        # Normalize the path
         return os.path.normpath(full_path)
 
     def add_document(self):
@@ -482,13 +438,11 @@ class ProjectDocumentWidget(QWidget):
         if dialog.exec():
             source_file_path = dialog.file_path_edit.text() # Path selected by user
             if not source_file_path:
-                # This case should be handled by Dialog's accept validation, but double-check
                 UIUtils.show_warning(self, "警告", "请选择要上传的文件")
                 return
 
             doc_type_enum = DocumentType(dialog.type_combo.currentText())
 
-            # --- Generate new path using specific rule ---
             new_file_path = self._generate_document_path(
                 project=self.current_project,
                 doc_type_enum=doc_type_enum,
@@ -497,20 +451,16 @@ class ProjectDocumentWidget(QWidget):
             if not new_file_path:
                  UIUtils.show_error(self, "错误", "无法生成文档保存路径")
                  return
-            # --- End path generation ---
 
-            # Ensure target directory exists
             target_dir = os.path.dirname(new_file_path)
             ensure_directory_exists(target_dir)
 
-            # Copy file
             try:
                 shutil.copy2(source_file_path, new_file_path) # Use copy2 to preserve metadata
             except Exception as e:
                 UIUtils.show_error(self, "错误", f"复制文件失败: {e}")
                 return
 
-            # Add to database
             Session = sessionmaker(bind=self.engine)
             session = Session()
             try:
@@ -521,7 +471,6 @@ class ProjectDocumentWidget(QWidget):
                     version=dialog.version_edit.text().strip(),
                     description=dialog.description_edit.toPlainText().strip(), # Use toPlainText()
                     keywords=dialog.keywords_edit.text().strip(),
-                    # uploader=dialog.uploader_edit.text().strip(), # Removed uploader
                     file_path=new_file_path # Store the new path
                 )
                 session.add(document)
@@ -531,7 +480,6 @@ class ProjectDocumentWidget(QWidget):
             except Exception as e:
                 session.rollback()
                 UIUtils.show_error(self, "错误", f"添加文档到数据库失败: {e}")
-                # Attempt to delete the copied file if DB insert fails
                 try:
                     os.remove(new_file_path)
                 except OSError:
@@ -560,19 +508,15 @@ class ProjectDocumentWidget(QWidget):
                 return
 
             dialog = DocumentDialog(self, document=document)
-            # Disable file selection during edit as we don't replace files this way
             dialog.file_path_edit.setEnabled(False)
             dialog.findChild(QPushButton, "选择文件").setEnabled(False) # Find button by name/type
 
             if dialog.exec():
-                # Update document attributes
                 document.name = dialog.name_edit.text().strip()
                 document.doc_type = DocumentType(dialog.type_combo.currentText())
                 document.version = dialog.version_edit.text().strip()
                 document.description = dialog.description_edit.toPlainText().strip() # Use toPlainText()
                 document.keywords = dialog.keywords_edit.text().strip()
-                # document.uploader = dialog.uploader_edit.text().strip() # Removed uploader
-                # file_path is not updated here
 
                 session.commit()
                 self.load_documents() # Reload to show changes
@@ -613,14 +557,12 @@ class ProjectDocumentWidget(QWidget):
                         session.delete(document)
                         session.flush() # Ensure delete happens before file removal attempt
 
-                        # Attempt to delete the associated file
                         if file_path_to_delete and os.path.exists(file_path_to_delete):
                             try:
                                 os.remove(file_path_to_delete)
                             except OSError as e:
                                 print(f"Error deleting file {file_path_to_delete}: {e}")
                                 failed_files.append(os.path.basename(file_path_to_delete))
-                                # Continue deleting DB entry even if file deletion fails
 
                         deleted_count += 1
 
@@ -669,7 +611,6 @@ class ProjectDocumentWidget(QWidget):
                  UIUtils.show_error(self, "错误", f"文件不存在: {source_path}")
                  return
 
-            # Suggest a filename based on the document name and original extension
             original_filename = os.path.basename(source_path)
             _, ext = os.path.splitext(original_filename)
             suggested_filename = f"{sanitize_filename(document.name)}{ext}"
@@ -722,7 +663,6 @@ class ProjectDocumentWidget(QWidget):
         file_path = document.file_path
         if not os.path.exists(file_path):
             UIUtils.show_error(self, "错误", f"文件不存在: {file_path}")
-            # Optionally update button state if file is missing
             btn.setIcon(FluentIcon.REMOVE_FROM)
             btn.setToolTip("文件丢失")
             btn.setEnabled(False)
@@ -731,7 +671,6 @@ class ProjectDocumentWidget(QWidget):
         if action_type == 'view':
             view_attachment(file_path, self)
         elif action_type == 'download':
-            # Suggest a filename based on the document name and original extension
             original_filename = os.path.basename(file_path)
             _, ext = os.path.splitext(original_filename)
             suggested_filename = f"{sanitize_filename(document.name)}{ext}"
@@ -753,7 +692,6 @@ class ProjectDocumentWidget(QWidget):
         current_order = self.document_table.horizontalHeader().sortIndicatorOrder()
         order = Qt.AscendingOrder if current_order == Qt.DescendingOrder else Qt.DescendingOrder
 
-        # Map visual column index to data attribute for sorting
         column_map = {
             0: 'name',
             1: 'doc_type', # Sort by enum value
@@ -761,12 +699,10 @@ class ProjectDocumentWidget(QWidget):
             3: 'keywords',
             4: 'upload_time', # Use the stored datetime object
             5: 'description',
-            # Column 6 (Attachment) is not sortable
         }
 
         sort_attribute = column_map.get(column)
         if sort_attribute:
-            # Use a custom key function for sorting
             def sort_key(doc):
                 value = getattr(doc, sort_attribute, None)
                 if isinstance(value, DocumentType):

@@ -8,7 +8,6 @@ from sqlalchemy import Engine # Import Engine type hint
 import os
 
 class UIUtils:
-    # 统一设置InfoBar的显示时间为15秒
     DEFAULT_INFOBAR_DURATION = 10000
   
     @staticmethod
@@ -53,15 +52,11 @@ class UIUtils:
         header.setSectionResizeMode(QHeaderView.Interactive)
         header.setStretchLastSection(True)  # 最后一列自动填充剩余空间        
         header.setSectionsMovable(True)  # 允许用户调整列宽
-    #    header.setSortIndicatorShown(True)
-    #    header.setSectionsMovable(True)
         
         # 设置选择模式
         table.setSelectionBehavior(QTableWidget.SelectRows)
         table.setSelectionMode(QTableWidget.ExtendedSelection)
 
-        # Connect itemChanged signal to automatically set tooltips
-        # Note: This signal is emitted AFTER the item's data has changed.
         table.itemChanged.connect(UIUtils.set_item_tooltip)
 
     @staticmethod
@@ -101,21 +96,17 @@ class UIUtils:
         # 设置表头属性
         header = tree.header()
         header.setSectionResizeMode(QHeaderView.Interactive)
-    #    header.setSortIndicatorShown(True)
-    #    header.setSectionsMovable(True)
         
         # 设置选择模式
         tree.setSelectionBehavior(QTreeWidget.SelectRows)
         tree.setSelectionMode(QTreeWidget.ExtendedSelection)
 
-        # Connect itemChanged signal to automatically set tooltips
         tree.itemChanged.connect(UIUtils.set_tree_item_tooltip)
 
     @staticmethod
     def set_tree_item_tooltip(item: QTreeWidgetItem, column: int):
         """Sets the tooltip for a QTreeWidgetItem in a specific column."""
         if item:
-            # Set tooltip for the specified column based on its text
             item.setToolTip(column, item.text(column))
 
     @staticmethod
@@ -227,7 +218,6 @@ class UIUtils:
             else:
                 combo_box.addItem("请选择项目...", userData=None) # 添加默认提示项
                 for project in projects:
-                    # 显示项目名称，将整个 project 对象存储在 userData 中
                     combo_box.addItem(f"{project.financial_code} ", userData=project)
         except Exception as e:
             print(f"Error loading projects for ComboBox: {e}")

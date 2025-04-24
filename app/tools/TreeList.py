@@ -205,7 +205,6 @@ class TreeListApp(QMainWindow):
                                                  selectedFilter='Excel文件 (*.xlsx)')
         if path:
             if filter == 'JSON文件 (*.json)':
-                # 使用原有的保存JSON功能
                 data = self._get_tree_data(self.tree.invisibleRootItem())
                 with open(path, 'w', encoding='utf-8') as f:
                     json.dump(data, f, ensure_ascii=False, indent=2)
@@ -231,9 +230,7 @@ class TreeListApp(QMainWindow):
     def _flatten_tree(self, item, level=1, parent_chain=[]):
         items = []
         
-        # 检查是否为invisibleRootItem
         if item == self.tree.invisibleRootItem():
-            # 如果是invisibleRootItem，只处理其子项
             for i in range(item.childCount()):
                 child = item.child(i)
                 items.extend(self._flatten_tree(child, level, parent_chain))

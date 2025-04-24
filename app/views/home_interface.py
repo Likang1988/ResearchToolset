@@ -293,8 +293,6 @@ class HomeInterface(QWidget):
                 
                 elif activity.type == "预算" and activity.budget:
                     project_info = f"{activity.budget.project.financial_code}"
-                #    if activity.budget.year:
-                #        project_info += f"-{activity.budget.year}"
                     main_info = f"{time_str} {project_info} {activity.action} {activity.type}"
                     details = f"预算年度：{activity.budget.year or '总预算'}，预算金额：{activity.budget.total_amount or 0} 万元"
                 
