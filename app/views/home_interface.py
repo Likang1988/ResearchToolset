@@ -13,56 +13,30 @@ class HomeInterface(QWidget):
     def __init__(self, engine=None):
         super().__init__()
         self.engine = engine
+        self._signals_connected = False # Add flag to track signal connection
         self.setup_ui()
         self.setup_background()
-    
+
     def showEvent(self, event):
         super().showEvent(event)
-        # 获取主窗口实例并连接信号
-        main_window = self.window()
-        if main_window:
-            # 连接项目列表更新信号
-            if hasattr(main_window, 'project_updated'):
-                try:
-                    main_window.project_updated.disconnect(self.refresh_data)
-                except RuntimeError: pass
-                main_window.project_updated.connect(self.refresh_data)
-            # 连接预算或支出更新信号
-            if hasattr(main_window, 'budget_or_expense_updated'):
-                try:
-                    main_window.budget_or_expense_updated.disconnect(self.refresh_data)
-                except RuntimeError: pass
-                main_window.budget_or_expense_updated.connect(self.refresh_data)
-            # 连接活动更新信号 (保持不变)
-            if hasattr(main_window, 'activity_updated'):
-                try:
-                    main_window.activity_updated.disconnect(self.refresh_data)
-                except RuntimeError: pass
-                main_window.activity_updated.connect(self.refresh_data)
-    
-    def post_init(self):
-        # 获取主窗口实例并连接信号
-        main_window = self.window()
-        if main_window:
-            # 连接项目列表更新信号
-            if hasattr(main_window, 'project_updated'):
-                try:
-                    main_window.project_updated.disconnect(self.refresh_data)
-                except RuntimeError: pass
-                main_window.project_updated.connect(self.refresh_data)
-            # 连接预算或支出更新信号
-            if hasattr(main_window, 'budget_or_expense_updated'):
-                try:
-                    main_window.budget_or_expense_updated.disconnect(self.refresh_data)
-                except RuntimeError: pass
-                main_window.budget_or_expense_updated.connect(self.refresh_data)
-            # 连接活动更新信号 (保持不变)
-            if hasattr(main_window, 'activity_updated'):
-                try:
-                    main_window.activity_updated.disconnect(self.refresh_data)
-                except RuntimeError: pass
-                main_window.activity_updated.connect(self.refresh_data)
-    
+        # 获取主窗口实例并连接信号 (只连接一次)
+        if not self._signals_connected:
+            main_window = self.window()
+            if main_window:
+                # 连接项目列表更新信号
+                if hasattr(main_window, 'project_updated'):
+                    main_window.project_updated.connect(self.refresh_data)
+                # 连接预算或支出更新信号
+                if hasattr(main_window, 'budget_or_expense_updated'):
+                    main_window.budget_or_expense_updated.connect(self.refresh_data)
+                # 连接活动更新信号
+                if hasattr(main_window, 'activity_updated'):
+                    main_window.activity_updated.connect(self.refresh_data)
+
+                self._signals_connected = True # Mark signals as connected
+
+    # Removed redundant post_init method which duplicated signal connections from showEvent
+
     def refresh_data(self):
         # 清空现有布局
         for i in reversed(range(self.project_layout.count())): 

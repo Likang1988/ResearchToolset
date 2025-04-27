@@ -34,7 +34,7 @@ class MainWindow(FluentWindow):
         self.setWindowTitle("科研工具集")
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path)) # Use the absolute file path
-            print(f"Icon set from: {icon_path}") # Optional: confirm path used
+            # print(f"Icon set from: {icon_path}") # Removed print
         else:
             print(f"警告: 图标文件未找到于 {icon_path}") # Add a warning if not found
         self.resize(1200, 800)
@@ -60,15 +60,6 @@ class MainWindow(FluentWindow):
         )
         self.projecting_interface.project_list_updated.connect(self.project_updated)
 
-        # 添加项目进度导航项
-        self.progress_interface = ProjectProgressWidget(self.engine) 
-        self.progress_interface.setObjectName("progressInterface")
-        self.addSubInterface(
-            self.progress_interface,
-            QIcon(UIUtils.get_svg_icon_path('progress')), 
-            "项目进度"
-        )      
-                                                              
         # 添加项目经费导航项
         self.project_budget_interface = ProjectBudgetWidget(self.engine) 
         self.project_budget_interface.setObjectName("projectBudgetInterface")
@@ -78,6 +69,15 @@ class MainWindow(FluentWindow):
             "项目经费"
         )
         self.project_budget_interface.budget_updated.connect(self.budget_or_expense_updated)
+        
+        # 添加项目进度导航项
+        self.progress_interface = ProjectProgressWidget(self.engine) 
+        self.progress_interface.setObjectName("progressInterface")
+        self.addSubInterface(
+            self.progress_interface,
+            QIcon(UIUtils.get_svg_icon_path('progress')), 
+            "项目进度"
+        )                                                                    
         
         # 添加项目文档导航项
         self.document_interface = ProjectDocumentWidget(self.engine) 

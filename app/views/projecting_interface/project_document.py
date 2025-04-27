@@ -177,17 +177,19 @@ class ProjectDocumentWidget(QWidget):
                 except RuntimeError:
                     pass # 信号未连接，忽略错误
                 main_window.project_updated.connect(self._refresh_project_selector)
-                print("ProjectDocumentWidget: Connected to project_updated signal.")
+                # print("ProjectDocumentWidget: Connected to project_updated signal.") # Removed print
             else:
-                 print("ProjectDocumentWidget: Could not find main window or project_updated signal.")
+                 # print("ProjectDocumentWidget: Could not find main window or project_updated signal.") # Removed print
+                 pass # Do nothing if signal not found
         except Exception as e:
-            print(f"ProjectDocumentWidget: Error connecting signal: {e}")
+            # print(f"ProjectDocumentWidget: Error connecting signal: {e}") # Removed print
+            pass # Ignore connection errors silently
 
     def _refresh_project_selector(self):
         """刷新项目选择下拉框的内容"""
-        print("ProjectDocumentWidget: Refreshing project selector...")
+        # print("ProjectDocumentWidget: Refreshing project selector...") # Removed print
         if not hasattr(self, 'project_selector') or not self.engine:
-            print("ProjectDocumentWidget: Project selector or engine not initialized.")
+            # print("ProjectDocumentWidget: Project selector or engine not initialized.") # Removed print
             return
 
         current_project_id = None
@@ -221,12 +223,12 @@ class ProjectDocumentWidget(QWidget):
                         self._on_project_selected(0) # 选中 "请选择项目..."
 
         except Exception as e:
-            print(f"Error refreshing project selector in DocumentWidget: {e}")
+            # print(f"Error refreshing project selector in DocumentWidget: {e}") # Removed print
             self.project_selector.addItem("加载项目出错", userData=None)
             self.project_selector.setEnabled(False)
         finally:
             session.close()
-            print("ProjectDocumentWidget: Project selector refreshed.")
+            # print("ProjectDocumentWidget: Project selector refreshed.") # Removed print
 
     def setup_ui(self):
         self.main_layout = QVBoxLayout(self)
@@ -318,12 +320,12 @@ class ProjectDocumentWidget(QWidget):
         selected_project = self.project_selector.itemData(index)
         if selected_project and isinstance(selected_project, Project):
             self.current_project = selected_project
-            print(f"DocumentWidget: Project selected - {self.current_project.name}")
+            # print(f"DocumentWidget: Project selected - {self.current_project.name}") # Removed print
             self.load_documents() # Load documents for the selected project
         else:
             self.current_project = None
             self.document_table.setRowCount(0) # Clear table if no project selected
-            print("DocumentWidget: No valid project selected.")
+            # print("DocumentWidget: No valid project selected.") # Removed print
 
     def load_documents(self):
         """Loads all documents for the current project into memory and populates the table."""
@@ -331,14 +333,14 @@ class ProjectDocumentWidget(QWidget):
         self.current_documents = []
         self.document_table.setRowCount(0)
         if not self.current_project:
-            print("DocumentWidget: No project selected, cannot load documents.")
+            # print("DocumentWidget: No project selected, cannot load documents.") # Removed print
             return
 
         Session = sessionmaker(bind=self.engine)
         session = Session()
 
         try:
-            print(f"DocumentWidget: Loading documents for project ID: {self.current_project.id}")
+            # print(f"DocumentWidget: Loading documents for project ID: {self.current_project.id}") # Removed print
             self.all_documents = session.query(ProjectDocument).filter(
                 ProjectDocument.project_id == self.current_project.id
             ).order_by(ProjectDocument.upload_time.desc()).all()
@@ -410,7 +412,7 @@ class ProjectDocumentWidget(QWidget):
     def _generate_document_path(self, project, doc_type_enum, original_filename):
         """Generates the specific path for a project document based on business rules."""
         if not project or not doc_type_enum or not original_filename:
-            print("Error: Missing project, document type, or filename for path generation.")
+            # print("Error: Missing project, document type, or filename for path generation.") # Removed print
             return None
 
         base_folder = "documents"

@@ -24,14 +24,14 @@ def main():
     app.setFont(font)
     
     # 设置日志
-    logging.basicConfig(level=logging.DEBUG)
-    
+    logging.basicConfig(level=logging.INFO) # Changed level to INFO
+
     mpl.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'Arial']
     mpl.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
     
     # 设置应用程序图标
     icon_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'app', 'assets', 'icon.ico'))
-    print(f"图标路径: {icon_path}")  # 打印路径以便调试
+    # print(f"图标路径: {icon_path}") # Removed debug print
     if os.path.exists(icon_path):
         app.setWindowIcon(QIcon(icon_path))
     else:

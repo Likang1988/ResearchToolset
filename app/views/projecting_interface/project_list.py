@@ -90,7 +90,7 @@ class ProjectListWindow(QWidget):
         
        
         button_layout.addLayout(left_buttons)
-        button_layout.addLayout(right_buttons)
+        #button_layout.addLayout(right_buttons)
         layout.addLayout(button_layout)
         
         
@@ -111,6 +111,15 @@ class ProjectListWindow(QWidget):
         # 设置表格样式
         UIUtils.set_table_style(self.project_table)
         
+        # 减小统计表格表头字号和行高
+        stats_header = self.project_table.horizontalHeader()
+        stats_header.setStyleSheet("""
+            QHeaderView::section {
+                font-size: 12px; /* 减小字号 */
+                padding: 2px 4px; /* 调整内边距以影响行高 */
+            }
+        """)
+        
         # 设置列宽模式
         header = self.project_table.horizontalHeader()  # 获取水平表头
         header.setSectionResizeMode(QHeaderView.Interactive)  # 可调整列宽  
@@ -130,6 +139,7 @@ class ProjectListWindow(QWidget):
                         
         layout.addWidget(self.project_table)
         self.refresh_project_table()
+
     def refresh_project_table(self):
         # 清空现有表格
         self.project_table.setRowCount(0)

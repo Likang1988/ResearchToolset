@@ -41,18 +41,20 @@ class ProjectProgressWidget(QWidget):
                 except RuntimeError:
                     pass # 信号未连接，忽略错误
                 main_window.project_updated.connect(self._refresh_project_selector)
-                print("ProjectProgressWidget: Connected to project_updated signal.")
+                # print("ProjectProgressWidget: Connected to project_updated signal.") # Removed print
             else:
-                 print("ProjectProgressWidget: Could not find main window or project_updated signal.")
+                 # print("ProjectProgressWidget: Could not find main window or project_updated signal.") # Removed print
+                 pass # Do nothing if signal not found
         except Exception as e:
-            print(f"ProjectProgressWidget: Error connecting signal: {e}")
+            # print(f"ProjectProgressWidget: Error connecting signal: {e}") # Removed print
+            pass # Ignore connection errors silently
 
 
     def _refresh_project_selector(self):
         """刷新项目选择下拉框的内容"""
-        print("ProjectProgressWidget: Refreshing project selector...")
+        # print("ProjectProgressWidget: Refreshing project selector...") # Removed print
         if not hasattr(self, 'project_selector') or not self.engine:
-            print("ProjectProgressWidget: Project selector or engine not initialized.")
+            # print("ProjectProgressWidget: Project selector or engine not initialized.") # Removed print
             return
 
         current_project_id = None
@@ -87,16 +89,16 @@ class ProjectProgressWidget(QWidget):
                          self._on_project_selected(0) # 选中 "请选择项目..."
 
         except Exception as e:
-            print(f"Error refreshing project selector: {e}")
+            # print(f"Error refreshing project selector: {e}") # Removed print
             self.project_selector.addItem("加载项目出错", userData=None)
             self.project_selector.setEnabled(False)
         finally:
             session.close()
-            print("ProjectProgressWidget: Project selector refreshed.")
+            # print("ProjectProgressWidget: Project selector refreshed.") # Removed print
 
     def setup_ui(self):
         """初始化界面"""
-        os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "8081" # 设置一个端口，例如 8081
+        # os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "8081" # Removed: Disable remote debugging for release
         # -------------------------------
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(18, 18, 18, 18) # Add some margins
@@ -130,14 +132,14 @@ class ProjectProgressWidget(QWidget):
         selected_project = self.project_selector.itemData(index)
         if selected_project and isinstance(selected_project, Project):
             self.current_project = selected_project
-            print(f"Project selected in widget: {self.current_project.name}")
+            # print(f"Project selected in widget: {self.current_project.name}") # Removed print
             self.gantt_bridge.set_project(self.current_project)
             self.web_view.page().runJavaScript("loadInitialData();")
         else:
             self.current_project = None
             self.gantt_bridge.set_project(None)
             self.web_view.page().runJavaScript("clearGantt();")
-            print("No valid project selected.")
+            # print("No valid project selected.") # Removed print
 
 
     def load_gantt(self):
@@ -155,7 +157,8 @@ class ProjectProgressWidget(QWidget):
             if not os.path.exists(self.qwebchannel_js_path):
                  # 尝试从标准位置复制（如果需要）
                  # 或者提示用户手动放置
-                 print(f"Warning: qwebchannel.js not found at {self.qwebchannel_js_path}. QWebChannel might not work.")
+                 # print(f"Warning: qwebchannel.js not found at {self.qwebchannel_js_path}. QWebChannel might not work.") # Removed print
+                 pass # Silently ignore if not found for now
 
 
             gantt_url = QUrl.fromLocalFile(gantt_path)
@@ -164,12 +167,13 @@ class ProjectProgressWidget(QWidget):
             # 设置页面加载完成后的回调
             self.web_view.loadFinished.connect(self.on_gantt_loaded)
         except Exception as e:
-            print(f"Error loading Gantt: {str(e)}")
+            # print(f"Error loading Gantt: {str(e)}") # Removed print
+            pass # Silently ignore loading errors for now
 
     def on_gantt_loaded(self, success):
         """甘特图加载完成回调"""
         if success:
-            print("jQueryGantt HTML loaded successfully. Initializing QWebChannel...")
+            # print("jQueryGantt HTML loaded successfully. Initializing QWebChannel...") # Removed print
             try:
                 with open(self.qwebchannel_js_path, 'r', encoding='utf-8') as f:
                     qwebchannel_js = f.read()
@@ -227,10 +231,12 @@ class ProjectProgressWidget(QWidget):
                 """
                 self.web_view.page().runJavaScript(init_script)
             except Exception as e:
-                 print(f"Error injecting qwebchannel.js or initializing: {e}")
+                 # print(f"Error injecting qwebchannel.js or initializing: {e}") # Removed print
+                 pass # Silently ignore injection errors
 
         else:
-            print("Failed to load jQueryGantt HTML")
+            # print("Failed to load jQueryGantt HTML") # Removed print
+            pass # Silently ignore load failure
 
     @Slot(bool, str)
     def show_save_status(self, success, message):
@@ -266,13 +272,13 @@ class GanttBridge(QObject):
     def set_project(self, project):
         """Sets the current project for the bridge."""
         self.project = project
-        print(f"GanttBridge project set to: {project.name if project else 'None'}")
+        # print(f"GanttBridge project set to: {project.name if project else 'None'}") # Removed print
 
     @Slot(result=str) # 返回JSON字符串
     def load_gantt_data(self):
         """从数据库加载指定项目的甘特图数据"""
         if not self.project:
-            print("GanttBridge: No project selected, returning empty data.")
+            # print("GanttBridge: No project selected, returning empty data.") # Removed print
             return json.dumps({
                 "tasks": [], "selectedRow": -1, "deletedTaskIds": [],
                 "resources": [], "roles": [], "canWrite": False, "canDelete": False,
@@ -281,7 +287,7 @@ class GanttBridge(QObject):
 
         session = self.Session()
         try:
-            print(f"GanttBridge: Loading data for project ID: {self.project.id}")
+            # print(f"GanttBridge: Loading data for project ID: {self.project.id}") # Removed print
             tasks_db = session.query(GanttTask).filter(GanttTask.project_id == self.project.id).order_by(GanttTask.id).all()
             dependencies_db = session.query(GanttDependency).filter(GanttDependency.project_id == self.project.id).all()
 
@@ -325,11 +331,11 @@ class GanttBridge(QObject):
                 "canWriteOnParent": True,
                 "canAdd": True
             }
-            print(f"Loaded {len(tasks_json)} tasks for project {self.project.id}")
+            # print(f"Loaded {len(tasks_json)} tasks for project {self.project.id}") # Removed print
             return json.dumps(project_data, default=str) # 使用default=str处理日期等
 
         except Exception as e:
-            print(f"Error loading Gantt data: {e}")
+            # print(f"Error loading Gantt data: {e}") # Removed print
             session.rollback()
             return json.dumps({
                 "tasks": [], "selectedRow": -1, "deletedTaskIds": [],
@@ -355,7 +361,7 @@ class GanttBridge(QObject):
         失败时返回包含错误信息的JSON字符串。
         """
         if not self.project:
-            print("GanttBridge: No project selected, cannot save data.")
+            # print("GanttBridge: No project selected, cannot save data.") # Removed print
             error_message = "未选择项目，无法保存数据。"
             self.data_saved.emit(False, error_message)
             return json.dumps({"success": False, "error": error_message})
@@ -363,7 +369,7 @@ class GanttBridge(QObject):
         session = self.Session()
         new_task_id_map = {} # 存储临时ID到新数据库ID的映射
         try:
-            print(f"GanttBridge: Saving data for project ID: {self.project.id}")
+            # print(f"GanttBridge: Saving data for project ID: {self.project.id}") # Removed print
             project_data = json.loads(project_json_str)
             tasks_data = project_data.get("tasks", [])
             deleted_task_ids = project_data.get("deletedTaskIds", [])
@@ -381,7 +387,7 @@ class GanttBridge(QObject):
                     GanttTask.project_id == self.project.id,
                     GanttTask.gantt_id.in_(deleted_task_ids)
                 ).delete(synchronize_session=False)
-                print(f"Deleted tasks: {deleted_task_ids}")
+                # print(f"Deleted tasks: {deleted_task_ids}") # Removed print
 
             # 2. 处理现有任务和新任务
             # --- 事务开始 ---
@@ -396,7 +402,7 @@ class GanttBridge(QObject):
                     GanttTask.project_id == self.project.id,
                     GanttTask.gantt_id.in_(deleted_task_ids)
                 ).delete(synchronize_session=False)
-                print(f"Deleted tasks: {deleted_task_ids}")
+                # print(f"Deleted tasks: {deleted_task_ids}") # Removed print
 
             # 2. 处理更新和新增的任务
             existing_tasks_db = session.query(GanttTask).filter(GanttTask.project_id == self.project.id).all()
@@ -440,7 +446,7 @@ class GanttBridge(QObject):
                     persistent_gantt_id = str(new_task.id)
                     new_task.gantt_id = persistent_gantt_id
                     new_task_id_map[gantt_id] = persistent_gantt_id
-                    print(f"Added new task: {gantt_id} -> {persistent_gantt_id}")
+                    # print(f"Added new task: {gantt_id} -> {persistent_gantt_id}") # Removed print
                     current_gantt_id = persistent_gantt_id
                     processed_gantt_ids.add(current_gantt_id)
                 elif gantt_id in existing_task_map:
@@ -448,20 +454,20 @@ class GanttBridge(QObject):
                     existing_task = existing_task_map.pop(gantt_id) # 从map中取出并移除，表示已处理
                     for key, value in task_obj_data.items():
                         setattr(existing_task, key, value)
-                    print(f"Updated task: {gantt_id}")
+                    # print(f"Updated task: {gantt_id}") # Removed print
                     current_gantt_id = gantt_id
                     processed_gantt_ids.add(current_gantt_id)
                 else:
-                    print(f"Task with persistent id {gantt_id} not found in DB, attempting to insert.")
+                    # print(f"Task with persistent id {gantt_id} not found in DB, attempting to insert.") # Removed print
                     new_task = GanttTask(gantt_id=gantt_id, **task_obj_data)
                     try:
                         session.add(new_task)
                         session.flush()
-                        print(f"Inserted task with provided persistent id: {gantt_id}")
+                        # print(f"Inserted task with provided persistent id: {gantt_id}") # Removed print
                         current_gantt_id = gantt_id
                         processed_gantt_ids.add(current_gantt_id)
                     except Exception as insert_err:
-                        print(f"Failed to insert task with id {gantt_id}: {insert_err}")
+                        # print(f"Failed to insert task with id {gantt_id}: {insert_err}") # Removed print
                         session.rollback() # 回滚单条插入错误，继续处理其他任务
                         continue # 跳过此任务的依赖处理
 
@@ -478,7 +484,7 @@ class GanttBridge(QObject):
             # 3. 处理依赖关系 (在所有任务处理完之后)
             # 先删除该项目的所有旧依赖
             session.query(GanttDependency).filter(GanttDependency.project_id == self.project.id).delete(synchronize_session=False)
-            print("Cleared old dependencies.")
+            # print("Cleared old dependencies.") # Removed print
 
             # 添加新的依赖关系
             added_deps_count = 0

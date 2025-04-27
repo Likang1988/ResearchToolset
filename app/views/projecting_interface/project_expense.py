@@ -208,7 +208,7 @@ class ProjectExpenseWidget(QWidget):
         export_excel_btn.clicked.connect(self.export_expense_excel)
         filter_layout.addWidget(export_excel_btn)
 
-        export_voucher_btn = PushButton("导出凭证")
+        export_voucher_btn = PushButton("导出附件")
         export_voucher_btn.clicked.connect(self.export_expense_vouchers)
         filter_layout.addWidget(export_voucher_btn)
 
@@ -241,6 +241,16 @@ class ProjectExpenseWidget(QWidget):
 
         # 设置表格样式
         UIUtils.set_table_style(self.stats_table)
+
+        # 减小统计表格表头字号和行高
+        stats_header = self.stats_table.horizontalHeader()
+        stats_header.setStyleSheet("""
+            QHeaderView::section {
+                font-size: 12px; /* 减小字号 */
+                padding: 2px 4px; /* 调整内边距以影响行高 */
+            }
+        """)
+
 
         bottom_layout.addWidget(self.stats_table)
         splitter.addWidget(bottom_widget)

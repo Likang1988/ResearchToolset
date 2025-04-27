@@ -195,17 +195,19 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
                 except RuntimeError:
                     pass # 信号未连接，忽略错误
                 main_window.project_updated.connect(self._refresh_project_selector)
-                print("ProjectOutcomeWidget: Connected to project_updated signal.")
+                # print("ProjectOutcomeWidget: Connected to project_updated signal.") # Removed print
             else:
-                 print("ProjectOutcomeWidget: Could not find main window or project_updated signal.")
+                 # print("ProjectOutcomeWidget: Could not find main window or project_updated signal.") # Removed print
+                 pass # Do nothing if signal not found
         except Exception as e:
-            print(f"ProjectOutcomeWidget: Error connecting signal: {e}")
+            # print(f"ProjectOutcomeWidget: Error connecting signal: {e}") # Removed print
+            pass # Ignore connection errors silently
 
     def _refresh_project_selector(self):
         """刷新项目选择下拉框的内容"""
-        print("ProjectOutcomeWidget: Refreshing project selector...")
+        # print("ProjectOutcomeWidget: Refreshing project selector...") # Removed print
         if not hasattr(self, 'project_selector') or not self.engine:
-            print("ProjectOutcomeWidget: Project selector or engine not initialized.")
+            # print("ProjectOutcomeWidget: Project selector or engine not initialized.") # Removed print
             return
 
         current_project_id = None
@@ -239,12 +241,12 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
                         self._on_project_selected(0) # 选中 "请选择项目..."
 
         except Exception as e:
-            print(f"Error refreshing project selector in OutcomeWidget: {e}")
+            # print(f"Error refreshing project selector in OutcomeWidget: {e}") # Removed print
             self.project_selector.addItem("加载项目出错", userData=None)
             self.project_selector.setEnabled(False)
         finally:
             session.close()
-            print("ProjectOutcomeWidget: Project selector refreshed.")
+            # print("ProjectOutcomeWidget: Project selector refreshed.") # Removed print
 
     def setup_ui(self):
         self.main_layout = QVBoxLayout(self)
@@ -344,12 +346,12 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
         selected_project = self.project_selector.itemData(index)
         if selected_project and isinstance(selected_project, Project):
             self.current_project = selected_project
-            print(f"OutcomeWidget: Project selected - {self.current_project.name}")
+            # print(f"OutcomeWidget: Project selected - {self.current_project.name}") # Removed print
             self.load_outcome() # Load outcome for the selected project
         else:
             self.current_project = None
             self.outcome_table.setRowCount(0) # Clear table if no project selected
-            print("OutcomeWidget: No valid project selected.")
+            # print("OutcomeWidget: No valid project selected.") # Removed print
 
     def load_outcome(self):
         """Loads all outcomes for the current project into memory and populates the table."""
@@ -357,14 +359,14 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
         self.current_outcomes = []
         self.outcome_table.setRowCount(0) # Clear table first
         if not self.current_project:
-            print("OutcomeWidget: No project selected, cannot load outcome.")
+            # print("OutcomeWidget: No project selected, cannot load outcome.") # Removed print
             return
 
         Session = sessionmaker(bind=self.engine)
         session = Session()
 
         try:
-            print(f"OutcomeWidget: Loading outcome for project ID: {self.current_project.id}")
+            # print(f"OutcomeWidget: Loading outcome for project ID: {self.current_project.id}") # Removed print
             self.all_outcomes = session.query(ProjectOutcome).filter(
                 ProjectOutcome.project_id == self.current_project.id
             ).order_by(ProjectOutcome.publish_date.desc()).all() # Order by publish date
@@ -372,7 +374,7 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
             self._populate_table(self.current_outcomes)
         except Exception as e:
              UIUtils.show_error(self, "错误", f"加载成果数据失败: {e}")
-             print(f"Error loading outcomes: {e}")
+             # print(f"Error loading outcomes: {e}") # Removed print
         finally:
             session.close()
 
@@ -468,7 +470,7 @@ class ProjectOutcomeWidget(QWidget): # 重命名 Widget 类
     def _generate_outcome_path(self, project, outcome_type_enum, original_filename):
         """Generates the specific path for a project outcome based on business rules."""
         if not project or not outcome_type_enum or not original_filename:
-            print("Error: Missing project, outcome type, or filename for path generation.")
+            # print("Error: Missing project, outcome type, or filename for path generation.") # Removed print
             return None
 
         base_folder = "outcomes" # Changed base folder

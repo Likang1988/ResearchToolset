@@ -11,13 +11,9 @@ def build_app():
     root_dir = os.path.dirname(os.path.abspath(__file__))
     
     # 设置输出目录
-    if is_windows:
-        dist_dir = 'D:\\Compile'
-    elif is_macos:
-        dist_dir = '/Users/Data/Compile'
-    else:  # Linux系统
-        dist_dir = os.path.expanduser('~/Compile')
-    build_dir = os.path.join(root_dir, 'build')
+    dist_dir = os.path.join(root_dir, 'build', 'dist')
+    build_dir = os.path.join(root_dir, 'build', 'build')
+    spec_dir = os.path.join(root_dir, 'build')
     
     # 清理之前的构建文件
     if os.path.exists(dist_dir):
@@ -42,7 +38,7 @@ def build_app():
         f'--add-data={os.path.join(root_dir, "app", "integration", "jQueryGantt")}{";"}app/integration/jQueryGantt' if is_windows else f'--add-data={os.path.join(root_dir, "app", "integration", "jQueryGantt")}:app/integration/jQueryGantt', # 添加jQueryGantt资源
         '--distpath=' + dist_dir,  # 指定输出目录
         '--workpath=' + build_dir,  # 指定构建目录
-        '--specpath=' + dist_dir,  # spec文件位置
+        '--specpath=' + spec_dir,  # spec文件位置
     ]
     
     run(pyinstaller_args)

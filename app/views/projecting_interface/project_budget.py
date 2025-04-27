@@ -43,17 +43,19 @@ class ProjectBudgetWidget(QWidget):
                 except RuntimeError:
                     pass # 信号未连接，忽略错误
                 main_window.project_updated.connect(self._refresh_project_selector)
-                print("ProjectBudgetWidget: Connected to project_updated signal.")
+                # print("ProjectBudgetWidget: Connected to project_updated signal.") # Removed print
             else:
-                 print("ProjectBudgetWidget: Could not find main window or project_updated signal.")
+                 # print("ProjectBudgetWidget: Could not find main window or project_updated signal.") # Removed print
+                 pass # Do nothing if signal not found
         except Exception as e:
-            print(f"ProjectBudgetWidget: Error connecting signal: {e}")
+            # print(f"ProjectBudgetWidget: Error connecting signal: {e}") # Removed print
+            pass # Ignore connection errors silently for now
 
     def _refresh_project_selector(self):
         """刷新项目选择下拉框的内容"""
-        print("ProjectBudgetWidget: Refreshing project selector...")
+        # print("ProjectBudgetWidget: Refreshing project selector...") # Removed print
         if not hasattr(self, 'project_selector') or not self.engine:
-            print("ProjectBudgetWidget: Project selector or engine not initialized.")
+            # print("ProjectBudgetWidget: Project selector or engine not initialized.") # Removed print
             return
 
         current_project_id = None
@@ -87,12 +89,12 @@ class ProjectBudgetWidget(QWidget):
                         self._on_project_selected(0) # 选中 "请选择项目..."
 
         except Exception as e:
-            print(f"Error refreshing project selector in BudgetWidget: {e}")
+            # print(f"Error refreshing project selector in BudgetWidget: {e}") # Removed print
             self.project_selector.addItem("加载项目出错", userData=None)
             self.project_selector.setEnabled(False)
         finally:
             session.close()
-            print("ProjectBudgetWidget: Project selector refreshed.")
+            # print("ProjectBudgetWidget: Project selector refreshed.") # Removed print
 
     def setup_ui(self):
         """设置UI界面"""
@@ -211,7 +213,7 @@ class ProjectBudgetWidget(QWidget):
         selected_project = self.project_selector.itemData(index)
         if selected_project and isinstance(selected_project, Project):
             self.current_project = selected_project
-            print(f"BudgetWidget: Project selected - {self.current_project.name}")
+            # print(f"BudgetWidget: Project selected - {self.current_project.name}") # Removed print
             self.title_label.setText(f"预算管理 - {self.current_project.financial_code}")
             self.load_budgets() # Load budgets for the selected project
         else:
@@ -219,7 +221,7 @@ class ProjectBudgetWidget(QWidget):
             self.title_label.setText("项目预算管理") # Reset title
             self.budget_tree.clear() # Clear tree if no project selected
             self.chart_widget.clear_charts() # Clear charts
-            print("BudgetWidget: No valid project selected.")
+            # print("BudgetWidget: No valid project selected.") # Removed print
 
 
     def open_project_expense(self, budget):
@@ -253,7 +255,7 @@ class ProjectBudgetWidget(QWidget):
         self.chart_widget.clear_charts() # Clear charts on load/reload
 
         if not self.current_project:
-            print("BudgetWidget: No project selected, cannot load budgets.")
+            # print("BudgetWidget: No project selected, cannot load budgets.") # Removed print
             return
 
 
@@ -261,7 +263,7 @@ class ProjectBudgetWidget(QWidget):
         session = Session()
 
         try:
-            print(f"BudgetWidget: Loading budgets for project ID: {self.current_project.id}")
+            # print(f"BudgetWidget: Loading budgets for project ID: {self.current_project.id}") # Removed print
             # 加载总预算
             total_budget = session.query(Budget).filter(
                 Budget.project_id == self.current_project.id, # Use current_project.id
@@ -308,9 +310,11 @@ class ProjectBudgetWidget(QWidget):
 
             # 根据平台调整字号
             if sys.platform == 'darwin':  # macOS
-                font.setPointSize(font.pointSize() + 1)  # 在macOS上增大1号
+                current_size = font.pointSize()
+                font.setPointSize(current_size + 1 if current_size > 0 else QApplication.font().pointSize() + 1) # Use default app font size + 1 if item font size is invalid
             else:  # Windows/Linux
-                font.setPointSize(font.pointSize())  # 保持默认
+                current_size = font.pointSize()
+                font.setPointSize(current_size if current_size > 0 else QApplication.font().pointSize()) # Use default app font size if item font size is invalid
 
             font.setBold(True)
             for i in range(6):  # 设置所有列的字体为加粗
