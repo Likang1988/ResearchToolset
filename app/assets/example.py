@@ -17,7 +17,6 @@ class Widget(QWidget):
         super().__init__(parent=parent)
         self.setObjectName("homeInterface")
 
-        # 1. 将 QWebEngineView 替换成 FramelessWebEngineView
         self.webView = FramelessWebEngineView(self)
         self.webView.load(QUrl("https://www.baidu.com/"))
 
@@ -37,7 +36,6 @@ class Window(FluentWindow):
 
         # 初始化窗口
         self.resize(900, 700)
-        #self.setWindowIcon(QIcon(':/qfluentwidgets/images/logo.png'))
         self.setWindowTitle('PyQt-Fluent-Widgets')
 
 

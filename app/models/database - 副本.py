@@ -51,7 +51,6 @@ class Budget(Base):
     budget_items = relationship("BudgetItem", back_populates="budget", cascade="all, delete-orphan")
     expenses = relationship("Expense", back_populates="budget", cascade="all, delete-orphan")
 
-    # 添加唯一约束，但只对非None的year生效
     __table_args__ = (
         UniqueConstraint('project_id', 'year', 
             name='uix_project_year',
@@ -159,7 +158,6 @@ class Expense(Base):
     
 
 
-# --- Gantt Chart Models Start ---
 
 class GanttTask(Base):
     """甘特图任务"""
@@ -184,9 +182,7 @@ class GanttTask(Base):
     has_child = Column(Boolean, default=False) # 标记是否有子任务
 
     project = relationship("Project", backref="gantt_tasks")
-    # 注意：依赖关系通过 GanttDependency 表处理
 
-    # 唯一约束：同一个项目下的 gantt_id 应该是唯一的
     __table_args__ = (UniqueConstraint('project_id', 'gantt_id', name='uix_project_gantt_id'),)
 
 class GanttDependency(Base):
@@ -204,7 +200,6 @@ class GanttDependency(Base):
     # 唯一约束：同一个项目下的依赖关系应该是唯一的
     __table_args__ = (UniqueConstraint('project_id', 'predecessor_gantt_id', 'successor_gantt_id', name='uix_project_dependency'),)
 
-# --- Gantt Chart Models End ---
 
 
 def get_budget_usage(session, project_id, budget_id=None):
@@ -267,25 +262,20 @@ def get_budget_usage(session, project_id, budget_id=None):
 def migrate_db(engine):
     """迁移数据库"""
     from sqlalchemy import text
-    # from .project_task import migrate_project_tasks # Removed import
     
     connection = engine.connect()
     transaction = connection.begin()
     
     # 执行项目任务表迁移
-    # migrate_project_tasks(engine) # Removed function call
     
-    # 检查project_outcomes表是否存在submit_date列 (原 project_achievements)
     result = connection.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='project_outcomes'")) # 更新表名
     if result.fetchone():
         result = connection.execute(text("PRAGMA table_info(project_outcomes)")) # 更新表名
         columns = [row[1] for row in result.fetchall()]
         
         if 'submit_date' not in columns:
-            # 添加submit_date列
             connection.execute(text("ALTER TABLE project_outcomes ADD COLUMN submit_date DATE")) # 更新表名
 
-    # 检查 projects 表是否存在 director 列
     result = connection.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='projects'"))
     if result.fetchone():
         result = connection.execute(text("PRAGMA table_info(projects)"))
@@ -297,16 +287,12 @@ def migrate_db(engine):
             except Exception as e:
                 print(f"添加 director 列失败: {e}")
                 # 如果需要，可以在这里回滚事务或采取其他错误处理措施
-                # transaction.rollback()
-                # raise e
 
     try:
-        # 检查expenses表是否存在
         result = connection.execute(
             text("SELECT name FROM sqlite_master WHERE type='table' AND name='expenses'")
         )
         if result.fetchone():
-            # 检查expenses表是否存在voucher_path列
             result = connection.execute(text("PRAGMA table_info(expenses)"))
             columns = [row[1] for row in result.fetchall()]
             
@@ -349,17 +335,14 @@ def migrate_db(engine):
                 transaction.commit()
                 print("成功添加voucher_path列")
         
-        # 检查activities表是否存在
         result = connection.execute(
             text("SELECT name FROM sqlite_master WHERE type='table' AND name='activities'")
         )
         if result.fetchone():
-            # 检查activities表中的列信息
             result = connection.execute(text("PRAGMA table_info(activities)"))
             columns = {row[1]: row[2] for row in result.fetchall()}
             
             # 需要迁移的情况：
-            # 1. timestamp列不是DATETIME类型
             # 2. 缺少新增的字段
             needs_migration = (
                 ('timestamp' in columns and columns['timestamp'] != 'DATETIME') or
@@ -391,7 +374,6 @@ def migrate_db(engine):
                     )
                 """))
                 
-                # 复制数据到临时表，对于新字段使用NULL值
                 connection.execute(text("""
                     INSERT INTO activities_temp (
                         id, project_id, budget_id, expense_id, type,
@@ -427,7 +409,6 @@ def init_db(db_path):
     """初始化数据库"""
     # 获取程序根目录
     root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    # 确保使用程序根目录下的database路径
     db_path = os.path.join(root_dir, db_path)
     engine = create_engine(f'sqlite:///{db_path}')
     Base.metadata.create_all(engine)
@@ -437,7 +418,6 @@ def get_engine():
     """获取数据库引擎实例"""
     # 获取程序根目录
     root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    # 确保使用程序根目录下的database路径
     db_path = os.path.join(root_dir, 'database', 'database.db')
     engine = create_engine(f'sqlite:///{db_path}')
     return engine
@@ -496,5 +476,4 @@ if __name__ == "__main__":
     # 创建新表
     Base.metadata.create_all(engine)
     # 运行迁移脚本（如果需要更复杂的迁移）
-    # migrate_db(engine)
     print("数据库初始化或迁移完成")

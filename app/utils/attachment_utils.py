@@ -10,23 +10,14 @@ import re # Import regex for sanitization
 import datetime # Import datetime for timestamp
 from ..utils.ui_utils import UIUtils # Assuming UIUtils is in the parent directory
 
-# Define base directories relative to the utils directory
 UTILS_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.abspath(os.path.join(UTILS_DIR, '..', '..')) # Go up two levels to project root
 
-# --- NEW UTILITY FUNCTIONS START ---
 
 def sanitize_filename(filename):
     """Removes or replaces characters that are invalid in file paths."""
-    # Remove leading/trailing whitespace
     filename = filename.strip()
-    # Replace potentially problematic characters with underscores
     filename = re.sub(r'[\\/*?:"<>|]', '_', filename)
-    # Optionally, limit filename length (e.g., to 200 characters)
-    # max_len = 200
-    # if len(filename) > max_len:
-    #     name, ext = os.path.splitext(filename)
-    #     filename = name[:max_len - len(ext) - 1] + '_' + ext
     return filename
 
 def ensure_directory_exists(dir_path):
@@ -36,14 +27,12 @@ def ensure_directory_exists(dir_path):
             os.makedirs(dir_path, exist_ok=True)
         except OSError as e:
             print(f"Error creating directory {dir_path}: {e}")
-            # Optionally re-raise or handle the error appropriately
             raise
 
 def get_timestamp_str():
     """Returns the current timestamp as a string in YYYYMMDDHHMMSS format."""
     return datetime.datetime.now().strftime('%Y%m%d%H%M%S')
 
-# --- NEW UTILITY FUNCTIONS END ---
 
 def get_attachment_icon_path(icon_name):
     """Helper function to get the absolute path for an icon."""
@@ -71,19 +60,15 @@ def create_attachment_button(item_id, attachment_path, handle_attachment_func, p
     btn.setProperty("attachment_path", attachment_path) # Store current path
 
     if attachment_path and os.path.exists(attachment_path):
-        # Use a generic 'attached' icon if file exists
         btn.setIcon(QIcon(get_attachment_icon_path('attach.svg')))
         btn.setToolTip("管理附件")
     else:
-        # Use a generic 'add attachment' icon if no file or path is invalid
         btn.setIcon(QIcon(get_attachment_icon_path('add_outline.svg'))) # Assuming an add icon exists
         btn.setToolTip("添加附件")
 
     btn.setFixedSize(28, 28)
     btn.setIconSize(QSize(18, 18)) # Slightly smaller icon size
     btn.clicked.connect(lambda checked=False, b=btn: handle_attachment_func(None, b)) # Pass button itself
-    # btn.setContextMenuPolicy(Qt.CustomContextMenu) # Disabled right-click menu
-    # btn.customContextMenuRequested.connect(lambda pos, b=btn: handle_attachment_func(pos, b)) # Disabled right-click menu
 
     layout.addWidget(btn, 0, Qt.AlignCenter) # Ensure vertical centering
     container.setLayout(layout)
@@ -115,18 +100,15 @@ def create_attachment_menu(parent, attachment_path, item_id, handle_attachment_f
 
     return menu
 
-# --- Removed obsolete handle_attachment and handle_attachment_action functions ---
 
 import sys # Add sys import if not already present at the top
 import subprocess # Add subprocess import if not already present at the top
 
-# ... (ensure other necessary imports like shutil, QFileDialog are present)
 
 def view_attachment(attachment_path, parent_widget):
     """Opens the attachment file using the default system application."""
     if attachment_path and os.path.exists(attachment_path):
         try:
-            # Use os.startfile on Windows, open on macOS/Linux
             if os.name == 'nt':
                 os.startfile(attachment_path)
             elif sys.platform == 'darwin': # Use sys.platform for macOS check
@@ -144,10 +126,8 @@ def download_attachment(attachment_path, parent_widget):
         UIUtils.show_warning(parent_widget, "提示", "附件文件不存在或路径无效")
         return
 
-    # Suggest a filename based on the original attachment name
     suggested_filename = os.path.basename(attachment_path)
 
-    # Open 'Save As' dialog
     save_path, _ = QFileDialog.getSaveFileName(
         parent_widget,
         "保存附件",
@@ -156,11 +136,9 @@ def download_attachment(attachment_path, parent_widget):
     )
 
     if not save_path:
-        # User cancelled the dialog
         return
 
     try:
-        # Copy the file to the chosen location
         shutil.copy2(attachment_path, save_path)
         UIUtils.show_success(parent_widget, "成功", f"附件已保存到：\n{save_path}")
     except Exception as e:
@@ -170,11 +148,8 @@ def download_attachment(attachment_path, parent_widget):
 def get_new_attachment_path(item, project, item_type, base_folder, original_filename):
     """Generates a standardized path for the new attachment."""
     _, ext = os.path.splitext(original_filename)
-    # Define target directory: ROOT_DIR / base_folder / project_id / item_id
     target_dir = os.path.join(ROOT_DIR, base_folder, str(project.id), str(item.id))
     os.makedirs(target_dir, exist_ok=True)
-    # Define filename: item_type_item_id_original_basename_without_ext + ext
-    # Sanitize original filename part if needed
     sanitized_original_name = "".join(c if c.isalnum() or c in ('_', '-') else '_' for c in os.path.splitext(os.path.basename(original_filename))[0])
     filename = f"{item_type}_{item.id}_{sanitized_original_name}{ext}"
     return os.path.join(target_dir, filename)
@@ -194,24 +169,19 @@ def replace_attachment(item, session, parent_widget, project, item_type, attachm
     old_path = getattr(item, attachment_attr, None)
 
     try:
-        # Generate new standardized path
         new_path = get_new_attachment_path(item, project, item_type, base_folder, file_path)
 
-        # Copy the new file
         shutil.copy2(file_path, new_path)
 
-        # Update database
         setattr(item, attachment_attr, new_path)
         session.commit()
 
-        # Delete old file if it exists and is different from the new one
         if old_path and os.path.exists(old_path) and old_path != new_path:
             try:
                 os.remove(old_path)
             except OSError as e:
                 print(f"无法删除旧附件 {old_path}: {e}") # Log error but continue
 
-        # Update button state
         btn.setIcon(QIcon(get_attachment_icon_path('attach.svg')))
         btn.setToolTip("管理附件")
         btn.setProperty("attachment_path", new_path) # Update button property
@@ -238,14 +208,11 @@ def delete_attachment(item, session, parent_widget, attachment_attr, btn):
 
     if confirm_dialog.exec():
         try:
-            # Delete the file
             os.remove(attachment_path)
 
-            # Update database
             setattr(item, attachment_attr, None)
             session.commit()
 
-            # Update button state to reflect deletion
             btn.setIcon(QIcon(get_attachment_icon_path('add_outline.svg')))
             btn.setToolTip("添加附件")
             btn.setProperty("attachment_path", None) # Clear the stored path

@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 import sys
 import os
 
-# 添加项目根目录到Python路径
 root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(root_dir)
 
@@ -136,7 +135,6 @@ def generate_template(num_records=10, output_dir=None):
     # 生成随机数据
     data = generate_random_expense_data(num_records)
     
-    # 创建DataFrame
     df = pd.DataFrame(data)
     
     # 生成文件名
@@ -144,7 +142,6 @@ def generate_template(num_records=10, output_dir=None):
     filename = f'支出导入模板_{timestamp}.xlsx'
     filepath = os.path.join(output_dir, filename)
     
-    # 创建ExcelWriter对象
     with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
         # 写入数据表
         df.to_excel(writer, sheet_name='支出信息', index=False)

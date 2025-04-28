@@ -13,7 +13,6 @@ def main():
     is_mac = platform.system() == 'Darwin'
     is_windows = platform.system() == 'Windows'
     
-    # Create Qt application
     app = QApplication(sys.argv)
     
     # 设置字体
@@ -25,16 +24,14 @@ def main():
     app.setFont(font)
     
     # 设置日志
-    logging.basicConfig(level=logging.DEBUG)
-    
-    # 设置matplotlib中文字体
+    logging.basicConfig(level=logging.INFO) # Changed level to INFO
+
     mpl.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'Arial']
     mpl.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
     
-    # 删除重复的QApplication创建和QFont导入
     # 设置应用程序图标
     icon_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'app', 'assets', 'icon.ico'))
-    print(f"图标路径: {icon_path}")  # 打印路径以便调试
+    # print(f"图标路径: {icon_path}") # Removed debug print
     if os.path.exists(icon_path):
         app.setWindowIcon(QIcon(icon_path))
     else:
@@ -42,7 +39,6 @@ def main():
     
     # 获取数据库路径
     if getattr(sys, 'frozen', False):
-        # 如果是打包后的exe
         base_dir = os.path.dirname(sys.executable)
     else:
         # 如果是源码运行
@@ -71,7 +67,6 @@ def main():
     window = MainWindow(engine)
     window.show()
 
-    # Start the event loop
     sys.exit(app.exec())
 
 if __name__ == '__main__':

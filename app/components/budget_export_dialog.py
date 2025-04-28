@@ -188,14 +188,12 @@ class BudgetExportDialog(QDialog):
                     spacing_index = (i * 4) - 1  # 每组控件占4个位置（label, spinbox, spacing）
                     self.proportion_layout.takeAt(spacing_index)
                 
-                # 移除spinbox
                 spinbox_index = i * 2 + 1
                 spinbox = self.proportion_spinboxes[i]
                 self.proportion_layout.removeWidget(spinbox)
                 spinbox.deleteLater()
                 self.proportion_spinboxes.pop()
                 
-                # 移除label
                 label_index = i * 2
                 label = self.proportion_labels[i]
                 self.proportion_layout.removeWidget(label)
