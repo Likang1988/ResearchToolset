@@ -44,7 +44,9 @@ class ProgressBarDelegate(QStyledItemDelegate):
         else:
             # 根据执行率在浅绿色和浅红色之间插值
             progress_ratio = min(rate / 100.0, 1.0)
+            # 浅绿色的RGB分量
             start_r, start_g, start_b = 153, 255, 153
+            # 浅红色的RGB分量
             end_r, end_g, end_b = 255, 153, 153
             # 线性插值计算当前颜色
             r = int(start_r + (end_r - start_r) * progress_ratio)

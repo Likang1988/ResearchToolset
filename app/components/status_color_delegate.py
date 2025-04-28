@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import (QStyledItemDelegate, QWidget, QPushButton, QHBoxLayout,
                              QApplication, QStyleOptionViewItem, QColorDialog, QDialog, QVBoxLayout)
+# 将 QModelIndex 和 QAbstractTableModel 移到 QtCore 的导入
 from PySide6.QtCore import Qt, QSize, Signal, QEvent, QPoint, QRect, QAbstractTableModel, QModelIndex
 from PySide6.QtGui import QPainter, QColor, QBrush, QPen
 from enum import Enum, unique
@@ -103,6 +104,7 @@ class StatusColorEditor(QDialog):
 class StatusColorDelegate(QStyledItemDelegate):
     """用于绘制和编辑状态颜色的委托"""
 
+    # 移除 index 的类型提示 : QModelIndex
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index):
         # 获取状态颜色
         color = index.data(Qt.DecorationRole) # 从模型获取颜色
@@ -137,6 +139,10 @@ class StatusColorDelegate(QStyledItemDelegate):
         pass
 
     def setModelData(self, editor: QWidget, model: QAbstractTableModel, index: QModelIndex):
+        # 当编辑器发出 statusSelected 信号时，更新模型
+        # 这个连接在 editor 创建后进行，或者通过 editor 的信号直接更新模型
+        # 这里我们假设 editor 会发出一个包含 TaskStatus 的信号
+        # (在 StatusColorEditor 中通过 statusSelected 信号实现)
         editor.statusSelected.connect(lambda status: model.setData(index, status, Qt.EditRole))
 
     def updateEditorGeometry(self, editor: QWidget, option: QStyleOptionViewItem, index: QModelIndex):
@@ -177,6 +183,7 @@ class StatusColorDelegate(QStyledItemDelegate):
             self.setModelData(editor, model, index) # 连接信号
             self.updateEditorGeometry(editor, option, index)
             editor.exec() # 显示为模态对话框，等待选择
+            # 不需要显式调用 commitAndCloseEditor，因为 StatusColorEditor 关闭时会触发信号更新模型
             return True # 事件已处理
 
         return super().editorEvent(event, model, option, index)

@@ -52,6 +52,7 @@ class BudgetChartBase(ABC):
         for i, (label, amount) in enumerate(sorted(data_dict.items())):
             if amount > 0:
                 percentage = (amount / total_amount) * 100
+                # 将标签文本分行显示，使用HTML格式实现换行
                 label_text = f"<div style='text-align: center;'>{label}<br/>{amount:.2f}万元<br/>({percentage:.1f}%)</div>"
                 slice = QPieSlice("", amount)  # 先创建一个空标签的切片
                 slice.setLabelVisible(True)
@@ -244,6 +245,7 @@ class BudgetChartWidget(QWidget):
 
     def clear_charts(self):
         """清除图表，显示“暂无数据”"""
+        # Create an empty chart using the base class method or similar logic
         empty_chart = self.create_empty_chart("请选择项目以查看图表") # Use the method from base or reimplement
         self.chart_view.setChart(empty_chart)
         self.chart_handler = None # Reset the handler

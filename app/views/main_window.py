@@ -27,18 +27,25 @@ class MainWindow(FluentWindow):
         self.engine = engine
         self.project_budget_interface = None
         
+        # --- Icon Path ---
+        # Get the directory containing main_window.py
         current_dir = os.path.dirname(os.path.abspath(__file__))
+        # Construct the absolute path to the icon relative to this file's location
         icon_path = os.path.abspath(os.path.join(current_dir, '..', 'assets', 'icon.ico'))
+        # --- End Icon Path ---
 
         # 设置窗口标题和大小
         self.setWindowTitle("科研工具集")
+        # self.setWindowIcon(QIcon(':/assets/icon.ico')) # Old line using resource path
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path)) # Use the absolute file path
-            # print(f"Icon set from: {icon_path}") # Removed print
+            print(f"Icon set from: {icon_path}") # Optional: confirm path used
         else:
             print(f"警告: 图标文件未找到于 {icon_path}") # Add a warning if not found
         self.resize(1200, 800)
+        #self.setMinimumSize(1200, 800)
 
+        # 启用 Mica 特效 (解决 WebEngineView 导致背景失效的问题)
         self.setMicaEffectEnabled(False)
 
         # 添加主页导航项
@@ -58,8 +65,18 @@ class MainWindow(FluentWindow):
             QIcon(UIUtils.get_svg_icon_path('projecting_tab')),
             "项目清单"
         )
+        # 连接 ProjectListWindow 的信号到 MainWindow 的信号
         self.projecting_interface.project_list_updated.connect(self.project_updated)
 
+        # 添加项目进度导航项
+        self.progress_interface = ProjectProgressWidget(self.engine) 
+        self.progress_interface.setObjectName("progressInterface")
+        self.addSubInterface(
+            self.progress_interface,
+            QIcon(UIUtils.get_svg_icon_path('progress')), 
+            "项目进度"
+        )      
+                                                              
         # 添加项目经费导航项
         self.project_budget_interface = ProjectBudgetWidget(self.engine) 
         self.project_budget_interface.setObjectName("projectBudgetInterface")
@@ -68,16 +85,8 @@ class MainWindow(FluentWindow):
             QIcon(UIUtils.get_svg_icon_path('budgeting_tab')), 
             "项目经费"
         )
+        # 连接 ProjectBudgetWidget 的信号到 MainWindow 的新信号
         self.project_budget_interface.budget_updated.connect(self.budget_or_expense_updated)
-        
-        # 添加项目进度导航项
-        self.progress_interface = ProjectProgressWidget(self.engine) 
-        self.progress_interface.setObjectName("progressInterface")
-        self.addSubInterface(
-            self.progress_interface,
-            QIcon(UIUtils.get_svg_icon_path('progress')), 
-            "项目进度"
-        )                                                                    
         
         # 添加项目文档导航项
         self.document_interface = ProjectDocumentWidget(self.engine) 
@@ -125,6 +134,8 @@ class MainWindow(FluentWindow):
             position=NavigationItemPosition.BOTTOM
         )
                 
+        # --- Connect project_updated signal to refresh selectors ---
+        # Ensure the target widgets have the _refresh_project_selector method
         if hasattr(self.progress_interface, '_refresh_project_selector'):
             self.project_updated.connect(self.progress_interface._refresh_project_selector)
         if hasattr(self.project_budget_interface, '_refresh_project_selector'):
@@ -133,12 +144,15 @@ class MainWindow(FluentWindow):
             self.project_updated.connect(self.document_interface._refresh_project_selector)
         if hasattr(self.achievement_interface, '_refresh_project_selector'):
             self.project_updated.connect(self.achievement_interface._refresh_project_selector)
+        # Also refresh the budget editing interface if it has a selector
         if hasattr(self.budget_edit_interface, '_refresh_project_selector'):
              self.project_updated.connect(self.budget_edit_interface._refresh_project_selector)
+        # --- End signal connections ---
 
         # 设置当前页面
         self.navigationInterface.setCurrentItem("主页")
         self.navigationInterface.setExpandWidth(150)
+        #self.setMicaEffectEnabled(True)
         FluentWindow.updateFrameless(self)
         
 

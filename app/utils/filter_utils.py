@@ -1,3 +1,4 @@
+# app/utils/filter_utils.py
 
 from datetime import datetime, date
 from enum import Enum # Import Enum for type checking
@@ -12,6 +13,7 @@ class FilterUtils:
         keyword_lower = keyword.lower()
         for attr in attributes:
             value = getattr(item, attr, None)
+            # Ensure value is a string before lowercasing and checking
             if value and isinstance(value, str) and keyword_lower in value.lower():
                 return True
         return False
@@ -19,11 +21,14 @@ class FilterUtils:
     @staticmethod
     def _matches_enum(item, enum_value, attribute):
         """检查对象的枚举属性是否匹配"""
+        # Allow filtering by "All" types/statuses etc.
         if enum_value is None or enum_value.startswith("全部"):
              return True
         item_value = getattr(item, attribute, None)
+        # Check if item_value is an Enum instance, compare its .value
         if isinstance(item_value, Enum):
              return item_value.value == enum_value
+        # Otherwise, compare directly (assuming enum_value is the string representation)
         return str(item_value) == enum_value
 
 
@@ -33,8 +38,10 @@ class FilterUtils:
         item_date = getattr(item, attribute, None)
         if not item_date: return False # Treat missing date as not matching
 
+        # Ensure comparison between date objects
         if isinstance(item_date, datetime):
             item_date = item_date.date()
+        # Also ensure filter dates are date objects if they are datetime
         if isinstance(start_date, datetime): start_date = start_date.date()
         if isinstance(end_date, datetime): end_date = end_date.date()
 
@@ -69,6 +76,7 @@ class FilterUtils:
                     'end_date': date(2023, 12, 31),
                     'min_amount': 100.0,
                     'max_amount': 500.0,
+                    # Add other specific fields like 'status'
                     'status': '已发布'
                 }
             attribute_mapping: (可选) 字典，将 filter_criteria 中的键映射到对象上的实际属性名。
@@ -89,17 +97,22 @@ class FilterUtils:
         for item in data_list:
             match = True
 
+            # 1. Keyword check (if applicable)
             if keyword and keyword_attributes:
                  mapped_keyword_attributes = [attribute_mapping.get(attr, attr) for attr in keyword_attributes]
                  if not FilterUtils._matches_keyword(item, keyword, mapped_keyword_attributes):
                      continue # Skip to next item if keyword doesn't match
 
+            # 2. Iterate through other specific criteria
             for key, filter_value in filter_criteria.items():
                 if key in ['keyword', 'keyword_attributes']: continue # Already handled
 
+                # Determine the actual attribute name on the item object
                 attr_name = attribute_mapping.get(key, key)
 
+                # Handle different filter types
                 if key == 'start_date':
+                    # Date range check (only needs to be done once per item)
                     start_date = filter_criteria.get('start_date')
                     end_date = filter_criteria.get('end_date')
                     date_attr = attribute_mapping.get('date', 'date') # Default to 'date' if not mapped
@@ -109,6 +122,7 @@ class FilterUtils:
                     continue # Handled by start_date check
 
                 elif key == 'min_amount':
+                     # Amount range check (only needs to be done once per item)
                      min_amount = filter_criteria.get('min_amount')
                      max_amount = filter_criteria.get('max_amount')
                      amount_attr = attribute_mapping.get('amount', 'amount') # Default to 'amount'
@@ -121,6 +135,9 @@ class FilterUtils:
                     if not FilterUtils._matches_enum(item, filter_value, attr_name):
                          match = False; break
 
+                # Add more specific checks here if needed for other field types
+                # elif getattr(item, attr_name, None) != filter_value:
+                #    match = False; break
 
             if match:
                 filtered_list.append(item)

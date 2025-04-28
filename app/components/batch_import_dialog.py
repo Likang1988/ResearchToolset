@@ -88,6 +88,7 @@ class BatchImportDialog(QDialog):
                 }
                 df = pd.DataFrame(example_data)
                 
+                # 创建ExcelWriter对象，并设置日期格式
                 with pd.ExcelWriter(save_path, engine='openpyxl', datetime_format='YYYY-MM-DD') as writer:
                     # 写入数据表
                     df.to_excel(writer, sheet_name='支出信息', index=False)
@@ -211,7 +212,9 @@ class BatchImportDialog(QDialog):
             # 检查日期格式
             if '报账日期' in df.columns and not df['报账日期'].isna().all():
                 try:
+                    # 使用pandas的灵活日期解析功能，支持多种常见格式
                     df['报账日期'] = pd.to_datetime(df['报账日期'], format=None)
+                    # 统一转换为YYYY-MM-DD格式
                     df['报账日期'] = df['报账日期'].dt.strftime('%Y-%m-%d')
                     df['报账日期'] = pd.to_datetime(df['报账日期'])
                 except Exception as e:
