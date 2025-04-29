@@ -587,13 +587,13 @@ function showBaselineInfo (event,element){
   <!--
   <div class="ganttButtonBar noprint">
     <div class="buttons">
-      <button onclick="ge.addNewRootTask();" class="button textual icon requireWrite" title="新建一级任务"><span class="teamworkIcon">+</span></button>
-      <button onclick="saveGanttData();" id="saveButton" class="button textual icon requireWrite" title="保存"><span class="teamworkIcon">&#x4f;</span></button>
-    <span class="ganttButtonSeparator requireWrite"></span>
-      <button onclick="saveGanttOnServer();" class="button first big requireWrite" title="保存">保存</button>
-      <button onclick='ge.exportGantt();' class='button requireWrite exportproject'title="导出">导出</button>
+      <button onclick="ge.addNewRootTask();" class="button first big requireWrite" title="新建一级任务">新建任务</button>
     
-      &nbsp; &nbsp; &nbsp; &nbsp;
+      <button onclick="saveGanttOnServer();" class="button first big requireWrite" title="保存">保存任务</button>
+   
+      <button onclick='ge.exportGantt();' class='button first big requireWrite'title="导出">导出任务</button>
+    
+      &nbsp; 
       <span class="ganttButtonSeparator"></span>
       <button onclick="$('#workSpace').trigger('undo.gantt');return false;" class="button textual icon requireCanWrite" title="撤销"><span class="teamworkIcon">'</span></button>
       <button onclick="$('#workSpace').trigger('redo.gantt');return false;" class="button textual icon requireCanWrite" title="重做"><span class="teamworkIcon">&middot;</span></button>
@@ -617,9 +617,7 @@ function showBaselineInfo (event,element){
       <button onclick="$('#workSpace').trigger('zoomPlus.gantt');return false;" class="button textual icon " title="放大"><span class="teamworkIcon">(</span></button>
 
     <span class="ganttButtonSeparator"></span>
-      <button onclick="ge.gantt.showCriticalPath=!ge.gantt.showCriticalPath; ge.redraw();return false;" class="button textual icon requireCanSeeCriticalPath" title="关键路径"><span class="teamworkIcon">&pound;</span></button>
-    <span class="ganttButtonSeparator requireCanSeeCriticalPath"></span>
-      
+    
       <button onclick="ge.splitter.resize(.1);return false;" class="button textual icon" title="右侧最大化"><span class="teamworkIcon">F</span></button>
       <button onclick="ge.splitter.resize(50);return false;" class="button textual icon" title="平均显示"><span class="teamworkIcon">O</span></button>
       <button onclick="ge.splitter.resize(100);return false;" class="button textual icon" title="左侧最大化"><span class="teamworkIcon">R</span></button>
