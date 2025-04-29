@@ -298,6 +298,31 @@ GanttMaster.prototype.createTask = function (id, name, code, level, start, durat
   return factory.build(id, name, code, level, start, duration);
 };
 
+// Function to add a new root task (level 0)
+GanttMaster.prototype.addNewRootTask = function () {
+  if (!this.permissions.canAdd) {
+    console.warn("No permission to add new tasks.");
+    return;
+  }
+
+  this.beginTransaction();
+  var factory = new TaskFactory();
+  var start = new Date().getTime();
+  // Use a temporary ID, it might be replaced upon saving
+  var newTask = factory.build("tmp_" + new Date().getTime(), "New Task", "", 0, start, 1);
+
+  // Add the task to the master list and UI
+  var task = this.addTask(newTask);
+
+  this.endTransaction();
+
+  // Optionally, select and focus the new task
+  if (task && task.rowElement) {
+    this.selectTask(task);
+    task.rowElement.find("[name=name]").focus();
+  }
+};
+
 
 GanttMaster.prototype.getOrCreateResource = function (id, name) {
   var res= this.getResource(id);
