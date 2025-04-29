@@ -408,6 +408,7 @@ class GanttBridge(QObject):
             tasks_data = project_data.get("tasks", [])
             deleted_task_ids = project_data.get("deletedTaskIds", [])
 
+            # --- 事务开始 ---
             # 1. 处理删除的任务
             if deleted_task_ids:
                 # 先删除依赖这些任务的记录
@@ -417,21 +418,6 @@ class GanttBridge(QObject):
                     (GanttDependency.successor_gantt_id.in_(deleted_task_ids))
                 ).delete(synchronize_session=False)
                 # 再删除任务本身
-                session.query(GanttTask).filter(
-                    GanttTask.project_id == self.project.id,
-                    GanttTask.gantt_id.in_(deleted_task_ids)
-                ).delete(synchronize_session=False)
-                # print(f"Deleted tasks: {deleted_task_ids}") # Removed print
-
-            # 2. 处理现有任务和新任务
-            # --- 事务开始 ---
-            # 1. 处理删除的任务 (保持不变)
-            if deleted_task_ids:
-                session.query(GanttDependency).filter(
-                    GanttDependency.project_id == self.project.id,
-                    (GanttDependency.predecessor_gantt_id.in_(deleted_task_ids)) |
-                    (GanttDependency.successor_gantt_id.in_(deleted_task_ids))
-                ).delete(synchronize_session=False)
                 session.query(GanttTask).filter(
                     GanttTask.project_id == self.project.id,
                     GanttTask.gantt_id.in_(deleted_task_ids)

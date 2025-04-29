@@ -253,7 +253,7 @@ Task.prototype.setPeriod = function (start, end) {
 
 
 //<%---------- MOVE TO ---------------------- --%>
-Task.prototype.moveTo = function (start, ignoreMilestones, propagateToInferiors) {
+Task.prototype.moveTo = function (start, ignoreMilestones, propagateToInferiors, preventParentUpdate) {
   //console.debug("moveTo ",this.name,new Date(start),this.duration,ignoreMilestones);
   //var profiler = new Profiler("gt_task_moveTo");
 
@@ -307,10 +307,10 @@ Task.prototype.moveTo = function (start, ignoreMilestones, propagateToInferiors)
     for (var i = 0; i < children.length; i++) {
       var ch = children[i];
       var chStart=incrementDateByUnits(new Date(ch.start),panDeltaInWM);
-      ch.moveTo(chStart,false,false);
+      ch.moveTo(chStart,false,false, true); // prevent parent update
       }
 
-    if (!updateTree(this)) {
+    if (!preventParentUpdate && !updateTree(this)) {
       return false;
     }
 

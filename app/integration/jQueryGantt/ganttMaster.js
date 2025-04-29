@@ -29,7 +29,7 @@ function GanttMaster() {
   this.gantt; //element for gantt
   this.splitter; //element for splitter
 
-  this.isMultiRoot=false; // set to true in case of tasklist
+  this.isMultiRoot=true; // set to true in case of tasklist
 
   this.workSpace;  // the original element used for containing everything
   this.element; // editor and gantt box without buttons
@@ -346,8 +346,11 @@ GanttMaster.prototype.removeLink = function (fromTask, toTask) {
 
   if (found) {
     this.updateDependsStrings();
-    if (this.updateLinks(toTask))
-      this.changeTaskDates(toTask, toTask.start, toTask.end); // fake change to force date recomputation from dependencies
+    if (this.updateLinks(toTask)) {
+      if (!this.__currentTransaction) {
+        this.changeTaskDates(toTask, toTask.start, toTask.end); // fake change to force date recomputation from dependencies
+      }
+    }
   }
   this.endTransaction();
 };
