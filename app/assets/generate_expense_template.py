@@ -102,7 +102,7 @@ def generate_random_expense_data(num_records=10):
         
         # 根据费用类别设置合理的金额范围
         if category == BudgetCategory.EQUIPMENT:
-            amount = random.uniform(10000, 500000)  # 设备费：1-50万
+            amount = random.uniform(10000, 50000)  # 设备费：1-50万
         elif category == BudgetCategory.MATERIAL:
             amount = random.uniform(1000, 50000)    # 材料费、测试费、加工费：0.1-5万
         elif category == BudgetCategory.MATERIAL:

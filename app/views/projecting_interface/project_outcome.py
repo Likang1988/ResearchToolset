@@ -555,11 +555,11 @@ class ProjectOutcomeWidget(QWidget):
                     name=dialog.name_edit.text(),
                     type=OutcomeType(dialog.type_combo.currentText()),
                     status=OutcomeStatus(dialog.status_combo.currentText()),
-                    authors=dialog.authors_edit.text(),
+                    authors=dialog.authors_edit.toPlainText(),
                     submit_date=dialog.submit_date.date().toPython(),
                     publish_date=dialog.publish_date.date().toPython(),
                     journal=dialog.journal_edit.text(),
-                    description=dialog.description_edit.text(),
+                    description=dialog.description_edit.toPlainText(),
                     attachment_path=None # Initially no attachment path
                 )
                 session.add(outcome)

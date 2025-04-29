@@ -98,7 +98,8 @@ class ProjectProgressWidget(QWidget):
 
     def setup_ui(self):
         """初始化界面"""
-        # os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "8081" # Removed: Disable remote debugging for release
+        # 启用QtWebEngine远程调试，端口8081
+        os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "8081"
         # -------------------------------
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(18, 18, 18, 18) # Add some margins
@@ -173,7 +174,40 @@ class ProjectProgressWidget(QWidget):
     def on_gantt_loaded(self, success):
         """甘特图加载完成回调"""
         if success:
-            # print("jQueryGantt HTML loaded successfully. Initializing QWebChannel...") # Removed print
+            # 添加增强调试信息
+            self.web_view.page().runJavaScript("""
+                try {
+                    console.group('Gantt Debug Info');
+                    console.log('Gantt chart loaded successfully');
+                    console.log('Debug URL: http://127.0.0.1:8081');
+                    console.log('Tasks count:', ge.tasks.length);
+                    console.log('Links count:', ge.links.length);
+                    
+                    // 暴露Gantt对象到全局以便调试
+                    window.debugGantt = {
+                        getTasks: function() { return ge.tasks; },
+                        getLinks: function() { return ge.links; },
+                        getCurrentTask: function() { return ge.currentTask; },
+                        getRecursionLimit: function() { return 10; }
+                    };
+                    
+                    // 添加递归保护检查
+                    if (typeof Task.prototype._originalMoveTo === 'undefined') {
+                        Task.prototype._originalMoveTo = Task.prototype.moveTo;
+                        Task.prototype.moveTo = function(start, ignoreMilestones, propagateToInferiors, depth) {
+                            depth = depth || 0;
+                            if (depth > debugGantt.getRecursionLimit()) {
+                                console.error('Recursion limit exceeded in moveTo');
+                                return false;
+                            }
+                            return this._originalMoveTo(start, ignoreMilestones, propagateToInferiors, depth);
+                        };
+                    }
+                    console.groupEnd();
+                } catch (e) {
+                    console.error('Gantt debug initialization error:', e);
+                }
+            """)
             try:
                 with open(self.qwebchannel_js_path, 'r', encoding='utf-8') as f:
                     qwebchannel_js = f.read()
