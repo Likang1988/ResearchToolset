@@ -176,7 +176,7 @@ class ProjectListWindow(QWidget):
                 item_end_date = QTableWidgetItem(str(project.end_date))
                 self.project_table.setItem(row_position, 5, item_end_date)
 
-                item_budget = QTableWidgetItem(str(project.total_budget))
+                item_budget = QTableWidgetItem(f"{project.total_budget:.2f}")
                 self.project_table.setItem(row_position, 6, item_budget)
 
                 item_director = QTableWidgetItem(str(project.director))
