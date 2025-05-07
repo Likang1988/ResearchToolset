@@ -164,7 +164,7 @@ GridEditor.prototype.refreshTaskRow = function (task) {
   row.find("[status]").attr("status", task.status);
 
   row.find("[name=duration]").val(durationToString(task.duration)).prop("readonly",!canWrite || task.isParent() && task.master.shrinkParent);
-  row.find("[name=progress]").val(task.progress).prop("readonly",!canWrite || task.progressByWorklog==true);
+  row.find("[name=progress]").val(task.progress).prop("readonly",!canWrite || task.progressByWorklog==true || task.isParent());
   row.find("[name=startIsMilestone]").prop("checked", task.startIsMilestone);
   row.find("[name=start]").val(new Date(task.start).format()).updateOldValue().prop("readonly",!canWrite || task.depends || !(task.canWrite  || this.master.permissions.canWrite) ); // called on dates only because for other field is called on focus event
   row.find("[name=endIsMilestone]").prop("checked", task.endIsMilestone);

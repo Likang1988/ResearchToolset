@@ -42,12 +42,27 @@ function TaskFactory() {
 function Task(id, name, code, level, start, end, duration, collapsed) {
   this.id = id;
   this.name = name;
-  this.progress = 0;
+  this._progress = 0;
   this.progressByWorklog = false;
   this.relevance = 0;
   this.type = "";
   this.typeId = "";
   this.description = "";
+  
+  // Monitor progress changes
+  Object.defineProperty(this, 'progress', {
+    get: function() {
+      return this._progress || 0;
+    },
+    set: function(value) {
+      this._progress = value;
+      // Update parent task progress when progress changes
+      if (!this.progressByWorklog) {
+        this.updateParentProgress();
+      }
+    }
+  });
+
   this.code = code;
   this.level = level;
   this.status = "STATUS_UNDEFINED";
@@ -85,6 +100,33 @@ Task.prototype.clone = function () {
       ret[key] = this[key];
     }
   return ret;
+};
+
+Task.prototype.updateParentProgress = function () {
+  var parent = this.getParent();
+  if (!parent) return;
+
+  var children = parent.getChildren();
+  if (!children || children.length === 0) return;
+
+  var totalWeight = 0;
+  var weightedProgress = 0;
+
+  // 计算加权进度
+  for (var i = 0; i < children.length; i++) {
+    var child = children[i];
+    var weight = child.duration || 1; // 使用持续时间作为权重
+    totalWeight += weight;
+    weightedProgress += (child.progress || 0) * weight;
+  }
+
+  // 更新父任务进度
+  if (totalWeight > 0) {
+    parent.progress = Number((weightedProgress / totalWeight).toFixed(2));
+    parent.canWrite = false; // 禁用父任务进度编辑
+    // 递归更新上层父任务
+    parent.updateParentProgress();
+  }
 };
 
 Task.prototype.getAssigsString = function () {

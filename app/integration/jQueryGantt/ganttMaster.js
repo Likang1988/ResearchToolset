@@ -1147,6 +1147,11 @@ GanttMaster.prototype.deleteCurrentTask = function (taskId) {
     //redraw
     self.taskIsChanged();
 
+    // Update parent progress after deleting a child task
+    if (par) {
+      par.updateParentProgress();
+    }
+
     //[expand]
     if (par)
       self.editor.refreshExpandStatus(par);
@@ -1160,6 +1165,8 @@ GanttMaster.prototype.deleteCurrentTask = function (taskId) {
       task.rowElement.find("[name=name]").focus();
     }
     self.endTransaction();
+    // Automatically save after deleting a task
+    saveGanttData();
   }
 };
 
