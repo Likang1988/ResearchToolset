@@ -393,16 +393,28 @@ $.splittify = {
 //<%------------------------------------------------------------------------  UTILITIES ---------------------------------------------------------------%>
 // same dates returns 1
 function getDurationInUnits(start,end){
-  return start.distanceInWorkingDays(end)+1; // working in days
+  // Calculate duration in total days including weekends, ignoring time part
+  var startDate = new Date(start);
+  startDate.setHours(0, 0, 0, 0);
+  var endDate = new Date(end);
+  endDate.setHours(0, 0, 0, 0);
+  var diff = Math.abs(endDate.getTime() - startDate.getTime());
+  return Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1;
 }
 
-//con due date uguali ritorna 0: usata per cancolare la distanza effettiva tra due date
+// Calculate the distance between two dates in total days including weekends, ignoring time part
 function getDistanceInUnits(date1,date2){
-  return date1.distanceInWorkingDays(date2); // working in days
+  var startDate = new Date(date1);
+  startDate.setHours(0, 0, 0, 0);
+  var endDate = new Date(date2);
+  endDate.setHours(0, 0, 0, 0);
+  var diff = Math.abs(endDate.getTime() - startDate.getTime());
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
 function incrementDateByUnits(date,duration){
-  date.incrementDateByWorkingDays(duration); // working in days
+  // Increment date by total days including weekends
+  date.setDate(date.getDate() + duration);
   return date;
 }
 
@@ -419,10 +431,6 @@ function computeStartDate(start) {
   var d;
   d = new Date(start + 3600000 * 12);
   d.setHours(0, 0, 0, 0);
-  //move to next working day
-  while (isHoliday(d)) {
-    d.setDate(d.getDate() + 1);
-  }
   d.setHours(0, 0, 0, 0);
   return d;
 }
@@ -438,10 +446,6 @@ function computeEnd(end) {
 function computeEndDate(end) {
   var d = new Date(end - 3600000 * 12);
   d.setHours(23, 59, 59, 999);
-  //move to next working day
-  while (isHoliday(d)) {
-    d.setDate(d.getDate() + 1);
-  }
   d.setHours(23, 59, 59, 999);
   return d;
 }
@@ -449,12 +453,7 @@ function computeEndDate(end) {
 function computeEndByDuration(start, duration) {
 //console.debug("computeEndByDuration start ",d,duration)
   var d = new Date(start);
-  var q = duration - 1;
-  while (q > 0) {
-    d.setDate(d.getDate() + 1);
-    if (!isHoliday(d))
-      q--;
-  }
+  d.setDate(d.getDate() + duration - 1);
   d.setHours(23, 59, 59, 999);
   return d.getTime();
 }
