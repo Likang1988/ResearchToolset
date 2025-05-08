@@ -26,8 +26,19 @@ class ToolsInterface(QWidget):
         # 创建滚动区域
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setStyleSheet("QScrollArea {border: none; background-color: transparent;}")
+        # 设置样式表
+        scroll.setStyleSheet("""
+            QScrollArea {
+                background-color: transparent;
+                border: 1px solid rgba(0, 0, 0, 0.1);
+                border-radius: 8px;
+            }
+            QWidget#qt_scrollarea_viewport {
+                background-color: transparent;
+            }
+        """)
         
+
         # 创建工具卡片容器
         container = QWidget()
         container_layout = QVBoxLayout(container)

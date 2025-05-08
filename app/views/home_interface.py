@@ -4,7 +4,7 @@ from PySide6.QtGui import QPixmap
 from qfluentwidgets import (TitleLabel, SubtitleLabel, ScrollArea, CardWidget, PrimaryPushButton,
                           FluentIcon, InfoBadge, BodyLabel)
 from sqlalchemy import func
-from ..models.database import sessionmaker, Project, Budget, BudgetCategory, get_budget_usage, Activity
+from ..models.database import sessionmaker, Project, Budget, BudgetCategory, get_budget_usage, Activity, GanttTask
 from datetime import datetime
 from ..utils.ui_utils import UIUtils
 import os
@@ -35,12 +35,19 @@ class HomeInterface(QWidget):
     # Removed redundant post_init method which duplicated signal connections from showEvent
 
     def refresh_data(self):
-        # 清空现有布局
-        for i in reversed(range(self.project_layout.count())): 
+        # 清空现有项目经费布局
+        for i in reversed(range(self.project_layout.count())):
             self.project_layout.itemAt(i).widget().setParent(None)
         
+        # 清空现有项目进度布局
+        while self.task_layout.count():
+            item = self.task_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
         # 重新加载数据
         self.load_projects()
+        self.load_tasks() # 添加这行来刷新任务概览
     
     def setup_background(self):
         # 创建背景标签
@@ -120,7 +127,7 @@ class HomeInterface(QWidget):
         
         
         
-        # 右侧项目任务概览
+        # 右侧项目进度概览
         self.task_overview = ScrollArea()
         self.task_overview.setWidgetResizable(True)
         self.task_overview.setStyleSheet("""
@@ -140,8 +147,8 @@ class HomeInterface(QWidget):
         self.task_layout.setSpacing(10)
         self.task_layout.setAlignment(Qt.AlignTop)
         
-        # 右侧项目任务概览标题
-        task_title = TitleLabel("项目任务概览", self)
+        # 右侧项目进度概览标题
+        task_title = TitleLabel("项目进度概览", self)
         task_title.setStyleSheet("font-size: 20px; margin-bottom: 10px;")
         task_title.setGeometry(570, 320, 530, 40) # Adjust position as needed
         
@@ -176,8 +183,8 @@ class HomeInterface(QWidget):
                 total_spent = budget_usage['total_spent'] / 10000  # 转换为万元
                 execution_rate = (budget_usage['total_spent'] / (project.total_budget * 10000)) * 100 if project.total_budget > 0 else 0
                 
-                # 添加财务编号标题
-                financial_code_title = QLabel("财务编号")
+                # 添加项目标题
+                financial_code_title = QLabel("项目")
                 financial_code_title.setAlignment(Qt.AlignCenter)
                 financial_code_title.setStyleSheet("font-size: 14px; color: #666;")
                 grid_layout.addWidget(financial_code_title, 0, 0)
@@ -239,7 +246,7 @@ class HomeInterface(QWidget):
     
     
     def load_tasks(self):
-        """加载并显示项目任务概览"""
+        """加载并显示项目进度概览"""
         if not self.engine:
             print("数据库引擎未初始化，无法加载项目任务。")
             return
@@ -248,8 +255,10 @@ class HomeInterface(QWidget):
         session = Session()
 
         try:
-            # 查询所有甘特图任务
-            tasks = session.query(GanttTask).all() # Get all tasks for now
+            # 查询所有一级甘特图任务 (level == 0)
+            print("正在查询一级项目任务...")
+            tasks = session.query(GanttTask).filter(GanttTask.level == 0).all()
+            print(f"查询到 {len(tasks)} 个一级项目任务。")
 
             # 清空现有布局中的所有小部件
             while self.task_layout.count():
@@ -258,21 +267,75 @@ class HomeInterface(QWidget):
                     item.widget().deleteLater()
 
             if not tasks:
-                no_task_label = BodyLabel("没有找到项目任务。")
+                print("没有找到一级项目任务，显示提示信息。")
+                no_task_label = BodyLabel("没有找到一级项目任务。")
                 no_task_label.setAlignment(Qt.AlignCenter)
                 self.task_layout.addWidget(no_task_label)
                 return
 
+            print("正在创建任务卡片...")
             for task in tasks:
-                # 为每个任务创建一个简单的标签或卡片
-                task_info_label = BodyLabel(f"任务: {task.name} (项目: {task.project.financial_code if task.project else 'N/A'})")
-                task_info_label.setWordWrap(True)
-                self.task_layout.addWidget(task_info_label)
+                print(f"处理任务: {task.name}, 项目: {task.project.financial_code if task.project else 'N/A'}, 进度: {task.progress}")
+                card = CardWidget()
+                card.setFixedHeight(80)  # 设置卡片高度
+                card_layout = QVBoxLayout(card)
+                card_layout.setContentsMargins(15, 15, 15, 15)
+
+                # 创建网格布局用于显示任务信息
+                grid_layout = QGridLayout()
+                grid_layout.setSpacing(10)
+
+                # 添加项目简称标题
+                project_code_title = QLabel("项目")
+                project_code_title.setAlignment(Qt.AlignCenter)
+                project_code_title.setStyleSheet("font-size: 14px; color: #666;")
+                grid_layout.addWidget(project_code_title, 0, 0)
+
+                # 添加任务名称标题
+                task_name_title = QLabel("任务名称")
+                task_name_title.setAlignment(Qt.AlignCenter)
+                task_name_title.setStyleSheet("font-size: 14px; color: #666;")
+                grid_layout.addWidget(task_name_title, 0, 1)
+
+                # 添加任务进度标题
+                task_progress_title = QLabel("任务进度")
+                task_progress_title.setAlignment(Qt.AlignCenter)
+                task_progress_title.setStyleSheet("font-size: 14px; color: #666;")
+                grid_layout.addWidget(task_progress_title, 0, 2)
+
+                # 添加项目简称值
+                project_code_value = QLabel(task.project.financial_code if task.project else "--")
+                project_code_value.setAlignment(Qt.AlignCenter)
+                project_code_value.setStyleSheet("font-size: 18px; font-weight: bold;")
+                grid_layout.addWidget(project_code_value, 1, 0)
+
+                # 添加任务名称值
+                task_name_value = QLabel(task.name)
+                task_name_value.setAlignment(Qt.AlignCenter)
+                task_name_value.setStyleSheet("font-size: 18px; font-weight: bold;")
+                grid_layout.addWidget(task_name_value, 1, 1)
+
+                # 添加任务进度值
+                task_progress_value = QLabel(f"{task.progress:.0f}<span style='font-size: 14px; font-weight: normal;'> %</span>")
+                task_progress_value.setAlignment(Qt.AlignCenter)
+                task_progress_value.setStyleSheet("font-size: 18px; font-weight: bold;")
+                grid_layout.addWidget(task_progress_value, 1, 2)
+
+                # 添加网格布局到卡片布局
+                card_layout.addLayout(grid_layout)
+
+                # TODO: Add click event for task card if needed
+
+                self.task_layout.addWidget(card)
+            print("任务卡片创建完成。")
 
         except Exception as e:
             print(f"加载项目任务失败: {e}")
+            import traceback
+            traceback.print_exc() # 打印详细的异常信息
         finally:
             session.close()
+            print("数据库会话已关闭。")
     
     def open_project_budget(self, project):
         # 获取主窗口实例
