@@ -189,6 +189,7 @@ $.gridify = function (table, opt) {
 
 $.splittify = {
   init: function (where, first, second, perc) {
+    console.log("$.splittify.init called with:", { where: where, first: first, second: second, perc: perc });
 
     //perc = perc || 50;
 
@@ -203,6 +204,8 @@ $.splittify = {
 
     //override with saved one
     loadPosition();
+    console.log("$.splittify.init - loaded position:", splitter.perc);
+
 
     var toLeft = $("<div>").addClass("toLeft").html("{").click(function () {splitter.resize(0.001, 300);});
     splitterBar.append(toLeft);
@@ -223,11 +226,22 @@ $.splittify = {
 
     var totalW = where.innerWidth();
     var splW = splitterBar.width();
-    var fbw = totalW * perc / 100 - splW;
+    console.log("$.splittify.init - totalW:", totalW, "splW:", splW);
+
+    var fbw = totalW * splitter.perc / 100 - splW; // Use splitter.perc here
+    console.log("$.splittify.init - calculated fbw (before min/max):", fbw);
+
+    fbw = fbw > splitter.firstBoxMinWidth ? fbw : splitter.firstBoxMinWidth;
     fbw = fbw > totalW - splW - splitter.secondBoxMinWidth ? totalW - splW - splitter.secondBoxMinWidth : fbw;
+    console.log("$.splittify.init - final fbw (after min/max):", fbw);
+
+
     firstBox.width(fbw).css({left: 0});
     splitterBar.css({left: firstBox.width()});
     secondBox.width(totalW - fbw - splW).css({left: firstBox.width() + splW});
+
+    console.log("$.splittify.init - firstBox width:", firstBox.width(), "secondBox width:", secondBox.width(), "splitterBar left:", splitterBar.css('left'));
+
 
     splitterBar.on("mousedown.gdf", function (e) {
 
@@ -246,13 +260,23 @@ $.splittify = {
         var w = sb.parent().width();
         var fbw = firstBox;
 
+        console.log("mousemove.gdf - e.pageX:", e.pageX, "sb.parent().offset().left:", sb.parent().offset().left, "pos (calculated):", pos);
+        console.log("mousemove.gdf - container width (w):", w, "splitter width (sb.width()):", sb.width());
+
         pos = pos > splitter.firstBoxMinWidth ? pos : splitter.firstBoxMinWidth;
-        //pos = pos < realW - 10 ? pos : realW - 10;
-        pos = pos > totalW - splW - splitter.secondBoxMinWidth ? totalW - splW - splitter.secondBoxMinWidth : pos;
+        //pos = pos < realW - 10 ? pos : realW - 10; // This line seems commented out or unused
+        // Use current container width 'w' instead of initial 'totalW' for max constraint
+        pos = pos > w - splW - splitter.secondBoxMinWidth ? w - splW - splitter.secondBoxMinWidth : pos;
+        console.log("mousemove.gdf - pos (after min/max constraints):", pos);
+
+
         sb.css({left: pos});
         firstBox.width(pos);
         secondBox.css({left: pos + sb.width(), width: w - pos - sb.width()});
         splitter.perc = (firstBox.width() / splitter.element.width()) * 100;
+
+        console.log("mousemove.gdf - firstBox width (set):", firstBox.width(), "secondBox width (set):", secondBox.width(), "splitterBar left (set):", sb.css('left'));
+
 
         //on mouse up on body to stop resizing
       }).on("mouseup.gdf", function () {
@@ -288,18 +312,18 @@ $.splittify = {
 
 
       if (Math.abs(top-lastScrollTop)>10) {
-	    firstBoxHeader.css('top', top).hide();
-	    secondBoxHeader.css('top', top).hide();
+     firstBoxHeader.css('top', top).hide();
+     secondBoxHeader.css('top', top).hide();
       }
       lastScrollTop=top;
 
       where.stopTime("reset").oneTime(100, "reset", function () {
 
-	      stopScroll = "";
-	      top = el.scrollTop();
+       stopScroll = "";
+       top = el.scrollTop();
 
-	      firstBoxHeader.css('top', top).fadeIn();
-	      secondBoxHeader.css('top', top).fadeIn();
+       firstBoxHeader.css('top', top).fadeIn();
+       secondBoxHeader.css('top', top).fadeIn();
 
       });
 
@@ -345,18 +369,44 @@ $.splittify = {
       this.secondBoxMinWidth = 30;
 
       this.resize = function (newPerc, anim) {
+        console.log("Splitter.resize called with:", { newPerc: newPerc, anim: anim });
         var animTime = anim ? anim : 0;
         this.perc = newPerc ? newPerc : this.perc;
         var totalW = this.element.width();
         var splW = this.splitterBar.width();
+        console.log("Splitter.resize - totalW:", totalW, "splW:", splW);
+
         var newW = totalW * this.perc / 100;
+        console.log("Splitter.resize - calculated newW (before min/max):", newW);
+
         newW = newW > this.firstBoxMinWidth ? newW : this.firstBoxMinWidth;
         newW = newW > totalW - splW - splitter.secondBoxMinWidth ? totalW - splW - splitter.secondBoxMinWidth : newW;
-        this.firstBox.animate({width: newW}, animTime, function () {$(this).css("overflow-x", "auto")});
-        this.splitterBar.animate({left: newW}, animTime);
-        this.secondBox.animate({left: newW + this.splitterBar.width(), width: totalW - newW - splW}, animTime, function () {$(this).css("overflow", "auto")});
+        console.log("Splitter.resize - final newW (after min/max):", newW);
 
-        storePosition();
+        this.firstBox.animate({width: newW}, animTime, function () {
+          $(this).css("overflow-x", "auto");
+          // Get the actual rendered width after animation/setting
+          var actualFirstBoxWidth = $(this).width();
+          var actualSplitterBarWidth = splitter.splitterBar.width(); // Use splitter instance
+          var actualTotalWidth = splitter.element.width(); // Use splitter instance
+
+          console.log("Splitter.resize - Inside animate callback - actualFirstBoxWidth:", actualFirstBoxWidth, "actualSplitterBarWidth:", actualSplitterBarWidth, "actualTotalWidth:", actualTotalWidth);
+
+          // Use actual width to position splitter and size second box
+          splitter.splitterBar.css({left: actualFirstBoxWidth}); // Use splitter instance
+          splitter.secondBox.css({left: actualFirstBoxWidth + actualSplitterBarWidth, width: actualTotalWidth - actualFirstBoxWidth - actualSplitterBarWidth}); // Use splitter instance
+
+          console.log("Splitter.resize - Inside animate callback - firstBox width (after adjustment):", $(this).width(), "secondBox width (after adjustment):", splitter.secondBox.width(), "splitterBar left (after adjustment):", splitter.splitterBar.css('left'));
+
+          storePosition(); // Store position after adjustments
+        });
+        // Note: splitterBar and secondBox animations are now handled inside the firstBox animate callback
+        // this.splitterBar.animate({left: newW}, animTime);
+        // this.secondBox.animate({left: newW + this.splitterBar.width(), width: totalW - newW - splW}, animTime, function () {$(this).css("overflow", "auto")});
+
+        console.log("Splitter.resize - firstBox width (before callback):", this.firstBox.width(), "secondBox width (before callback):", this.secondBox.width(), "splitterBar left (before callback):", this.splitterBar.css('left'));
+
+        // storePosition(); // Moved inside callback
       };
 
       var self = this;
