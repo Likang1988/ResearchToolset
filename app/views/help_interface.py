@@ -4,10 +4,16 @@ from PySide6.QtGui import QPixmap
 from qfluentwidgets import (SettingCardGroup, ExpandGroupSettingCard, ScrollArea,
                           InfoBar, FluentIcon, CardWidget, TitleLabel, BodyLabel)
 import os
+from PySide6.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView # Import necessary widgets for table
+from PySide6.QtCore import QDateTime # Import QDateTime for timestamp
+from sqlalchemy import func # Import func for database queries
+from ..models.database import sessionmaker, Activity # Import sessionmaker and Activity model
+from datetime import datetime # Import datetime
 
 class HelpInterface(ScrollArea):
-    def __init__(self):
+    def __init__(self, engine=None): # Accept engine as parameter
         super().__init__()
+        self.engine = engine # Store engine
         self.setup_ui()
     
     def setup_ui(self):
@@ -238,7 +244,84 @@ class HelpInterface(ScrollArea):
         # 将内容组添加到布局
         self.expandLayout.addWidget(self.readmeGroup)
         self.expandLayout.addWidget(self.helpGroup)
+
+        # 创建操作日志内容组
+        self.logGroup = ExpandGroupSettingCard(FluentIcon.HISTORY, "操作日志", "", self.scrollWidget) # Using HISTORY icon for logs
+
+        # 创建操作日志表格
+        self.log_table = QTableWidget(self.logGroup)
+        self.log_table.setColumnCount(6) # Adjust column count as needed
+        self.log_table.setHorizontalHeaderLabels(["时间", "类型", "动作", "描述", "操作人", "相关信息"]) # Adjust headers
+        self.log_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch) # Stretch columns
+        self.log_table.verticalHeader().setVisible(False) # Hide row numbers
+        self.log_table.setEditTriggers(QTableWidget.NoEditTriggers) # Make table read-only
+        self.log_table.setSelectionBehavior(QTableWidget.SelectRows) # Select entire rows
+        self.log_table.setSelectionMode(QTableWidget.SingleSelection) # Allow single row selection
+
+        self.logGroup.addGroupWidget(self.log_table)
+        self.expandLayout.addWidget(self.logGroup)
         
         # 设置滚动区域
         self.setWidget(self.scrollWidget)
         self.setWidgetResizable(True)
+
+        # Load activities when the help interface is shown
+        # self.load_activities() # Will be called when the tab is shown
+
+    def showEvent(self, event):
+        """在窗口显示时加载操作日志"""
+        super().showEvent(event)
+        self.load_activities()
+
+
+    def load_activities(self):
+        """加载并显示操作日志"""
+        if not self.engine:
+            print("数据库引擎未初始化，无法加载操作日志。")
+            # Optionally show an info bar
+            # UIUtils.show_warning(self, "警告", "数据库引擎未初始化，无法加载操作日志。")
+            return
+
+        Session = sessionmaker(bind=self.engine)
+        session = Session()
+
+        try:
+            # 查询活动记录，按时间倒序排列，限制数量
+            activities = session.query(Activity).order_by(Activity.timestamp.desc()).limit(100).all() # Limit to 100 for log
+
+            # 清空现有表格内容
+            self.log_table.setRowCount(0)
+
+            for row, activity in enumerate(activities):
+                self.log_table.insertRow(row)
+
+                # 时间
+                time_item = QTableWidgetItem(activity.timestamp.strftime("%Y-%m-%d %H:%M:%S"))
+                self.log_table.setItem(row, 0, time_item)
+
+                # 类型
+                type_item = QTableWidgetItem(activity.type)
+                self.log_table.setItem(row, 1, type_item)
+
+                # 动作
+                action_item = QTableWidgetItem(activity.action)
+                self.log_table.setItem(row, 2, action_item)
+
+                # 描述
+                description_item = QTableWidgetItem(activity.description)
+                self.log_table.setItem(row, 3, description_item)
+
+                # 操作人
+                operator_item = QTableWidgetItem(activity.operator)
+                self.log_table.setItem(row, 4, operator_item)
+
+                # 相关信息
+                related_info_item = QTableWidgetItem(activity.related_info or "") # Handle None
+                self.log_table.setItem(row, 5, related_info_item)
+
+        except Exception as e:
+            print(f"加载操作日志失败: {e}") # Print error for now
+            # Optionally show an info bar
+            # UIUtils.show_error(self, "错误", f"加载操作日志失败: {e}")
+        finally:
+            session.close()

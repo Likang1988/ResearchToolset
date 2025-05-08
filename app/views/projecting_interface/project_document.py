@@ -239,6 +239,7 @@ class ProjectDocumentWidget(QWidget):
     def setup_ui(self):
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(18, 18, 18, 18) # Add some margins
+        self.main_layout.setSpacing(10)
         # --- Add Project Selector ---
         selector_layout = QHBoxLayout()
         selector_label = TitleLabel("项目文档-", self)

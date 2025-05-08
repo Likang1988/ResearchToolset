@@ -101,6 +101,7 @@ class ProjectBudgetWidget(QWidget):
         self.setWindowTitle("预算管理")
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(18, 18, 18, 18) # Add some margins
+        main_layout.setSpacing(10)
 
         selector_layout = QHBoxLayout()        
         selector_label = TitleLabel("项目经费-", self)
@@ -114,7 +115,7 @@ class ProjectBudgetWidget(QWidget):
         self.title_label = TitleLabel("项目预算管理") # Store title label reference
         title_layout = QHBoxLayout()
         title_layout.addWidget(self.title_label)
-        title_layout.addStretch()
+        title_layout.addStretch() 
 
         layout = main_layout # Use main_layout directly
 
@@ -129,6 +130,7 @@ class ProjectBudgetWidget(QWidget):
 
         button_layout = UIUtils.create_button_layout(add_btn, edit_btn, delete_btn)
         layout.addLayout(button_layout)
+        
 
         # 创建分割器
         splitter = QSplitter(Qt.Horizontal)
@@ -202,8 +204,8 @@ class ProjectBudgetWidget(QWidget):
         splitter.addWidget(right_widget)
 
         # 设置分割器比例
-        splitter.setStretchFactor(0, 5)  # 左侧占60%
-        splitter.setStretchFactor(1, 21)  # 右侧占40%
+        splitter.setStretchFactor(0, 5)  # 左侧占2份
+        splitter.setStretchFactor(1, 21)  # 右侧占1份
         splitter.setChildrenCollapsible(False)  # 防止完全折叠
 
         layout.addWidget(splitter)
@@ -977,3 +979,12 @@ class ProjectBudgetWidget(QWidget):
         finally:
             if session.is_active:
                 session.close()
+
+    def load_project_data(self, project: Project):
+        """Loads the data for the given project."""
+        if project and isinstance(project, Project):
+            self.current_project = project
+            self._refresh_project_selector() # Refresh selector and select the project
+            self.load_budgets() # Load budgets for the selected project
+        else:
+            print("ProjectBudgetWidget: Invalid project object received.") # Added print for debugging

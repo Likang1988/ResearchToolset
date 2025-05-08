@@ -116,7 +116,7 @@ class MainWindow(FluentWindow):
         )
 
         # 添加帮助导航项
-        self.help_interface = HelpInterface()
+        self.help_interface = HelpInterface(self.engine) # Pass the engine
         self.help_interface.setObjectName("helpInterface")
         self.addSubInterface(
             self.help_interface,

@@ -29,9 +29,6 @@ class HomeInterface(QWidget):
                 # 连接预算或支出更新信号
                 if hasattr(main_window, 'budget_or_expense_updated'):
                     main_window.budget_or_expense_updated.connect(self.refresh_data)
-                # 连接活动更新信号
-                if hasattr(main_window, 'activity_updated'):
-                    main_window.activity_updated.connect(self.refresh_data)
 
                 self._signals_connected = True # Mark signals as connected
 
@@ -41,12 +38,9 @@ class HomeInterface(QWidget):
         # 清空现有布局
         for i in reversed(range(self.project_layout.count())): 
             self.project_layout.itemAt(i).widget().setParent(None)
-        for i in reversed(range(self.activity_layout.count())): 
-            self.activity_layout.itemAt(i).widget().setParent(None)
         
         # 重新加载数据
         self.load_projects()
-        self.load_activities()
     
     def setup_background(self):
         # 创建背景标签
@@ -95,7 +89,7 @@ class HomeInterface(QWidget):
         hbox = QHBoxLayout()
         hbox.setSpacing(20)
         
-        # 左侧项目概览
+        # 左侧项目经费概览
         self.project_overview = ScrollArea()
         self.project_overview.setWidgetResizable(True)
         self.project_overview.setFixedWidth(530)
@@ -116,29 +110,20 @@ class HomeInterface(QWidget):
         self.project_layout.setSpacing(10)
         self.project_layout.setAlignment(Qt.AlignTop)
         
-        # 左侧项目概览标题
-        project_title = TitleLabel("项目概览", self)
+        # 左侧项目经费概览标题
+        project_title = TitleLabel("项目经费概览", self)
         project_title.setStyleSheet("font-size: 20px; margin-bottom: 10px;")
         project_title.setGeometry(20, 320, self.width() - 36, 40)
         
         self.project_overview.setWidget(project_container)
         hbox.addWidget(self.project_overview)
         
-        # 右侧最近活动
-        activity_container = QWidget()
-        self.activity_layout = QVBoxLayout(activity_container)
-        self.activity_layout.setSpacing(10)
-        self.activity_layout.setAlignment(Qt.AlignTop)
         
-        # 右侧最近活动标题
-        activity_title = TitleLabel("最近活动", self)
-        activity_title.setStyleSheet("font-size: 20px; margin-bottom: 10px;")
-        activity_title.setGeometry(570, 320, 530, 40)
         
-        # 右侧最近活动
-        self.recent_activity = ScrollArea()
-        self.recent_activity.setWidgetResizable(True)
-        self.recent_activity.setStyleSheet("""
+        # 右侧项目任务概览
+        self.task_overview = ScrollArea()
+        self.task_overview.setWidgetResizable(True)
+        self.task_overview.setStyleSheet("""
             QScrollArea {
                 background-color: transparent;
                 border: 1px solid rgba(0, 0, 0, 0.1);
@@ -149,20 +134,25 @@ class HomeInterface(QWidget):
             }
         """)
         
-        activity_container = QWidget()
-        activity_container.setObjectName("qt_scrollarea_viewport")
-        self.activity_layout = QVBoxLayout(activity_container)
-        self.activity_layout.setSpacing(5)
-        self.activity_layout.setAlignment(Qt.AlignTop)
+        task_container = QWidget()
+        task_container.setObjectName("qt_scrollarea_viewport")
+        self.task_layout = QVBoxLayout(task_container)
+        self.task_layout.setSpacing(10)
+        self.task_layout.setAlignment(Qt.AlignTop)
         
-        self.recent_activity.setWidget(activity_container)
-        hbox.addWidget(self.recent_activity)
+        # 右侧项目任务概览标题
+        task_title = TitleLabel("项目任务概览", self)
+        task_title.setStyleSheet("font-size: 20px; margin-bottom: 10px;")
+        task_title.setGeometry(570, 320, 530, 40) # Adjust position as needed
+        
+        self.task_overview.setWidget(task_container)
+        hbox.addWidget(self.task_overview)
         
         main_layout.addLayout(hbox)
         
         # 加载数据
         self.load_projects()
-        self.load_activities()
+        self.load_tasks() # Call the new method
     
     def load_projects(self):
         Session = sessionmaker(bind=self.engine)
@@ -247,85 +237,59 @@ class HomeInterface(QWidget):
         finally:
             session.close()
     
-    def load_activities(self):
+    
+    def load_tasks(self):
+        """加载并显示项目任务概览"""
+        if not self.engine:
+            print("数据库引擎未初始化，无法加载项目任务。")
+            return
+
         Session = sessionmaker(bind=self.engine)
         session = Session()
-        
+
         try:
-            activities = session.query(Activity).order_by(Activity.timestamp.desc()).limit(50).all()
-            formatted_activities = []
-            
-            for activity in activities:
-                time_str = activity.timestamp.strftime("%Y-%m-%d %H:%M:%S")
-                main_info = ""
-                details = ""
-                
-                # 第一行信息（基本信息）
-                if activity.type == "项目" and activity.project:
-                    main_info = f"{time_str} {activity.action} {activity.type}"
-                    details = f"项目名称：{activity.project.name}，财务编号：{activity.project.financial_code or '--'}，总预算：{activity.project.total_budget or 0} 万元"
-                
-                elif activity.type == "预算" and activity.budget:
-                    project_info = f"{activity.budget.project.financial_code}"
-                    main_info = f"{time_str} {project_info} {activity.action} {activity.type}"
-                    details = f"预算年度：{activity.budget.year or '总预算'}，预算金额：{activity.budget.total_amount or 0} 万元"
-                
-                elif activity.type == "支出" and activity.expense:
-                    expense = activity.expense
-                    project_info = f"{expense.budget.project.financial_code}"
-                    if expense.budget.year:
-                        project_info += f"-{expense.budget.year}"
-                    main_info = f"{time_str} {project_info} {activity.action} {activity.type} 支出ID：{expense.id}"
-                    details = f"费用类别：{expense.category.value}，开支内容：{expense.content}，规格型号：{expense.specification or '--'}，报账金额：{expense.amount or 0} 元，报账日期：{expense.date.strftime('%Y-%m-%d') if expense.date else '--'}"
-                
-                # 只有当成功生成了活动信息时才添加到列表中
-                if main_info and details:
-                    activity_info = {
-                        "main_info": main_info,
-                        "details": details
-                    }
-                    formatted_activities.append(activity_info)
-            
+            # 查询所有甘特图任务
+            tasks = session.query(GanttTask).all() # Get all tasks for now
+
             # 清空现有布局中的所有小部件
-            while self.activity_layout.count():
-                item = self.activity_layout.takeAt(0)
+            while self.task_layout.count():
+                item = self.task_layout.takeAt(0)
                 if item.widget():
                     item.widget().deleteLater()
-            
-            # 添加格式化后的活动信息到布局
-            for activity_info in formatted_activities:
-                # 创建主要信息标签（第一行）
-                main_label = BodyLabel(activity_info['main_info'])
-                main_label.setStyleSheet("font-weight: bold;")
-                self.activity_layout.addWidget(main_label)
-                
-                # 创建详细信息标签（第二行）
-                details_label = BodyLabel(activity_info['details'])
-                details_label.setStyleSheet("color: #666;")
-                self.activity_layout.addWidget(details_label)
-                
-                # 添加分隔线
-                separator = QLabel()
-                separator.setFixedHeight(1)
-                separator.setStyleSheet("background-color: #e0e0e0;")
-                self.activity_layout.addWidget(separator)
+
+            if not tasks:
+                no_task_label = BodyLabel("没有找到项目任务。")
+                no_task_label.setAlignment(Qt.AlignCenter)
+                self.task_layout.addWidget(no_task_label)
+                return
+
+            for task in tasks:
+                # 为每个任务创建一个简单的标签或卡片
+                task_info_label = BodyLabel(f"任务: {task.name} (项目: {task.project.financial_code if task.project else 'N/A'})")
+                task_info_label.setWordWrap(True)
+                self.task_layout.addWidget(task_info_label)
+
+        except Exception as e:
+            print(f"加载项目任务失败: {e}")
         finally:
             session.close()
     
     def open_project_budget(self, project):
         # 获取主窗口实例
         main_window = self.window()
-        if main_window:
-            # 创建新的预算管理界面实例
-            from ..views.projecting_interface.project_budget import ProjectBudgetWidget
-            budget_interface = ProjectBudgetWidget(self.engine, project)
+        if main_window and hasattr(main_window, 'project_budget_interface'):
+            budget_interface = main_window.project_budget_interface
             
-            # 先切换导航栏选项卡
-            main_window.navigationInterface.setCurrentItem("经费追踪")
-            
-            # 再切换界面
-            main_window.stackedWidget.addWidget(budget_interface)
-            main_window.stackedWidget.setCurrentWidget(budget_interface)
+            # 确保只触发一次界面切换
+            if main_window.stackedWidget.currentWidget() != budget_interface:
+                main_window.navigationInterface.setCurrentItem("项目经费")
+                
+                if main_window.stackedWidget.indexOf(budget_interface) == -1:
+                    main_window.stackedWidget.addWidget(budget_interface)
+                main_window.stackedWidget.setCurrentWidget(budget_interface)
+                
+                # 加载项目数据
+                budget_interface.load_project_data(project) # Pass the project object
     
     def resizeEvent(self, event):
         super().resizeEvent(event)
