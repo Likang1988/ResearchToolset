@@ -650,6 +650,7 @@ function showBaselineInfo (event,element){
       <th class="gdfColHeader gdfResizable" style="width:60px;">工期(天)</th>
       <th class="gdfColHeader gdfResizable" style="width:60px;">进度(%)</th>
       <th class="gdfColHeader gdfResizable requireCanSeeDep" style="width:50px;">依赖项</th>
+      <th class="gdfColHeader gdfResizable" style="width:80px;">负责人</th> <!-- Added Responsible column header -->
       <th class="gdfColHeader gdfResizable" style="width:1000px; text-align: left; padding-left: 10px;">负责人</th>
     </tr>
     </thead>
@@ -672,6 +673,7 @@ function showBaselineInfo (event,element){
     <td class="gdfCell"><input type="text" name="duration" autocomplete="off" value="(#=obj.duration#)"></td>
     <td class="gdfCell"><input type="text" name="progress" class="validated" entrytype="PERCENTILE" autocomplete="off" value="(#=obj.progress?obj.progress:''#)" (#=obj.progressByWorklog?"readOnly":""#)></td>
     <td class="gdfCell requireCanSeeDep"><input type="text" name="depends" autocomplete="off" value="(#=obj.depends#)" (#=obj.hasExternalDep?"readonly":""#)></td>
+    <td class="gdfCell"><input type="text" name="responsible" value="(#=obj.responsible?obj.responsible:''#)" placeholder="负责人"></td> <!-- Added Responsible cell -->
     <td class="gdfCell taskAssigs">(#=obj.getAssigsString()#)</td>
   </tr>
   --></div>

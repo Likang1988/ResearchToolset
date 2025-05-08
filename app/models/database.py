@@ -175,11 +175,12 @@ class GanttTask(Base):
     end_date = Column(DateTime) # 存储为DateTime对象
     start_is_milestone = Column(Boolean, default=False)
     end_is_milestone = Column(Boolean, default=False)
-    progress = Column(Integer, default=0) # 进度百分比
+    progress = Column(Float, default=0.0) # 进度百分比
     progress_by_worklog = Column(Boolean, default=False)
     description = Column(String(500))
     collapsed = Column(Boolean, default=False)
     has_child = Column(Boolean, default=False) # 标记是否有子任务
+    responsible = Column(String(50)) # 添加负责人字段
 
     project = relationship("Project", backref="gantt_tasks")
 
@@ -267,7 +268,18 @@ def migrate_db(engine):
     transaction = connection.begin()
     
     # 执行项目任务表迁移
-    
+    try:
+        result = connection.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='gantt_tasks'"))
+        if result.fetchone():
+            result = connection.execute(text("PRAGMA table_info(gantt_tasks)"))
+            columns = [row[1] for row in result.fetchall()]
+            if 'responsible' not in columns:
+                connection.execute(text("ALTER TABLE gantt_tasks ADD COLUMN responsible VARCHAR(50)"))
+                print("成功添加 responsible 列到 gantt_tasks 表")
+    except Exception as e:
+        print(f"迁移 gantt_tasks 表失败: {e}")
+
+
     result = connection.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='project_outcomes'")) # 更新表名
     if result.fetchone():
         result = connection.execute(text("PRAGMA table_info(project_outcomes)")) # 更新表名

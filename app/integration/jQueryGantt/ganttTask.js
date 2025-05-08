@@ -99,6 +99,8 @@ Task.prototype.clone = function () {
       if (typeof(this[key]) != "object" || Array.isArray(this[key]))
       ret[key] = this[key];
     }
+  // Explicitly copy the internal _progress value
+  ret.progress = this._progress;
   return ret;
 };
 

@@ -327,13 +327,20 @@ class GanttBridge(QObject):
 
             tasks_json = []
             for task in tasks_db:
+                # 打印任务ID和进度，用于调试
+                print(f"Loading task {task.gantt_id}: progress = {task.progress}")
+
                 start_ms = int(task.start_date.replace(tzinfo=timezone.utc).timestamp() * 1000) if task.start_date else None
                 end_ms = int(task.end_date.replace(tzinfo=timezone.utc).timestamp() * 1000) if task.end_date else None
 
+                # 确保进度值是浮点数且在0-100之间
+                progress = float(task.progress) if task.progress is not None else 0.0
+                progress = max(0.0, min(100.0, progress))
+                
                 tasks_json.append({
                     "id": task.gantt_id, # 使用存储的gantt_id
                     "name": task.name,
-                    "progress": task.progress,
+                    "progress": progress,  # 使用处理后的进度值
                     "progressByWorklog": task.progress_by_worklog,
                     "relevance": 0, # 示例值，根据需要调整
                     "type": "", # 示例值
@@ -351,7 +358,8 @@ class GanttBridge(QObject):
                     "endIsMilestone": task.end_is_milestone,
                     "collapsed": task.collapsed,
                     "assigs": [], # 假设没有分配资源
-                    "hasChild": task.has_child
+                    "hasChild": task.has_child,
+                    "responsible": task.responsible # 添加负责人字段
                 })
 
             project_data = {
@@ -437,6 +445,17 @@ class GanttBridge(QObject):
                 start_dt = datetime.fromtimestamp(task_data["start"] / 1000, tz=timezone.utc) if task_data.get("start") is not None else None
                 end_dt = datetime.fromtimestamp(task_data["end"] / 1000, tz=timezone.utc) if task_data.get("end") is not None else None
 
+                # 处理进度值，确保是浮点数且在0-100之间
+                progress = task_data.get("progress", 0)
+                try:
+                    progress = float(progress)
+                    progress = max(0.0, min(100.0, progress))
+                    print(f"Processing task {task_data['name']}, progress = {progress}")
+                except (TypeError, ValueError):
+                    progress = 0.0
+                    print(f"Invalid progress value for task {task_data['name']}, defaulting to 0")
+
+
                 task_obj_data = {
                     "project_id": self.project.id,
                     "name": task_data["name"],
@@ -448,11 +467,12 @@ class GanttBridge(QObject):
                     "end_date": end_dt,
                     "start_is_milestone": task_data.get("startIsMilestone", False),
                     "end_is_milestone": task_data.get("endIsMilestone", False),
-                    "progress": task_data.get("progress", 0),
+                    "progress": progress,  # 使用处理后的进度值
                     "progress_by_worklog": task_data.get("progressByWorklog", False),
                     "description": task_data.get("description"),
                     "collapsed": task_data.get("collapsed", False),
-                    "has_child": task_data.get("hasChild", False)
+                    "has_child": task_data.get("hasChild", False),
+                    "responsible": task_data.get("responsible") # 添加负责人字段
                 }
 
                 current_gantt_id = None # 用于依赖关系处理
@@ -559,15 +579,75 @@ class GanttBridge(QObject):
                 else:
                      print(f"Skipping dependency: Pred '{final_pred_id}' (orig: {pred_id_orig}) or Succ '{final_succ_id}' (orig: {succ_id_orig}) not found in processed tasks.")
 
+            # --- 重新计算父任务进度 ---
+            def calculate_parent_task_progress(parent_task, children_tasks):
+                """计算父任务的进度"""
+                if not children_tasks:
+                    return parent_task.progress or 0
+
+                total_weight = 0
+                weighted_progress = 0
+
+                for child in children_tasks:
+                    # 使用 duration 作为权重，如果 duration 为 None 或 0，使用默认权重 1
+                    weight = max(child.duration or 1, 1)  # 确保权重至少为1
+                    total_weight += weight
+                    # 使用子任务的进度，如果为 None，默认为 0
+                    child_progress = max(min(child.progress or 0, 100), 0)  # 确保进度在0-100之间
+                    weighted_progress += child_progress * weight
+
+                # 计算加权平均进度，保留两位小数
+                if total_weight > 0:
+                    return round(weighted_progress / total_weight, 2)
+                return 0
+
+            try:
+                # 按层级和ID排序获取所有任务
+                all_tasks_after_save = session.query(GanttTask).filter(
+                    GanttTask.project_id == self.project.id
+                ).order_by(GanttTask.level.desc(), GanttTask.id).all()
+
+                # 创建任务层级映射
+                tasks_by_level = {}
+                for task in all_tasks_after_save:
+                    if task.level not in tasks_by_level:
+                        tasks_by_level[task.level] = []
+                    tasks_by_level[task.level].append(task)
+
+                # 从底层开始向上计算父任务进度
+                max_level = max(tasks_by_level.keys()) if tasks_by_level else 0
+                for level in range(max_level - 1, -1, -1):  # 从最深层级-1开始向上
+                    if level not in tasks_by_level:
+                        continue
+
+                    for parent_task in tasks_by_level[level]:
+                        if not parent_task.has_child:
+                            continue
+
+                        # 获取直接子任务
+                        children_tasks = [task for task in tasks_by_level.get(level + 1, [])
+                                        if task.level == parent_task.level + 1]
+
+                        # 计算并更新父任务进度
+                        new_progress = calculate_parent_task_progress(parent_task, children_tasks)
+                        if parent_task.progress != new_progress:
+                            parent_task.progress = new_progress
+                            logging.info(f"更新父任务 '{parent_task.name}' 的进度为: {new_progress}%")
+
+            except Exception as e:
+                logging.error(f"计算父任务进度时出错: {str(e)}")
+                raise
+
+
             # --- 事务提交 ---
             session.commit()
-            print(f"Saved/Updated {len(processed_gantt_ids)} tasks and added {added_deps_count} dependencies.")
+            # print(f"Saved/Updated {len(processed_gantt_ids)} tasks and added {added_deps_count} dependencies. Parent progress recalculated.") # Removed print
             self.data_saved.emit(True, "甘特图数据保存成功！")
             return json.dumps({"success": True, "id_map": new_task_id_map})
 
         except Exception as e:
             session.rollback()
-            print(f"Error saving Gantt data: {e}")
+            # print(f"Error saving Gantt data: {e}") # Removed print
             error_message = f"保存失败: {e}"
             self.data_saved.emit(False, error_message)
             return json.dumps({"success": False, "error": error_message})
