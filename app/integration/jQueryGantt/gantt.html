@@ -641,8 +641,8 @@ function showBaselineInfo (event,element){
     <tr style="height:40px">
       <th class="gdfColHeader" style="width:35px; border-right: none"></th>
       <th class="gdfColHeader" style="width:25px;"></th>
-      <th class="gdfColHeader gdfResizable" style="width:80px;">代码/简称</th>
-      <th class="gdfColHeader gdfResizable" style="width:300px;">名称</th>
+      <th class="gdfColHeader gdfResizable" style="width:75px;">任务编码</th>
+      <th class="gdfColHeader gdfResizable" style="width:300px;">任务名称</th>
       <th class="gdfColHeader"  align="center" style="width:17px;" title="开始日期是里程碑。"><span class="teamworkIcon" style="font-size: 8px;">^</span></th>
       <th class="gdfColHeader gdfResizable" style="width:80px;">开始日期</th>
       <th class="gdfColHeader"  align="center" style="width:17px;" title="结束日期是里程碑。"><span class="teamworkIcon" style="font-size: 8px;">^</span></th>
@@ -661,10 +661,10 @@ function showBaselineInfo (event,element){
   <tr id="tid_(#=obj.id#)" taskId="(#=obj.id#)" class="taskEditRow (#=obj.isParent()?'isParent':''#) (#=obj.collapsed?'collapsed':''#)" level="(#=level#)">
     <th class="gdfCell edit" align="right" style="cursor:pointer;"><span class="taskRowIndex">(#=obj.getRow()+1#)</span> <span class="teamworkIcon" style="font-size:12px;" >e</span></th>
     <td class="gdfCell noClip" align="center"><div class="taskStatus cvcColorSquare" status="(#=obj.status#)"></div></td>
-    <td class="gdfCell"><input type="text" name="code" value="(#=obj.code?obj.code:''#)" placeholder="代码/简称"></td>
+    <td class="gdfCell"><input type="text" name="code" value="(#=obj.code?obj.code:''#)" placeholder=""></td>
     <td class="gdfCell indentCell" style="padding-left:(#=obj.level*10+18#)px;">
       <div class="exp-controller" align="center"></div>
-      <input type="text" name="name" value="(#=obj.name#)" placeholder="名称">
+      <input type="text" name="name" value="(#=obj.name#)" placeholder="任务名称">
     </td>
     <td class="gdfCell" align="center"><input type="checkbox" name="startIsMilestone"></td>
     <td class="gdfCell"><input type="text" name="start"  value="" class="date"></td>
@@ -673,7 +673,7 @@ function showBaselineInfo (event,element){
     <td class="gdfCell"><input type="text" name="duration" autocomplete="off" value="(#=obj.duration#)"></td>
     <td class="gdfCell"><input type="text" name="progress" class="validated" entrytype="PERCENTILE" autocomplete="off" value="(#=obj.progress?obj.progress:''#)" (#=obj.progressByWorklog?"readOnly":""#)></td>
     <td class="gdfCell requireCanSeeDep"><input type="text" name="depends" autocomplete="off" value="(#=obj.depends#)" (#=obj.hasExternalDep?"readonly":""#)></td>
-    <td class="gdfCell"><input type="text" name="responsible" value="(#=obj.responsible?obj.responsible:''#)" placeholder="负责人"></td> <!-- Added Responsible cell -->
+    <td class="gdfCell"><input type="text" name="responsible" value="(#=obj.responsible?obj.responsible:''#)" placeholder=""></td> <!-- Added Responsible cell -->
     <td class="gdfCell taskAssigs">(#=obj.getAssigsString()#)</td>
   </tr>
   --></div>
@@ -729,10 +729,10 @@ function showBaselineInfo (event,element){
     <table  cellspacing="1" cellpadding="5" width="100%" class="taskData table" border="0">
           <tr>
         <td width="200" style="height: 80px"  valign="top">
-          <label for="code">代码/简称</label><br>
+          <label for="code">任务编码</label><br>
           <input type="text" name="code" id="code" value="" size=15 class="formElements" autocomplete='off' maxlength=255 style='width:100%' oldvalue="1">
         </td>
-        <td colspan="3" valign="top"><label for="name" class="required">名称</label><br><input type="text" name="name" id="name"class="formElements" autocomplete='off' maxlength=255 style='width:100%' value="" required="true" oldvalue="1"></td>
+        <td colspan="3" valign="top"><label for="name" class="required">任务名称</label><br><input type="text" name="name" id="name"class="formElements" autocomplete='off' maxlength=255 style='width:100%' value="" required="true" oldvalue="1"></td>
           </tr>
 
 

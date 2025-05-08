@@ -160,7 +160,7 @@ GridEditor.prototype.refreshTaskRow = function (task) {
   row.find(".taskRowIndex").html(task.getRow() + 1);
   row.find(".indentCell").css("padding-left", task.level * 10 + 18);
   row.find("[name=name]").val(task.name);
-  row.find("[name=code]").val(task.code);
+  row.find("[name=code]").val(task.code).prop("readonly", true); // Set code field to readonly
   row.find("[status]").attr("status", task.status);
 
   row.find("[name=duration]").val(durationToString(task.duration)).prop("readonly",!canWrite || task.isParent() && task.master.shrinkParent);

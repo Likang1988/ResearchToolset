@@ -309,7 +309,7 @@ GanttMaster.prototype.addNewRootTask = function () {
   var factory = new TaskFactory();
   var start = new Date().getTime();
   // Use a temporary ID, it might be replaced upon saving
-  var newTask = factory.build("tmp_" + new Date().getTime(), "New Task", "", 0, start, 1);
+  var newTask = factory.build("tmp_" + new Date().getTime(), "任务名称", "", 0, start, 1);
 
   // Add the task to the master list and UI
   var task = this.addTask(newTask);
@@ -453,6 +453,7 @@ GanttMaster.prototype.addTask = function (task, row) {
 
 //trigger addedTask event
   $(this.element).trigger("addedTask.gantt", task);
+  this.generateTaskCodes(); // Update codes after adding a task
   return ret;
 };
 
@@ -1004,6 +1005,7 @@ GanttMaster.prototype.moveUpCurrentTask = function () {
     self.beginTransaction();
     self.currentTask.moveUp();
     self.endTransaction();
+    this.generateTaskCodes(); // Update codes after moving up
   }
 };
 
@@ -1017,6 +1019,7 @@ GanttMaster.prototype.moveDownCurrentTask = function () {
     self.beginTransaction();
     self.currentTask.moveDown();
     self.endTransaction();
+    this.generateTaskCodes(); // Update codes after moving down
   }
 };
 
@@ -1034,6 +1037,7 @@ GanttMaster.prototype.outdentCurrentTask = function () {
 
     //[expand]
     if (par) self.editor.refreshExpandStatus(par);
+    this.generateTaskCodes(); // Update codes after outdenting
   }
 };
 
@@ -1049,6 +1053,7 @@ GanttMaster.prototype.indentCurrentTask = function () {
     self.beginTransaction();
     self.currentTask.indent();
     self.endTransaction();
+    this.generateTaskCodes(); // Update codes after indenting
   }
 };
 
@@ -1167,6 +1172,7 @@ GanttMaster.prototype.deleteCurrentTask = function (taskId) {
     self.endTransaction();
     // Automatically save after deleting a task
     saveGanttData();
+    this.generateTaskCodes(); // Update codes after deleting a task
   }
 };
 
@@ -1868,4 +1874,58 @@ GanttMaster.prototype.convertToText = function(tasks) {
     });
 
     return textContent;
+};
+
+// Function to generate hierarchical task codes
+GanttMaster.prototype.generateTaskCodes = function() {
+  var self = this;
+  var levelCounters = {}; // To keep track of the count at each level
+
+  function generateCode(task) {
+    var parent = task.getParent();
+    var parentCode = parent ? parent.code : '';
+    var level = task.level;
+
+    if (!levelCounters[level]) {
+      levelCounters[level] = parent ? {} : { count: 0 };
+    }
+
+    var currentLevelCounter;
+    if (parent) {
+      if (!levelCounters[level][parent.id]) {
+         levelCounters[level][parent.id] = { count: 0 };
+      }
+      currentLevelCounter = levelCounters[level][parent.id];
+    } else {
+      currentLevelCounter = levelCounters[level];
+    }
+
+    currentLevelCounter.count++;
+    var code = parentCode + (parentCode ? '.' : '') + currentLevelCounter.count;
+    task.code = code;
+
+    // Reset counters for lower levels when a new task is encountered at the current level
+    for (var lowerLevel = level + 1; levelCounters[lowerLevel]; lowerLevel++) {
+        if (parent) {
+             delete levelCounters[lowerLevel][task.id];
+        } else {
+             levelCounters[lowerLevel] = { count: 0 };
+        }
+    }
+
+    // Recursively generate codes for children
+    var children = task.getChildren();
+    for (var i = 0; i < children.length; i++) {
+      generateCode(children[i]);
+    }
+  }
+
+  // Start generating codes from root tasks (level 0)
+  var rootTasks = this.tasks.filter(task => task.level === 0);
+  for (var i = 0; i < rootTasks.length; i++) {
+    generateCode(rootTasks[i]);
+  }
+
+  // Refresh the grid to show updated codes
+  this.editor.redraw();
 };
