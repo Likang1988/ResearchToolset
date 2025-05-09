@@ -25,7 +25,8 @@ class BudgetChartBase(ABC):
         chart.setTitle(title)
         chart.setAnimationOptions(QChart.SeriesAnimations)
         chart.legend().setVisible(False)  # 隐藏图例标签
-        
+        chart.setBackgroundBrush(Qt.transparent) # 设置背景透明
+
         series = QPieSeries()
         empty_slice = QPieSlice("暂无数据", 1)
         empty_slice.setLabelVisible(True)
@@ -42,7 +43,8 @@ class BudgetChartBase(ABC):
         chart.setTitle(title)
         chart.setAnimationOptions(QChart.SeriesAnimations)
         chart.legend().setVisible(False)  # 隐藏图例标签
-        
+        chart.setBackgroundBrush(Qt.transparent) # 设置背景透明
+
         series = QPieSeries()
         series.setPieSize(0.5)  # 设置饼图大小为视图的60%
         series.setHorizontalPosition(0.5)  # 水平居中
@@ -242,6 +244,9 @@ class BudgetChartWidget(QWidget):
         self.category_btn.clicked.connect(self.show_category_chart)
         self.time_btn.clicked.connect(self.show_time_chart)
 
+        # 初始化显示空图表
+        self.clear_charts()
+
     def clear_charts(self):
         """清除图表，显示“暂无数据”"""
         empty_chart = self.create_empty_chart("请选择项目以查看图表") # Use the method from base or reimplement
@@ -254,6 +259,7 @@ class BudgetChartWidget(QWidget):
         chart.setTitle(title)
         chart.setAnimationOptions(QChart.SeriesAnimations)
         chart.legend().setVisible(False)  # 隐藏图例标签
+        chart.setBackgroundBrush(Qt.transparent) # 设置背景透明
 
         series = QPieSeries()
         empty_slice = QPieSlice("暂无数据", 1)
