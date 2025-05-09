@@ -350,6 +350,9 @@ class HomeInterface(QWidget):
 
                 card_layout.addLayout(tasks_list_layout)
 
+                # 添加点击事件
+                card.mousePressEvent = lambda event, p=tasks[0].project: self.open_project_progress(p) # Pass the project object
+
                 self.task_layout.addWidget(card)
 
             print("项目进度卡片创建完成。")
@@ -361,6 +364,28 @@ class HomeInterface(QWidget):
         finally:
             session.close()
             print("数据库会话已关闭。")
+
+    def open_project_progress(self, project):
+        """打开项目进度界面并加载项目数据"""
+        # 获取主窗口实例
+        main_window = self.window()
+        if main_window and hasattr(main_window, 'progress_interface'): # Check for progress_interface
+            progress_interface = main_window.progress_interface
+
+            # 确保只触发一次界面切换
+            if main_window.stackedWidget.currentWidget() != progress_interface:
+                main_window.navigationInterface.setCurrentItem("项目进度") # Use the correct item name
+
+                if main_window.stackedWidget.indexOf(progress_interface) == -1:
+                    main_window.stackedWidget.addWidget(progress_interface)
+                main_window.stackedWidget.setCurrentWidget(progress_interface)
+
+                # 加载项目数据
+                # Load project data using the new method
+                if hasattr(progress_interface, 'load_project_by_object'):
+                    progress_interface.load_project_by_object(project) # Pass the project object
+                else:
+                    print("警告: ProjectProgressWidget 没有 load_project_by_object 方法。") # Warning if method not found
 
     def open_project_budget(self, project):
         # 获取主窗口实例

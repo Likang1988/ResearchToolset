@@ -143,6 +143,26 @@ class ProjectProgressWidget(QWidget):
             # print("No valid project selected.") # Removed print
 
 
+    def load_project_by_object(self, project):
+        """根据项目对象在项目选择器中选中项目并加载数据"""
+        if not project or not hasattr(self, 'project_selector'):
+            print("无效的项目对象或项目选择器未初始化。")
+            return
+
+        # 查找项目在 ComboBox 中的索引
+        index = -1
+        for i in range(self.project_selector.count()):
+            data = self.project_selector.itemData(i)
+            if isinstance(data, Project) and data.id == project.id:
+                index = i
+                break
+
+        if index != -1:
+            self.project_selector.setCurrentIndex(index) # 这将触发 _on_project_selected
+        else:
+            print(f"未在项目选择器中找到项目: {project.financial_code}")
+
+
     def load_gantt(self):
         """加载本地jQueryGantt资源"""
         try:
