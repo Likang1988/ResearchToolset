@@ -342,7 +342,8 @@ class GanttBridge(QObject):
         session = self.Session()
         try:
             # print(f"GanttBridge: Loading data for project ID: {self.project.id}") # Removed print
-            tasks_db = session.query(GanttTask).filter(GanttTask.project_id == self.project.id).order_by(GanttTask.id).all()
+            # 按照 order 字段排序加载任务
+            tasks_db = session.query(GanttTask).filter(GanttTask.project_id == self.project.id).order_by(GanttTask.order).all()
             dependencies_db = session.query(GanttDependency).filter(GanttDependency.project_id == self.project.id).all()
 
             tasks_json = []
@@ -458,7 +459,7 @@ class GanttBridge(QObject):
             processed_gantt_ids = set() # 存储处理过的持久化ID
             all_dependencies_to_save = []
 
-            for task_data in tasks_data:
+            for index, task_data in enumerate(tasks_data): # 添加 enumerate 获取索引
                 gantt_id = str(task_data["id"]) # 确保是字符串
                 depends_str = task_data.get("depends", "")
 
@@ -492,7 +493,8 @@ class GanttBridge(QObject):
                     "description": task_data.get("description"),
                     "collapsed": task_data.get("collapsed", False),
                     "has_child": task_data.get("hasChild", False),
-                    "responsible": task_data.get("responsible") # 添加负责人字段
+                    "responsible": task_data.get("responsible"), # 添加负责人字段
+                    "order": index # 添加 order 字段
                 }
 
                 current_gantt_id = None # 用于依赖关系处理
@@ -663,6 +665,10 @@ class GanttBridge(QObject):
             session.commit()
             # print(f"Saved/Updated {len(processed_gantt_ids)} tasks and added {added_deps_count} dependencies. Parent progress recalculated.") # Removed print
             self.data_saved.emit(True, "甘特图数据保存成功！")
+            # 数据保存成功后，调用JS函数刷新甘特图
+            self.web_view.page().runJavaScript("loadInitialData();")
+            # 发出信号通知进度数据已更新
+            self.parent().progress_updated.emit() # 假设父级是 ProjectProgressWidget
             return json.dumps({"success": True, "id_map": new_task_id_map})
 
         except Exception as e:

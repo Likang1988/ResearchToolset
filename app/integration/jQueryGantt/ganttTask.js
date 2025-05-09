@@ -125,7 +125,7 @@ Task.prototype.updateParentProgress = function () {
   // 更新父任务进度
   if (totalWeight > 0) {
     parent.progress = Number((weightedProgress / totalWeight).toFixed(2));
-    parent.canWrite = false; // 禁用父任务进度编辑
+  //  parent.canWrite = false; // 禁用父任务进度编辑
     // 递归更新上层父任务
     parent.updateParentProgress();
   }

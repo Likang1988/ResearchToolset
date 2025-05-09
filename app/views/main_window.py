@@ -77,10 +77,12 @@ class MainWindow(FluentWindow):
             self.progress_interface,
             QIcon(UIUtils.get_svg_icon_path('progress')), 
             "项目进度"
-        )                                                                    
+        )
+        # 连接 progress_updated 信号到 HomeInterface 的 refresh_data 槽
+        self.progress_interface.progress_updated.connect(self.home_interface.refresh_data)
         
         # 添加项目文档导航项
-        self.document_interface = ProjectDocumentWidget(self.engine) 
+        self.document_interface = ProjectDocumentWidget(self.engine)
         self.document_interface.setObjectName("documentInterface")
         self.addSubInterface(
             self.document_interface,

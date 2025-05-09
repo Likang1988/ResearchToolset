@@ -1157,6 +1157,11 @@ GanttMaster.prototype.deleteCurrentTask = function (taskId) {
       par.updateParentProgress();
     }
 
+    // Update parent dates and duration after deleting a child task
+    if (par) {
+      updateTree(par); // Call updateTree to recompute parent dates/duration
+    }
+
     //[expand]
     if (par)
       self.editor.refreshExpandStatus(par);
@@ -1170,8 +1175,8 @@ GanttMaster.prototype.deleteCurrentTask = function (taskId) {
       task.rowElement.find("[name=name]").focus();
     }
     self.endTransaction();
-    // Automatically save after deleting a task
-    saveGanttData();
+    // Automatically save after deleting a task // Removed automatic save
+    // saveGanttData();
     this.generateTaskCodes(); // Update codes after deleting a task
   }
 };

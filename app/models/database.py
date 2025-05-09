@@ -181,6 +181,7 @@ class GanttTask(Base):
     collapsed = Column(Boolean, default=False)
     has_child = Column(Boolean, default=False) # 标记是否有子任务
     responsible = Column(String(50)) # 添加负责人字段
+    order = Column(Integer, default=0) # 添加任务排序字段
 
     project = relationship("Project", backref="gantt_tasks")
 
@@ -276,6 +277,9 @@ def migrate_db(engine):
             if 'responsible' not in columns:
                 connection.execute(text("ALTER TABLE gantt_tasks ADD COLUMN responsible VARCHAR(50)"))
                 print("成功添加 responsible 列到 gantt_tasks 表")
+            if 'order' not in columns: # 添加对 order 列的检查
+                connection.execute(text("ALTER TABLE gantt_tasks ADD COLUMN \"order\" INTEGER DEFAULT 0")) # 添加 order 列，注意关键字加双引号
+                print("成功添加 order 列到 gantt_tasks 表")
     except Exception as e:
         print(f"迁移 gantt_tasks 表失败: {e}")
 
