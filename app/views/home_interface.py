@@ -286,69 +286,59 @@ class HomeInterface(QWidget):
                     continue # Skip if no tasks for this project
 
                 card = CardWidget()
-                card_layout = QHBoxLayout(card)
-                card_layout.setContentsMargins(15, 15, 15, 15)
-                card_layout.setSpacing(20) # 增加项目简称和任务列表之间的间距
+                card_content_layout = QGridLayout(card) # Use QGridLayout for the card content
+                card_content_layout.setContentsMargins(15, 15, 15, 15)
+                card_content_layout.setSpacing(10) # Adjust spacing
 
                 # 左侧：项目简称
                 project_code_label = QLabel(tasks[0].project.financial_code if tasks[0].project else "--")
                 project_code_label.setStyleSheet("font-size: 18px; font-weight: bold;")
                 project_code_label.setAlignment(Qt.AlignCenter) # 垂直和水平居中对齐
                 project_code_label.setFixedWidth(100) # 设置固定宽度
-                card_layout.addWidget(project_code_label)
+                card_content_layout.addWidget(project_code_label, 0, 0, -1, 1, alignment=Qt.AlignCenter) # Add to grid column 0, span rows
 
                 # 添加分隔线
                 line = QLabel()
                 line.setStyleSheet("background-color: #ccc;")
                 line.setFixedWidth(1)
-                card_layout.addWidget(line)
+                card_content_layout.addWidget(line, 0, 1, -1, 1, alignment=Qt.AlignCenter) # Add to grid column 1, span rows
 
 
-                # 右侧：任务列表
-                tasks_list_layout = QVBoxLayout()
-                tasks_list_layout.setSpacing(5)
-                tasks_list_layout.setAlignment(Qt.AlignTop) # 顶部对齐
-
-                # 添加任务信息表头
-                header_layout = QGridLayout()
-                header_layout.setSpacing(10)
-
+                # Task information directly in grid columns 2, 3, 4
+                # Header row (Row 0)
                 task_code_title = QLabel("编码")
                 task_code_title.setStyleSheet("font-size: 14px; color: #666;")
-                header_layout.addWidget(task_code_title, 0, 0, alignment=Qt.AlignCenter) # 确保单元格内容居中对齐
+                card_content_layout.addWidget(task_code_title, 0, 2, alignment=Qt.AlignCenter)
 
                 task_name_title = QLabel("名称")
                 task_name_title.setStyleSheet("font-size: 14px; color: #666;")
-                header_layout.addWidget(task_name_title, 0, 1, alignment=Qt.AlignCenter) # 确保单元格内容居中对齐
-                header_layout.setColumnStretch(1, 2) # 任务名称列宽增大
+                card_content_layout.addWidget(task_name_title, 0, 3, alignment=Qt.AlignCenter)
 
                 task_progress_title = QLabel("进度")
                 task_progress_title.setStyleSheet("font-size: 14px; color: #666;")
-                header_layout.addWidget(task_progress_title, 0, 2, alignment=Qt.AlignCenter) # 确保单元格内容居中对齐
+                card_content_layout.addWidget(task_progress_title, 0, 4, alignment=Qt.AlignCenter)
 
-                tasks_list_layout.addLayout(header_layout)
-
-                # 添加任务信息行
+                # Task rows (Starting from Row 1)
                 for i, task in enumerate(tasks):
-                    task_row_layout = QGridLayout()
-                    task_row_layout.setSpacing(10)
-
-                    task_code_value = QLabel(task.code if task.code else str(i + 1)) # 使用任务编码或序号
+                    row = i + 1 # Start from row 1
+                    task_code_value = QLabel(task.code if task.code else str(i + 1))
                     task_code_value.setStyleSheet("font-size: 16px;")
-                    task_row_layout.addWidget(task_code_value, 0, 0, alignment=Qt.AlignCenter) # 确保单元格内容居中对齐
+                    card_content_layout.addWidget(task_code_value, row, 2, alignment=Qt.AlignCenter)
 
                     task_name_value = QLabel(task.name)
                     task_name_value.setStyleSheet("font-size: 16px;")
-                    task_row_layout.addWidget(task_name_value, 0, 1, alignment=Qt.AlignCenter) # 确保单元格内容居中对齐
-                    task_row_layout.setColumnStretch(1, 2) # 任务名称列宽增大
+                    card_content_layout.addWidget(task_name_value, row, 3, alignment=Qt.AlignCenter)
 
                     task_progress_value = QLabel(f"{task.progress:.0f}%")
                     task_progress_value.setStyleSheet("font-size: 16px; font-weight: bold;")
-                    task_row_layout.addWidget(task_progress_value, 0, 2, alignment=Qt.AlignCenter) # 确保单元格内容居中对齐
+                    card_content_layout.addWidget(task_progress_value, row, 4, alignment=Qt.AlignCenter)
 
-                    tasks_list_layout.addLayout(task_row_layout)
-
-                card_layout.addLayout(tasks_list_layout)
+                # Set column stretch factors for centering and layout
+                card_content_layout.setColumnStretch(0, 1) # Project code column
+                card_content_layout.setColumnStretch(1, 0) # Separator column (fixed width)
+                card_content_layout.setColumnStretch(2, 1) # "编码" column
+                card_content_layout.setColumnStretch(3, 2) # "名称" column (wider)
+                card_content_layout.setColumnStretch(4, 1) # "进度" column
 
                 # 添加点击事件
                 card.mousePressEvent = lambda event, p=tasks[0].project: self.open_project_progress(p) # Pass the project object
