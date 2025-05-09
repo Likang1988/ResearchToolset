@@ -184,56 +184,67 @@ class HomeInterface(QWidget):
                 total_spent = budget_usage['total_spent'] / 10000  # 转换为万元
                 execution_rate = (budget_usage['total_spent'] / (project.total_budget * 10000)) * 100 if project.total_budget > 0 else 0
 
-                # 添加项目标题
-                financial_code_title = QLabel("项目")
-                financial_code_title.setAlignment(Qt.AlignCenter)
-                financial_code_title.setStyleSheet("font-size: 14px; color: #666;")
-                grid_layout.addWidget(financial_code_title, 0, 0)
+                # Removed Project title
 
-                # 添加总经费标题
+                
+                # 添加财务编号值
+                project_code_label = QLabel(project.financial_code if project.financial_code else "--")
+                project_code_label.setAlignment(Qt.AlignCenter) # Align center
+                project_code_label.setStyleSheet("font-size: 18px; font-weight: bold;")
+                grid_layout.addWidget(project_code_label, 0, 0, 2, 1, alignment=Qt.AlignCenter) # Add to grid column 0, span 2 rows, center align
+
+                # 添加分隔线
+                line = QLabel()
+                line.setStyleSheet("background-color: #ccc;")
+                line.setFixedWidth(1)
+                grid_layout.addWidget(line, 0, 1, 2, 1) # Add to grid column 1, span 2 rows, remove alignment
+
+                # Add Total Budget title
                 total_budget_title = QLabel("总预算")
                 total_budget_title.setAlignment(Qt.AlignCenter)
                 total_budget_title.setStyleSheet("font-size: 14px; color: #666;")
-                grid_layout.addWidget(total_budget_title, 0, 1)
+                grid_layout.addWidget(total_budget_title, 0, 2, alignment=Qt.AlignCenter) # Add to grid column 2, row 0
 
-                # 添加总支出标题
+                # Add Total Spent title
                 total_spent_title = QLabel("总支出")
                 total_spent_title.setAlignment(Qt.AlignCenter)
                 total_spent_title.setStyleSheet("font-size: 14px; color: #666;")
-                grid_layout.addWidget(total_spent_title, 0, 2)
+                grid_layout.addWidget(total_spent_title, 0, 3, alignment=Qt.AlignCenter) # Add to grid column 3, row 0
 
-                # 添加执行率标题
+                # Add Execution Rate title
                 execution_rate_title = QLabel("执行率")
                 execution_rate_title.setAlignment(Qt.AlignCenter)
                 execution_rate_title.setStyleSheet("font-size: 14px; color: #666;")
-                grid_layout.addWidget(execution_rate_title, 0, 3)
+                grid_layout.addWidget(execution_rate_title, 0, 4, alignment=Qt.AlignCenter) # Add to grid column 4, row 0
 
-                # 添加财务编号值
-                financial_code_value = QLabel(project.financial_code if project.financial_code else "--")
-                financial_code_value.setAlignment(Qt.AlignCenter)
-                financial_code_value.setStyleSheet("font-size: 18px; font-weight: bold;")
-                grid_layout.addWidget(financial_code_value, 1, 0)
-
-                # 添加总经费值
+                # Add Total Budget value
                 total_budget_value = QLabel(f"{total_budget:.2f}<span style='font-size: 14px; font-weight: normal;'> 万元</span>")
                 total_budget_value.setAlignment(Qt.AlignCenter)
                 total_budget_value.setStyleSheet("font-size: 18px; font-weight: bold;")
-                grid_layout.addWidget(total_budget_value, 1, 1)
+                grid_layout.addWidget(total_budget_value, 1, 2, alignment=Qt.AlignCenter) # Add to grid column 2, row 1
 
-                # 添加总支出值
+                # Add Total Spent value
                 total_spent_value = QLabel(f"{total_spent:.2f}<span style='font-size: 14px; font-weight: normal;'> 万元</span>")
                 total_spent_value.setAlignment(Qt.AlignCenter)
                 total_spent_value.setStyleSheet("font-size: 18px; font-weight: bold;")
-                grid_layout.addWidget(total_spent_value, 1, 2)
+                grid_layout.addWidget(total_spent_value, 1, 3, alignment=Qt.AlignCenter) # Add to grid column 3, row 1
 
-                # 添加执行率值
+                # Add Execution Rate value
                 execution_rate_value = QLabel(f"{execution_rate:.2f}<span style='font-size: 14px; font-weight: normal;'> %</span>")
                 execution_rate_value.setAlignment(Qt.AlignCenter)
                 execution_rate_value.setStyleSheet("font-size: 18px; font-weight: bold;")
-                grid_layout.addWidget(execution_rate_value, 1, 3)
-                execution_rate_value.setAlignment(Qt.AlignCenter)
-                execution_rate_value.setStyleSheet("font-size: 18px; font-weight: bold;")
-                grid_layout.addWidget(execution_rate_value, 1, 3)
+                grid_layout.addWidget(execution_rate_value, 1, 4, alignment=Qt.AlignCenter) # Add to grid column 4, row 1
+
+                # Set column stretch factors for layout
+                grid_layout.setColumnStretch(0, 1) # Project code column
+                grid_layout.setColumnStretch(1, 0) # Separator column (fixed width)
+                grid_layout.setColumnStretch(2, 1) # Total Budget column
+                grid_layout.setColumnStretch(3, 1) # Total Spent column
+                grid_layout.setColumnStretch(4, 1) # Execution Rate column
+
+                # Set row stretch to ensure vertical centering
+                grid_layout.setRowStretch(0, 1)
+                grid_layout.setRowStretch(1, 1)
 
                 # 添加网格布局到卡片布局
                 card_layout.addLayout(grid_layout)
@@ -306,15 +317,15 @@ class HomeInterface(QWidget):
 
                 # Task information directly in grid columns 2, 3, 4
                 # Header row (Row 0)
-                task_code_title = QLabel("编码")
+                task_code_title = QLabel("任务编码")
                 task_code_title.setStyleSheet("font-size: 14px; color: #666;")
                 card_content_layout.addWidget(task_code_title, 0, 2, alignment=Qt.AlignCenter)
 
-                task_name_title = QLabel("名称")
+                task_name_title = QLabel("任务名称")
                 task_name_title.setStyleSheet("font-size: 14px; color: #666;")
                 card_content_layout.addWidget(task_name_title, 0, 3, alignment=Qt.AlignCenter)
 
-                task_progress_title = QLabel("进度")
+                task_progress_title = QLabel("任务进度")
                 task_progress_title.setStyleSheet("font-size: 14px; color: #666;")
                 card_content_layout.addWidget(task_progress_title, 0, 4, alignment=Qt.AlignCenter)
 
