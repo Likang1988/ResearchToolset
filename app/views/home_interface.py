@@ -301,7 +301,7 @@ class HomeInterface(QWidget):
                 line = QLabel()
                 line.setStyleSheet("background-color: #ccc;")
                 line.setFixedWidth(1)
-                card_content_layout.addWidget(line, 0, 1, -1, 1, alignment=Qt.AlignCenter) # Add to grid column 1, span rows
+                card_content_layout.addWidget(line, 0, 1, -1, 1) # Add to grid column 1, span rows, remove alignment
 
 
                 # Task information directly in grid columns 2, 3, 4
