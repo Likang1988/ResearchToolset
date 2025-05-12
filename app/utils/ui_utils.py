@@ -1,6 +1,5 @@
-from PySide6.QtWidgets import (QWidget, QTableWidget, QTableWidgetItem, QTreeWidget, QTreeWidgetItem, QHeaderView, QVBoxLayout, # Added QTreeWidgetItem
-                             QHBoxLayout, QLabel)
-from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (QTableWidget, QTableWidgetItem, QTreeWidget, QTreeWidgetItem, QHeaderView, 
+                             QHBoxLayout)
 from PySide6.QtGui import QFont # Import QFont
 from qfluentwidgets import TitleLabel, PrimaryPushButton, FluentIcon, InfoBar, TableWidget, ComboBox
 from ..models.database import Project, sessionmaker # Import Project model and sessionmaker

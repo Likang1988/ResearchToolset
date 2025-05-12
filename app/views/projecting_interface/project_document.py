@@ -1,13 +1,13 @@
 import os # Ensure os is imported
 import shutil # Ensure shutil is imported
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QFileDialog, QDialog, QLabel, QHeaderView, QApplication
-from PySide6.QtCore import Qt, QSize, QPoint 
-from PySide6.QtGui import QFont, QIcon 
-from qfluentwidgets import TitleLabel, FluentIcon, ComboBox, LineEdit, InfoBar, Dialog, BodyLabel, PushButton, TableWidget, TableItemDelegate, RoundMenu, Action, PlainTextEdit  
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidgetItem, QFileDialog, QDialog, QHeaderView, QApplication
+from PySide6.QtCore import Qt, QPoint 
+from PySide6.QtGui import QIcon 
+from qfluentwidgets import TitleLabel, FluentIcon, ComboBox, LineEdit, Dialog, BodyLabel, PushButton, TableWidget, TableItemDelegate, RoundMenu, Action, PlainTextEdit  
 from ...models.database import Project, sessionmaker 
 from ...utils.ui_utils import UIUtils
-from ...models.database import Base, get_engine, Activity # Project and sessionmaker already imported, add Activity
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum as SQLEnum, DateTime, Engine 
+from ...models.database import Base, Activity # Project and sessionmaker already imported, add Activity
+from sqlalchemy import Column, Integer, String, ForeignKey, Enum as SQLEnum, DateTime, Engine 
 from enum import Enum
 from datetime import datetime
 from ...utils.attachment_utils import (

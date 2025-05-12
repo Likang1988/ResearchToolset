@@ -1,11 +1,8 @@
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel)
-from PySide6.QtCore import Qt, QDate, QTimer # Import QTimer
-from PySide6.QtGui import QIcon
-from qfluentwidgets import (LineEdit, ComboBox, DateEdit, PushButton, InfoBar, # Changed EditableComboBox to ComboBox
-                          FluentIcon, setTheme, Theme, setThemeColor, ToolButton) # Added ToolButton
-from app.models.database import Budget, BudgetItem
+from PySide6.QtCore import QDate
+from qfluentwidgets import (LineEdit, ComboBox, DateEdit, PushButton,
+                          FluentIcon, ToolButton) 
 from ..utils.ui_utils import UIUtils
-from sqlalchemy.orm import sessionmaker
 
 class ProjectDialog(QDialog):
     def __init__(self, parent=None):

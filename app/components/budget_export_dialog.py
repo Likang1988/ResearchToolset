@@ -1,6 +1,5 @@
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QButtonGroup)
 from qfluentwidgets import PushButton, FluentIcon, CompactSpinBox, CheckBox, RadioButton 
-from PySide6.QtCore import Qt
 
 class BudgetExportDialog(QDialog):
     """预算导出对话框"""

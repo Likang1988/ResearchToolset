@@ -1,12 +1,9 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QHBoxLayout, QGridLayout
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from qfluentwidgets import (TitleLabel, SubtitleLabel, ScrollArea, CardWidget, PrimaryPushButton,
-                          FluentIcon, InfoBadge, BodyLabel)
-from sqlalchemy import func
-from ..models.database import sessionmaker, Project, Budget, BudgetCategory, get_budget_usage, Activity, GanttTask
-from datetime import datetime
-from ..utils.ui_utils import UIUtils
+from qfluentwidgets import (TitleLabel, ScrollArea, CardWidget,
+                          BodyLabel)
+from ..models.database import sessionmaker, Project, get_budget_usage, GanttTask
 import os
 from collections import defaultdict # 导入 defaultdict
 
@@ -280,7 +277,7 @@ class HomeInterface(QWidget):
 
             if not tasks_by_project:
                 print("没有找到一级项目任务，显示提示信息。")
-                no_task_label = BodyLabel("没有找到一级项目任务。")
+                no_task_label = BodyLabel("暂无项目任务信息。")
                 no_task_label.setAlignment(Qt.AlignCenter)
                 self.task_layout.addWidget(no_task_label)
                 return

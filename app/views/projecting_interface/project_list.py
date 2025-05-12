@@ -1,17 +1,13 @@
-from PySide6.QtWidgets import (QMainWindow, QWidget, QHeaderView, QVBoxLayout, QHBoxLayout,
-                                 QLabel, QTableWidgetItem, QStackedWidget, QApplication)
-from qfluentwidgets import PrimaryPushButton, ToolButton, InfoBar, Dialog
-from PySide6.QtCore import Qt, QSize, Signal # 导入 Signal
-from PySide6.QtGui import QIcon
-from qfluentwidgets import FluentIcon, TableWidget, TableItemDelegate, TitleLabel, RoundMenu, Action
+from PySide6.QtWidgets import (QWidget, QHeaderView, QVBoxLayout, QHBoxLayout,
+                                 QTableWidgetItem, QStackedWidget, QApplication)
+from qfluentwidgets import Dialog
+from PySide6.QtCore import Qt, Signal # 导入 Signal
+from qfluentwidgets import FluentIcon, TableWidget, TableItemDelegate, RoundMenu, Action
 import os # 导入 os 模块
 import shutil # 导入 shutil 模块
 from ...components.project_dialog import ProjectDialog
-from .project_budget import ProjectBudgetWidget
 from ...models.database import init_db, add_project_to_db, sessionmaker, Project, Budget, Expense, Activity, GanttTask, GanttDependency # 导入 GanttTask 和 GanttDependency
 from ...utils.ui_utils import UIUtils
-from ...utils.db_utils import DBUtils
-from sqlalchemy import func
 from datetime import datetime
 
 class ProjectListWindow(QWidget):

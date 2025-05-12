@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (QStyledItemDelegate, QWidget, QPushButton, QHBoxLayout,
-                             QApplication, QStyleOptionViewItem, QColorDialog, QDialog, QVBoxLayout)
-from PySide6.QtCore import Qt, QSize, Signal, QEvent, QPoint, QRect, QAbstractTableModel, QModelIndex
+                             QApplication, QStyleOptionViewItem, QDialog)
+from PySide6.QtCore import Qt, Signal, QEvent, QRect, QAbstractTableModel, QModelIndex
 from PySide6.QtGui import QPainter, QColor, QBrush, QPen
 from enum import Enum, unique
 

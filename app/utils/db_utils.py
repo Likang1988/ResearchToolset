@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from typing import TypeVar, Callable, Any
+from typing import TypeVar, Callable
 from functools import wraps
 from PySide6.QtWidgets import QMessageBox
 

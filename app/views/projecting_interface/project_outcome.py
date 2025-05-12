@@ -1,11 +1,11 @@
 import os # Ensure os is imported
 import shutil # Add shutil
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QDialog, QLabel, QHeaderView, QFileDialog, QApplication 
-from PySide6.QtCore import Qt, QSize, QPoint 
-from PySide6.QtGui import QFont, QIcon 
-from qfluentwidgets import TitleLabel, FluentIcon, LineEdit, ComboBox, DateEdit, InfoBar, BodyLabel, PushButton, TableWidget, TableItemDelegate, Dialog, RoundMenu, Action, PlainTextEdit
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidgetItem, QDialog, QHeaderView, QFileDialog, QApplication 
+from PySide6.QtCore import Qt, QPoint 
+from PySide6.QtGui import QIcon 
+from qfluentwidgets import TitleLabel, FluentIcon, LineEdit, ComboBox, DateEdit, BodyLabel, PushButton, TableWidget, TableItemDelegate, Dialog, RoundMenu, Action, PlainTextEdit
 from ...utils.ui_utils import UIUtils
-from ...models.database import Project, Base, get_engine, sessionmaker, Activity # Import Activity
+from ...models.database import Project, Base, sessionmaker, Activity # Import Activity
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum as SQLEnum, Engine 
 from enum import Enum
@@ -164,13 +164,13 @@ class OutcomeDialog(QDialog):
         self.name_edit.setText(self.outcome.name)
         self.type_combo.setCurrentText(self.outcome.type.value)
         self.status_combo.setCurrentText(self.outcome.status.value)
-        self.authors_edit.setText(self.outcome.authors)
+        self.authors_edit.setPlainText(self.outcome.authors)
         if self.outcome.submit_date:
             self.submit_date.setDate(self.outcome.submit_date)
         if self.outcome.publish_date:
             self.publish_date.setDate(self.outcome.publish_date)
         self.journal_edit.setText(self.outcome.journal)
-        self.description_edit.setText(self.outcome.description)
+        self.description_edit.setPlainText(self.outcome.description)
        
 
 class ProjectOutcomeWidget(QWidget): 

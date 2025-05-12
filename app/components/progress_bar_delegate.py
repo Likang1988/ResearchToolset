@@ -1,6 +1,6 @@
-from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionProgressBar, QStyle, QApplication
+from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionProgressBar, QStyle
 from PySide6.QtCore import Qt, QRect
-from PySide6.QtGui import QPainter, QColor, QLinearGradient
+from PySide6.QtGui import QPainter, QColor
 
 class ProgressBarDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):

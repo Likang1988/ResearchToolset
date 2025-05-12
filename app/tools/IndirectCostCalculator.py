@@ -1,8 +1,8 @@
 import sys
 import os
-from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
+from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QLabel, 
                              QLineEdit, QPushButton, QTextEdit, QFormLayout, QGroupBox)
-from PySide6.QtGui import QFont, QColor, QAction, QIcon
+from PySide6.QtGui import QIcon
 from PySide6.QtCore import Qt
 
 class IndirectCostCalculator(QWidget):

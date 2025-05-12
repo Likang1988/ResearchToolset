@@ -1,13 +1,12 @@
 import os
 import sys
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTreeWidget, QSplitter,
-                                 QLabel, QPushButton, QMessageBox, QSpinBox, QTableWidget, QTableWidgetItem,
-                                 QStackedWidget, QTreeWidgetItem, QApplication) # Keep QStackedWidget for now, might be used by parent, Added QApplication for clipboard
-from qfluentwidgets import PrimaryPushButton, TreeWidget, FluentIcon, ToolButton, InfoBar, Dialog, TitleLabel, ComboBox # Added ComboBox
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QSplitter,
+                                QTreeWidgetItem, QApplication) # Keep QStackedWidget for now, might be used by parent, Added QApplication for clipboard
+from qfluentwidgets import TreeWidget, FluentIcon, ToolButton, Dialog, TitleLabel # Added ComboBox
 from PySide6.QtCore import Qt, QSize, Signal
-from PySide6.QtGui import QIcon, QFont # 确保 QFont 已导入
+from PySide6.QtGui import QIcon 
 from ...components.budget_dialog import BudgetDialog, TotalBudgetDialog
-from .project_expense import ProjectExpenseWidget
+
 # 需要在文件顶部导入
 from ...models.database import Project, sessionmaker
 from ...models.database import sessionmaker, Budget, BudgetCategory, BudgetItem, Expense, Activity, Project # Added Project
@@ -16,7 +15,6 @@ from datetime import datetime
 from sqlalchemy import func
 from ...components.progress_bar_delegate import ProgressBarDelegate
 from ...utils.ui_utils import UIUtils
-from ...utils.db_utils import DBUtils
 from ...components.budget_chart_widget import BudgetChartWidget
 
 class ProjectBudgetWidget(QWidget):

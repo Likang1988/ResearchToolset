@@ -1,8 +1,6 @@
-from PySide6.QtWidgets import QApplication, QStackedWidget
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Signal
 from PySide6.QtGui import QIcon
-from qfluentwidgets import NavigationInterface, FluentWindow, FluentIcon, NavigationItemPosition
-from qframelesswindow import FramelessWindow, StandardTitleBar
+from qfluentwidgets import FluentWindow, FluentIcon, NavigationItemPosition
 from ..utils.ui_utils import UIUtils
 from .projecting_interface.project_list import ProjectListWindow
 from .projecting_interface.project_budget import ProjectBudgetWidget

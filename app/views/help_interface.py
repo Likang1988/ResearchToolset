@@ -1,14 +1,11 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from qfluentwidgets import (SettingCardGroup, ExpandGroupSettingCard, ScrollArea,
-                          InfoBar, FluentIcon, CardWidget, TitleLabel, BodyLabel)
+from qfluentwidgets import (ExpandGroupSettingCard, ScrollArea,
+                          FluentIcon, CardWidget, TitleLabel, BodyLabel)
 import os
 from PySide6.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView # Import necessary widgets for table
-from PySide6.QtCore import QDateTime # Import QDateTime for timestamp
-from sqlalchemy import func # Import func for database queries
 from ..models.database import sessionmaker, Activity # Import sessionmaker and Activity model
-from datetime import datetime # Import datetime
 import json # Import json for data comparison
 
 def find_diff(old_dict, new_dict):

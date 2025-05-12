@@ -6,15 +6,13 @@
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, 
-    QScrollArea, QWidget, QGridLayout, QMessageBox,
-    QGroupBox
+     QGridLayout, QGroupBox
 )
 from PySide6.QtCore import Qt, QDate, Signal
 from qfluentwidgets import (
-    SpinBox, DoubleSpinBox, PushButton, BodyLabel, FluentIcon, 
-    setTheme, Theme, setThemeColor, InfoBar
+    SpinBox, DoubleSpinBox, PushButton, BodyLabel, FluentIcon
 )
-from ..models.database import BudgetCategory, Project, Budget, BudgetItem, sessionmaker
+from ..models.database import BudgetCategory, Budget, BudgetItem, sessionmaker
 from sqlalchemy.orm import sessionmaker
 from ..utils.ui_utils import UIUtils
 from sqlalchemy import func

@@ -2,7 +2,7 @@ from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QFileDialog)
 from PySide6.QtCore import Qt
 import pandas as pd
 from datetime import datetime
-from qfluentwidgets import (InfoBar, PushButton, BodyLabel, FluentIcon)
+from qfluentwidgets import (PushButton, BodyLabel, FluentIcon)
 from ..models.database import BudgetCategory
 from ..utils.ui_utils import UIUtils
 

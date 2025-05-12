@@ -2,8 +2,8 @@ import os
 import shutil
 import sys # Added for platform check
 import subprocess # Added for opening files on Linux/macOS
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QFileDialog, QApplication
-from PySide6.QtCore import Qt, QSize, QPoint
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QFileDialog
+from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon
 from qfluentwidgets import ToolButton, RoundMenu, Action, FluentIcon, Dialog
 import re # Import regex for sanitization

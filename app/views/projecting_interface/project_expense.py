@@ -3,18 +3,17 @@ import shutil # Added for file operations
 import sys # Needed for platform check in view_attachment (though it's in utils now)
 import subprocess # Needed for platform check in view_attachment (though it's in utils now)
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-                                 QMessageBox, QStackedWidget, QSplitter,
-                                 QFileDialog, QFrame, QTableWidgetItem, # Added QFileDialog here if not present
+                                 QStackedWidget, QSplitter,
+                                 QFileDialog, QTableWidgetItem, # Added QFileDialog here if not present
                                  QHeaderView)
-from PySide6.QtCore import Qt, Signal, QDate, QSize, QPoint # Added QPoint
+from PySide6.QtCore import Qt, Signal, QDate, QPoint # Added QPoint
 from PySide6.QtGui import QIcon # Added for button icon updates
 from qfluentwidgets import (FluentIcon, TableWidget, PushButton, ComboBox, CompactDateEdit,
-                           LineEdit, SpinBox, TableItemDelegate, TitleLabel, InfoBar, Dialog, RoundMenu, PrimaryPushButton, ToolButton, Action) # Added Dialog, RoundMenu, Action, ToolButton
-from ...models.database import sessionmaker, Budget, BudgetCategory, Expense, BudgetItem, Activity # Import Expense
+                           LineEdit, TableItemDelegate, Dialog, RoundMenu, Action) # Added Dialog, RoundMenu, Action, ToolButton
+from ...models.database import sessionmaker, BudgetCategory, Expense, BudgetItem, Activity # Import Expense
 from datetime import datetime
 from ...components.expense_dialog import ExpenseDialog
 from ...utils.ui_utils import UIUtils
-from ...utils.db_utils import DBUtils
 from ...utils.attachment_utils import (
     create_attachment_button, # Keep this one
     sanitize_filename, ensure_directory_exists, get_attachment_icon_path,

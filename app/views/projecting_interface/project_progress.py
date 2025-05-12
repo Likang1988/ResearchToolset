@@ -1,11 +1,10 @@
 import json
 from datetime import datetime, timezone
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFileDialog # Added QHBoxLayout, QLabel, QFileDialog
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QFileDialog # Added QHBoxLayout, QLabel, QFileDialog
 from PySide6.QtWebChannel import QWebChannel
-from PySide6.QtCore import QUrl, Signal, QObject, Slot, QCoreApplication, Qt # Ensure Qt is imported
-from PySide6.QtGui import QIcon, QFont, QPixmap # 确保 QFont, QPixmap 已导入 # QPixmap no longer needed
-from qfluentwidgets import NavigationInterface, TitleLabel, InfoBar, InfoBarPosition, ComboBox # Added ComboBox
-from qframelesswindow.webengine import FramelessWindow, FramelessWebEngineView
+from PySide6.QtCore import QUrl, Signal, QObject, Slot
+from qfluentwidgets import TitleLabel, InfoBar, InfoBarPosition
+from qframelesswindow.webengine import FramelessWebEngineView
 from app.utils.ui_utils import UIUtils
 # 需要在文件顶部导入
 from app.models.database import Project, sessionmaker, Activity # Import Activity
