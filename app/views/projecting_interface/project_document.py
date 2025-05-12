@@ -6,7 +6,7 @@ from PySide6.QtGui import QFont, QIcon
 from qfluentwidgets import TitleLabel, FluentIcon, ComboBox, LineEdit, InfoBar, Dialog, BodyLabel, PushButton, TableWidget, TableItemDelegate, RoundMenu, Action, PlainTextEdit  
 from ...models.database import Project, sessionmaker 
 from ...utils.ui_utils import UIUtils
-from ...models.database import Base, get_engine # Project and sessionmaker already imported
+from ...models.database import Base, get_engine, Activity # Project and sessionmaker already imported, add Activity
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum as SQLEnum, DateTime, Engine 
 from enum import Enum
 from datetime import datetime
@@ -529,6 +529,20 @@ class ProjectDocumentWidget(QWidget):
                 )
                 session.add(document)
                 session.commit()
+
+                # 添加操作日志
+                activity = Activity(
+                    project_id=self.current_project.id,
+                    project_document_id=document.id,
+                    type="文档",
+                    action="新增",
+                    description=f"新增文档: {document.name}",
+                    operator="当前用户", # TODO: 获取当前登录用户
+                    related_info=f"类型: {document.doc_type.value}, 版本: {document.version or '无'}"
+                )
+                session.add(activity)
+                session.commit() # 提交日志
+
                 self.load_documents() # Reload table
                 UIUtils.show_success(self, "成功", "文档添加成功")
             except Exception as db_err:
@@ -581,6 +595,20 @@ class ProjectDocumentWidget(QWidget):
                 # document.uploader = dialog.uploader_edit.text() # Removed uploader update
                 # File path is not edited here, only through attachment handling
                 session.commit()
+
+                # 添加操作日志
+                activity = Activity(
+                    project_id=self.current_project.id,
+                    project_document_id=document.id,
+                    type="文档",
+                    action="编辑",
+                    description=f"编辑文档: {document.name}",
+                    operator="当前用户", # TODO: 获取当前登录用户
+                    related_info=f"类型: {document.doc_type.value}, 版本: {document.version or '无'}"
+                )
+                session.add(activity)
+                session.commit() # 提交日志
+
                 self.load_documents()
                 UIUtils.show_success(self, "成功", "文档信息编辑成功")
         except Exception as e:
@@ -637,7 +665,19 @@ class ProjectDocumentWidget(QWidget):
 
                         session.delete(document)
                         deleted_count += 1
-                session.commit()
+
+                        # 添加操作日志
+                        activity = Activity(
+                            project_id=self.current_project.id,
+                            type="文档",
+                            action="删除",
+                            description=f"删除文档: {document.name}",
+                            operator="当前用户", # TODO: 获取当前登录用户
+                            related_info=f"类型: {document.doc_type.value}, 版本: {document.version or '无'}"
+                        )
+                        session.add(activity)
+
+                session.commit() # 在循环外部统一提交
                 self.load_documents()
                 UIUtils.show_success(self, "成功", f"成功删除 {deleted_count} 条文档记录")
             except Exception as e:

@@ -5,7 +5,7 @@ from PySide6.QtCore import Qt, QSize, QPoint
 from PySide6.QtGui import QFont, QIcon 
 from qfluentwidgets import TitleLabel, FluentIcon, LineEdit, ComboBox, DateEdit, InfoBar, BodyLabel, PushButton, TableWidget, TableItemDelegate, Dialog, RoundMenu, Action, PlainTextEdit
 from ...utils.ui_utils import UIUtils
-from ...models.database import Project, Base, get_engine, sessionmaker 
+from ...models.database import Project, Base, get_engine, sessionmaker, Activity # Import Activity
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum as SQLEnum, Engine 
 from enum import Enum
@@ -565,6 +565,20 @@ class ProjectOutcomeWidget(QWidget):
                 )
                 session.add(outcome)
                 session.commit()
+
+                # 添加操作日志
+                activity = Activity(
+                    project_id=self.current_project.id,
+                    project_outcome_id=outcome.id,
+                    type="成果",
+                    action="新增",
+                    description=f"新增成果: {outcome.name}",
+                    operator="当前用户", # TODO: 获取当前登录用户
+                    related_info=f"类型: {outcome.type.value}, 状态: {outcome.status.value}"
+                )
+                session.add(activity)
+                session.commit() # 提交日志
+
                 self.load_outcome()
                 UIUtils.show_success(self, "成功", "成果添加成功 (请稍后添加附件)")
             except Exception as e:
@@ -809,6 +823,20 @@ class ProjectOutcomeWidget(QWidget):
                 # outcome.remarks = dialog.remarks_edit.text() # Removed remarks update
                 # Note: Attachment path is handled by handle_outcome_attachment
                 session.commit()
+
+                # 添加操作日志
+                activity = Activity(
+                    project_id=self.current_project.id,
+                    project_outcome_id=outcome.id,
+                    type="成果",
+                    action="编辑",
+                    description=f"编辑成果: {outcome.name}",
+                    operator="当前用户", # TODO: 获取当前登录用户
+                    related_info=f"类型: {outcome.type.value}, 状态: {outcome.status.value}"
+                )
+                session.add(activity)
+                session.commit() # 提交日志
+
                 self.load_outcome() # Reload all outcomes
                 UIUtils.show_success(self, "成功", "成果编辑成功")
         except Exception as e: # Catch potential DB errors
@@ -866,7 +894,19 @@ class ProjectOutcomeWidget(QWidget):
 
                         session.delete(outcome)
                         deleted_count += 1
-                session.commit()
+
+                        # 添加操作日志
+                        activity = Activity(
+                            project_id=self.current_project.id,
+                            type="成果",
+                            action="删除",
+                            description=f"删除成果: {outcome.name}",
+                            operator="当前用户", # TODO: 获取当前登录用户
+                            related_info=f"类型: {outcome.type.value}, 状态: {outcome.status.value}"
+                        )
+                        session.add(activity)
+
+                session.commit() # 在循环外部统一提交
                 self.load_outcome() # Reload all outcomes
                 UIUtils.show_success(self, "成功", f"成功删除 {deleted_count} 条成果记录")
             except Exception as e: # Catch potential DB errors

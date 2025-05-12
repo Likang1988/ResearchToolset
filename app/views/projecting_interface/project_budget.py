@@ -790,6 +790,9 @@ class ProjectBudgetWidget(QWidget):
                         session.close()
                         return
 
+                    # 记录旧数据
+                    old_data_str = f"总预算额: {budget.total_amount}"
+
                     budget.total_amount = data['total_amount']
 
                     # 更新或创建预算子项
@@ -807,6 +810,8 @@ class ProjectBudgetWidget(QWidget):
                             )
                             session.add(new_item)
 
+                    # 记录编辑总预算的活动
+                    new_data_str = f"总预算额: {budget.total_amount}"
                     activity = Activity(
                         project_id=self.current_project.id, # Use current_project.id
                         budget_id=budget.id,                 # 添加 budget_id 关联
@@ -814,12 +819,14 @@ class ProjectBudgetWidget(QWidget):
                         action="编辑",                       # 设置 action
                         description="编辑了项目总预算",         # 使用 description
                         operator="系统用户",                 # 修正: 使用 operator
-                        timestamp=datetime.now()             # 保留 timestamp
+                        old_data=old_data_str,
+                        new_data=new_data_str
                     )
                     session.add(activity)
 
                     session.commit()
                     self.load_budgets()
+                    self.budget_updated.emit() # 发射信号
                     UIUtils.show_success(self, "成功", "总预算更新成功")
 
             elif budget_type.startswith(" ") and budget_type.endswith("年度"): # Check with leading space
@@ -880,6 +887,9 @@ class ProjectBudgetWidget(QWidget):
                         )
                         # 不再阻止保存，仅弹出警告
 
+                    # 记录旧数据
+                    old_data_str = f"年度: {year}, 预算额: {budget.total_amount}"
+
                     budget.total_amount = data['total_amount']
 
                     # 更新或创建预算子项
@@ -905,19 +915,23 @@ class ProjectBudgetWidget(QWidget):
                             )
                             session.add(new_item)
 
+                    # 记录编辑年度预算的活动
+                    new_data_str = f"年度: {year}, 预算额: {budget.total_amount}"
                     activity = Activity(
                         project_id=self.current_project.id, # Use current_project.id
                         budget_id=budget.id,                 # 添加 budget_id 关联
                         type="预算",                         # 添加 type
                         action="编辑",                       # 设置 action
-                        description=f"编辑了 {year} 年度预算", # 使用 description
+                        description=f"编辑了项目 {self.current_project.financial_code} 的 {year} 年度预算", # 使用 description
                         operator="系统用户",                 # 修正: 使用 operator
-                        timestamp=datetime.now()             # 保留 timestamp
+                        old_data=old_data_str,
+                        new_data=new_data_str
                     )
                     session.add(activity)
 
                     session.commit()
                     self.load_budgets()
+                    self.budget_updated.emit() # 发射信号
                     UIUtils.show_success(self, "成功", f"{year}年度预算更新成功")
             else:
                  UIUtils.show_warning(self, "警告", "不能直接编辑预算科目，请编辑对应的年度或总预算。")

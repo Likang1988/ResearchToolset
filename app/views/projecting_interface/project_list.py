@@ -295,7 +295,8 @@ class ProjectListWindow(QWidget):
                     type="项目",
                     action="新增",
                     description=f"添加项目：{name} - {financial_code}",
-                    operator="系统用户"
+                    operator="系统用户",
+                    new_data=f"名称: {name}, 财务编号: {financial_code}, 项目编号: {project_code}, 类型: {project_type}, 开始日期: {start_date}, 结束日期: {end_date}, 总经费: {total_budget}, 负责人: {director}"
                 )
                 session.add(activity)
                 
@@ -366,12 +367,17 @@ class ProjectListWindow(QWidget):
                     project.director = dialog.project_director.text().strip() # 保存负责人信息
                     
                     # 记录编辑项目的活动
+                    old_data_str = f"名称: {old_name}, 财务编号: {old_financial_code}, 项目编号: {project.project_code}, 类型: {project.project_type}, 开始日期: {project.start_date}, 结束日期: {project.end_date}, 总经费: {project.total_budget}, 负责人: {project.director}"
+                    new_data_str = f"名称: {project.name}, 财务编号: {project.financial_code}, 项目编号: {project.project_code}, 类型: {project.project_type}, 开始日期: {project.start_date}, 结束日期: {project.end_date}, 总经费: {project.total_budget}, 负责人: {project.director}"
+
                     activity = Activity(
                         project_id=project.id,
                         type="项目",
                         action="编辑",
-                        description=f"编辑项目：{old_name} - {old_financial_code}",
-                        operator="系统用户"
+                        description=f"编辑项目：{project.name} - {project.financial_code}", # 使用新名称和编号
+                        operator="系统用户",
+                        old_data=old_data_str,
+                        new_data=new_data_str
                     )
                     session.add(activity)
                     

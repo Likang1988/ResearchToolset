@@ -8,8 +8,9 @@ from qfluentwidgets import NavigationInterface, TitleLabel, InfoBar, InfoBarPosi
 from qframelesswindow.webengine import FramelessWindow, FramelessWebEngineView
 from app.utils.ui_utils import UIUtils
 # 需要在文件顶部导入
-from app.models.database import Project, sessionmaker
-from app.models.database import sessionmaker, GanttTask, GanttDependency, Project
+from app.models.database import Project, sessionmaker, Activity # Import Activity
+from app.models.database import sessionmaker, GanttTask, GanttDependency, Project, Activity # Import Activity
+from enum import Enum # Import Enum
 import os # 确保导入 os 模块
 import csv
 from io import StringIO # 用于 CSV 写入内存
@@ -440,6 +441,38 @@ class GanttBridge(QObject):
             # --- 事务开始 ---
             # 1. 处理删除的任务
             if deleted_task_ids:
+                # 记录删除的任务
+                for deleted_gantt_id in deleted_task_ids:
+                    task_to_delete = session.query(GanttTask).filter(
+                        GanttTask.project_id == self.project.id,
+                        GanttTask.gantt_id == deleted_gantt_id
+                    ).first()
+                    if task_to_delete:
+                        old_data_str = json.dumps({
+                            "id": task_to_delete.gantt_id,
+                            "name": task_to_delete.name,
+                            "code": task_to_delete.code,
+                            "level": task_to_delete.level,
+                            "status": task_to_delete.status,
+                            "start_date": str(task_to_delete.start_date),
+                            "duration": task_to_delete.duration,
+                            "end_date": str(task_to_delete.end_date),
+                            "progress": task_to_delete.progress,
+                            "responsible": task_to_delete.responsible
+                        }, default=str, ensure_ascii=False)
+
+                        activity = Activity(
+                            project_id=self.project.id,
+                            gantt_task_id=task_to_delete.id, # 关联到数据库中的任务ID
+                            type="任务",
+                            action="删除",
+                            description=f"删除任务：{task_to_delete.name} (ID: {task_to_delete.gantt_id})",
+                            operator="系统用户",
+                            old_data=old_data_str,
+                            related_info=f"项目: {self.project.financial_code}"
+                        )
+                        session.add(activity)
+
                 # 先删除依赖这些任务的记录
                 session.query(GanttDependency).filter(
                     GanttDependency.project_id == self.project.id,
@@ -508,14 +541,108 @@ class GanttBridge(QObject):
                     persistent_gantt_id = str(new_task.id)
                     new_task.gantt_id = persistent_gantt_id
                     new_task_id_map[gantt_id] = persistent_gantt_id
+
+                    # 添加操作日志 (新增任务)
+                    activity = Activity(
+                        project_id=self.project.id,
+                        gantt_task_id=new_task.id, # 关联到新创建的任务ID
+                        type="任务",
+                        action="新增",
+                        description=f"新增任务：{new_task.name} (ID: {new_task.gantt_id})",
+                        operator="系统用户", # TODO: 获取当前登录用户
+                        new_data=json.dumps({
+                            "id": new_task.gantt_id,
+                            "name": new_task.name,
+                            "code": new_task.code,
+                            "level": new_task.level,
+                            "status": new_task.status,
+                            "start_date": str(new_task.start_date),
+                            "duration": new_task.duration,
+                            "end_date": str(new_task.end_date),
+                            "progress": new_task.progress,
+                            "responsible": new_task.responsible
+                        }, default=str, ensure_ascii=False),
+                        related_info=f"项目: {self.project.financial_code}"
+                    )
+                    session.add(activity)
+
                     # print(f"Added new task: {gantt_id} -> {persistent_gantt_id}") # Removed print
                     current_gantt_id = persistent_gantt_id
                     processed_gantt_ids.add(current_gantt_id)
                 elif gantt_id in existing_task_map:
                     # 现有任务：更新数据库
                     existing_task = existing_task_map.pop(gantt_id) # 从map中取出并移除，表示已处理
+
+                    # 记录旧数据
+                    old_data = {
+                        "id": existing_task.gantt_id,
+                        "name": existing_task.name,
+                        "code": existing_task.code,
+                        "level": existing_task.level,
+                        "status": existing_task.status,
+                        "start_date": str(existing_task.start_date),
+                        "duration": existing_task.duration,
+                        "end_date": str(existing_task.end_date),
+                        "progress": existing_task.progress,
+                        "responsible": existing_task.responsible
+                    }
+                    old_data_str = json.dumps(old_data, default=str, ensure_ascii=False)
+
+
+                    # 检查数据是否有变化
+                    data_changed = False
                     for key, value in task_obj_data.items():
-                        setattr(existing_task, key, value)
+                        # 比较新旧数据，注意处理日期和枚举类型
+                        old_value = getattr(existing_task, key)
+                        if isinstance(old_value, datetime) and isinstance(value, datetime):
+                            if old_value.replace(tzinfo=None) != value.replace(tzinfo=None): # 忽略时区比较
+                                data_changed = True
+                                break
+                        elif isinstance(old_value, Enum) and isinstance(value, Enum):
+                             if old_value != value:
+                                 data_changed = True
+                                 break
+                        elif old_value != value:
+                            data_changed = True
+                            break
+
+                    if data_changed:
+                        for key, value in task_obj_data.items():
+                            setattr(existing_task, key, value)
+
+                        # 记录新数据
+                        new_data = {
+                            "id": existing_task.gantt_id,
+                            "name": existing_task.name,
+                            "code": existing_task.code,
+                            "level": existing_task.level,
+                            "status": existing_task.status,
+                            "start_date": str(existing_task.start_date),
+                            "duration": existing_task.duration,
+                            "end_date": str(existing_task.end_date),
+                            "progress": existing_task.progress,
+                            "responsible": existing_task.responsible
+                        }
+                        new_data_str = json.dumps(new_data, default=str, ensure_ascii=False)
+
+                        # 添加操作日志 (编辑任务)
+                        activity = Activity(
+                            project_id=self.project.id,
+                            gantt_task_id=existing_task.id, # 关联到数据库中的任务ID
+                            type="任务",
+                            action="编辑",
+                            description=f"编辑任务：{existing_task.name} (ID: {existing_task.gantt_id})",
+                            operator="系统用户", # TODO: 获取当前登录用户
+                            old_data=old_data_str,
+                            new_data=new_data_str,
+                            related_info=f"项目: {self.project.financial_code}"
+                        )
+                        session.add(activity)
+                        # print(f"Recorded edit for task: {gantt_id}") # Added print for debugging
+                    # else:
+                        # print(f"Task data for {gantt_id} unchanged, no edit log recorded.") # Added print for debugging
+
+
                     # print(f"Updated task: {gantt_id}") # Removed print
                     current_gantt_id = gantt_id
                     processed_gantt_ids.add(current_gantt_id)
@@ -525,6 +652,31 @@ class GanttBridge(QObject):
                     try:
                         session.add(new_task)
                         session.flush()
+
+                        # 添加操作日志 (新增任务 - 持久化ID)
+                        activity = Activity(
+                            project_id=self.project.id,
+                            gantt_task_id=new_task.id, # 关联到新创建的任务ID
+                            type="任务",
+                            action="新增",
+                            description=f"新增任务：{new_task.name} (ID: {new_task.gantt_id})",
+                            operator="系统用户", # TODO: 获取当前登录用户
+                            new_data=json.dumps({
+                                "id": new_task.gantt_id,
+                                "name": new_task.name,
+                                "code": new_task.code,
+                                "level": new_task.level,
+                                "status": new_task.status,
+                                "start_date": str(new_task.start_date),
+                                "duration": new_task.duration,
+                                "end_date": str(new_task.end_date),
+                                "progress": new_task.progress,
+                                "responsible": new_task.responsible
+                            }, default=str, ensure_ascii=False),
+                            related_info=f"项目: {self.project.financial_code}"
+                        )
+                        session.add(activity)
+
                         # print(f"Inserted task with provided persistent id: {gantt_id}") # Removed print
                         current_gantt_id = gantt_id
                         processed_gantt_ids.add(current_gantt_id)

@@ -44,7 +44,7 @@ class UIUtils:
         """)
         
         # 设置表格基本属性
-        table.setWordWrap(False)
+        table.setWordWrap(False) 
         
         # 设置表头属性
         header = table.horizontalHeader()

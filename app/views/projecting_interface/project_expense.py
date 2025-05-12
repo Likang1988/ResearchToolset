@@ -766,6 +766,7 @@ class ProjectExpenseWidget(QWidget):
                             'date': str(expense.date)
                         }
 
+                        # 添加活动记录 (在删除前记录)
                         activity = Activity(
                             project_id=self.project.id,
                             budget_id=self.budget.id,

@@ -21,7 +21,7 @@ class HelpInterface(ScrollArea):
         self.scrollWidget = QWidget()
         self.expandLayout = QVBoxLayout(self.scrollWidget)
         self.expandLayout.setContentsMargins(16, 16, 16, 16)  # 设置边距
-        self.expandLayout.setSpacing(16)  # 设置内容组之间的间距
+        self.expandLayout.setSpacing(5)  # 设置内容组之间的间距
         
         # 创建软件简介内容组
         self.readmeGroup = ExpandGroupSettingCard(FluentIcon.DOCUMENT, "软件简介", "", self.scrollWidget)
@@ -178,7 +178,7 @@ class HelpInterface(ScrollArea):
         
 
         
-        self.readmeGroup.addGroupWidget(readme_card)
+
         
         # 创建帮助内容组
         self.helpGroup = ExpandGroupSettingCard(FluentIcon.HELP, "使用帮助", "", self.scrollWidget)
@@ -252,15 +252,38 @@ class HelpInterface(ScrollArea):
         self.log_table = QTableWidget(self.logGroup)
         self.log_table.setColumnCount(6) # Adjust column count as needed
         self.log_table.setHorizontalHeaderLabels(["时间", "类型", "动作", "描述", "操作人", "相关信息"]) # Adjust headers
-        self.log_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch) # Stretch columns
+        
+        header = self.log_table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.Interactive) # Allow interactive resizing
+        
+        # Set initial column widths
+        header.resizeSection(0, 150) # 时间
+        header.resizeSection(1, 80)  # 类型
+        header.resizeSection(2, 80)  # 动作
+        header.resizeSection(3, 300) # 描述
+        header.resizeSection(4, 100) # 操作人
+        header.resizeSection(5, 200) # 相关信息 (可以根据内容调整)
+
+        header.setStretchLastSection(True) # Stretch the last section to fill remaining space
+
         self.log_table.verticalHeader().setVisible(False) # Hide row numbers
         self.log_table.setEditTriggers(QTableWidget.NoEditTriggers) # Make table read-only
         self.log_table.setSelectionBehavior(QTableWidget.SelectRows) # Select entire rows
         self.log_table.setSelectionMode(QTableWidget.SingleSelection) # Allow single row selection
 
+        # Set minimum height to show approximately 10 rows + header
+        # Assuming default row height is around 20-25 pixels and header height is around 25-30 pixels
+        row_height = self.log_table.verticalHeader().defaultSectionSize() # Get default row height
+        header_height = self.log_table.horizontalHeader().height() # Get header height
+        min_table_height = header_height + (row_height * 10) # Calculate height for 10 rows
+        self.log_table.setMinimumHeight(min_table_height)
+
         self.logGroup.addGroupWidget(self.log_table)
         self.expandLayout.addWidget(self.logGroup)
         
+        # 添加垂直伸缩器，将内容顶到顶部
+        self.expandLayout.addStretch()
+
         # 设置滚动区域
         self.setWidget(self.scrollWidget)
         self.setWidgetResizable(True)

@@ -115,7 +115,11 @@ class Activity(Base):
     project_id = Column(Integer, ForeignKey('projects.id'), nullable=True)
     budget_id = Column(Integer, ForeignKey('budgets.id'), nullable=True)
     expense_id = Column(Integer, ForeignKey('expenses.id'), nullable=True)
-    type = Column(String(50), nullable=False)  # 操作类型：项目/预算/支出
+    gantt_task_id = Column(Integer, ForeignKey('gantt_tasks.id'), nullable=True) # 添加甘特图任务外键
+    project_document_id = Column(Integer, ForeignKey('project_documents.id'), nullable=True) # 添加项目文档外键
+    project_outcome_id = Column(Integer, ForeignKey('project_outcome.id'), nullable=True) # 添加项目成果外键，修正表名为 'project_outcome'
+
+    type = Column(String(50), nullable=False)  # 操作类型：项目/预算/支出/任务/文档/成果
     action = Column(String(50), nullable=False)  # 操作：新增/编辑/删除
     description = Column(String(200), nullable=False)  # 操作描述
     operator = Column(String(50), nullable=False)  # 操作人
@@ -131,6 +135,9 @@ class Activity(Base):
     project = relationship("Project", backref="activities")
     budget = relationship("Budget", backref="activities")
     expense = relationship("Expense", backref="activities")
+    gantt_task = relationship("GanttTask", backref="activities") # 添加关系
+    project_document = relationship("ProjectDocument", backref="activities") # 添加关系
+    project_outcome = relationship("ProjectOutcome", backref="activities") # 添加关系
 
 
 class Expense(Base):
@@ -366,17 +373,23 @@ def migrate_db(engine):
                 'new_data' not in columns or
                 'category' not in columns or
                 'amount' not in columns or
-                'related_info' not in columns
+                'related_info' not in columns or
+                'gantt_task_id' not in columns or # 检查新字段
+                'project_document_id' not in columns or # 检查新字段
+                'project_outcome_id' not in columns # 检查新字段
             )
             
             if needs_migration:
-                # 创建临时表，包含所有新字段
+                # 创建临时表，包含所有新字段和外键
                 connection.execute(text("""
                     CREATE TABLE activities_temp (
                         id INTEGER PRIMARY KEY,
                         project_id INTEGER,
                         budget_id INTEGER,
                         expense_id INTEGER,
+                        gantt_task_id INTEGER,     -- 新增字段
+                        project_document_id INTEGER, -- 新增字段
+                        project_outcome_id INTEGER,  -- 新增字段
                         type TEXT NOT NULL,
                         action TEXT NOT NULL,
                         description TEXT NOT NULL,
@@ -386,20 +399,29 @@ def migrate_db(engine):
                         new_data TEXT,
                         category TEXT,
                         amount FLOAT,
-                        related_info TEXT
+                        related_info TEXT,
+                        FOREIGN KEY(project_id) REFERENCES projects (id),
+                        FOREIGN KEY(budget_id) REFERENCES budgets (id),
+                        FOREIGN KEY(expense_id) REFERENCES expenses (id),
+                        FOREIGN KEY(gantt_task_id) REFERENCES gantt_tasks (id),
+                        FOREIGN KEY(project_document_id) REFERENCES project_documents (id),
+                        FOREIGN KEY(project_outcome_id) REFERENCES project_outcomes (id)
                     )
                 """))
                 
+                # 复制数据到临时表，为新字段插入 NULL
                 connection.execute(text("""
                     INSERT INTO activities_temp (
                         id, project_id, budget_id, expense_id, type,
                         action, description, operator, timestamp,
-                        old_data, new_data, category, amount, related_info
+                        old_data, new_data, category, amount, related_info,
+                        gantt_task_id, project_document_id, project_outcome_id
                     )
-                    SELECT 
+                    SELECT
                         id, project_id, budget_id, expense_id, type,
                         action, description, operator, datetime(timestamp),
-                        NULL, NULL, NULL, NULL, NULL
+                        old_data, new_data, category, amount, related_info,
+                        NULL, NULL, NULL -- 为新字段插入 NULL
                     FROM activities
                 """))
                 
@@ -412,6 +434,8 @@ def migrate_db(engine):
                 # 提交事务
                 transaction.commit()
                 print("成功更新activities表结构，添加了新字段并修正了timestamp列类型")
+            else:
+                 print("activities 表结构无需更新") # 添加无需更新的提示
         
     except Exception as e:
         print(f"数据库迁移失败: {str(e)}")
@@ -426,6 +450,8 @@ def migrate_db(engine):
                 connection.execute(text("ALTER TABLE project_outcomes ADD COLUMN attachment_path VARCHAR(500)"))
                 transaction.commit() # Commit this specific change
                 print("成功添加 attachment_path 列到 project_outcomes 表")
+            else:
+                 print("project_outcomes 表结构无需更新") # 添加无需更新的提示
     except Exception as e:
         print(f"迁移 project_outcomes 表失败: {e}")
 
