@@ -9,6 +9,25 @@ from PySide6.QtCore import QDateTime # Import QDateTime for timestamp
 from sqlalchemy import func # Import func for database queries
 from ..models.database import sessionmaker, Activity # Import sessionmaker and Activity model
 from datetime import datetime # Import datetime
+import json # Import json for data comparison
+
+def find_diff(old_dict, new_dict):
+    """Compares two dictionaries and returns a dictionary with differing values."""
+    diff = {}
+    if old_dict is None and new_dict is None:
+        return diff
+    elif old_dict is None:
+        return new_dict
+    elif new_dict is None:
+        return old_dict
+
+    all_keys = set(old_dict.keys()) | set(new_dict.keys())
+    for key in all_keys:
+        old_value = old_dict.get(key)
+        new_value = new_dict.get(key)
+        if old_value != new_value:
+            diff[key] = {"old": old_value, "new": new_value}
+    return diff
 
 class HelpInterface(ScrollArea):
     def __init__(self, engine=None): # Accept engine as parameter
@@ -250,8 +269,8 @@ class HelpInterface(ScrollArea):
 
         # 创建操作日志表格
         self.log_table = QTableWidget(self.logGroup)
-        self.log_table.setColumnCount(6) # Adjust column count as needed
-        self.log_table.setHorizontalHeaderLabels(["时间", "类型", "动作", "描述", "操作人", "相关信息"]) # Adjust headers
+        self.log_table.setColumnCount(7) # Adjust column count as needed
+        self.log_table.setHorizontalHeaderLabels(["时间", "类型", "动作", "描述", "相关信息", "原数据", "新数据"]) # Adjust headers
         
         header = self.log_table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.Interactive) # Allow interactive resizing
@@ -260,9 +279,10 @@ class HelpInterface(ScrollArea):
         header.resizeSection(0, 150) # 时间
         header.resizeSection(1, 80)  # 类型
         header.resizeSection(2, 80)  # 动作
-        header.resizeSection(3, 300) # 描述
-        header.resizeSection(4, 100) # 操作人
-        header.resizeSection(5, 200) # 相关信息 (可以根据内容调整)
+        header.resizeSection(3, 200) # 描述
+        header.resizeSection(4, 150) # 相关信息 (可以根据内容调整)
+        header.resizeSection(5, 200) # 原数据
+        header.resizeSection(6, 200) # 新数据
 
         header.setStretchLastSection(True) # Stretch the last section to fill remaining space
 
@@ -334,13 +354,29 @@ class HelpInterface(ScrollArea):
                 description_item = QTableWidgetItem(activity.description)
                 self.log_table.setItem(row, 3, description_item)
 
-                # 操作人
-                operator_item = QTableWidgetItem(activity.operator)
-                self.log_table.setItem(row, 4, operator_item)
-
                 # 相关信息
                 related_info_item = QTableWidgetItem(activity.related_info or "") # Handle None
-                self.log_table.setItem(row, 5, related_info_item)
+                self.log_table.setItem(row, 4, related_info_item)
+
+                # 原数据 和 新数据 (显示差异)
+                old_data = json.loads(activity.old_data) if activity.old_data else {}
+                new_data = json.loads(activity.new_data) if activity.new_data else {}
+                
+                diff = find_diff(old_data, new_data)
+                
+                old_diff_text = ""
+                new_diff_text = ""
+                
+                for key, values in diff.items():
+                    old_diff_text += f"{key}: {values.get('old')}\n"
+                    new_diff_text += f"{key}: {values.get('new')}\n"
+
+                old_data_item = QTableWidgetItem(old_diff_text.strip())
+                self.log_table.setItem(row, 5, old_data_item)
+
+                new_data_item = QTableWidgetItem(new_diff_text.strip())
+                self.log_table.setItem(row, 6, new_data_item)
+
 
         except Exception as e:
             print(f"加载操作日志失败: {e}") # Print error for now
