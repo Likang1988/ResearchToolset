@@ -333,14 +333,14 @@ class HomeInterface(QWidget):
                 for i, task in enumerate(tasks):
                     row = i + 1 # Start from row 1
                     task_code_value = QLabel(task.code if task.code else str(i + 1))
-                    task_code_value.setStyleSheet("font-size: 16px;")
+                    task_code_value.setStyleSheet("font-size: 16px; font-weight: bold;")
                     card_content_layout.addWidget(task_code_value, row, 2, alignment=Qt.AlignCenter)
 
                     task_name_value = QLabel(task.name)
-                    task_name_value.setStyleSheet("font-size: 16px;")
+                    task_name_value.setStyleSheet("font-size: 16px; font-weight: bold;")
                     card_content_layout.addWidget(task_name_value, row, 3, alignment=Qt.AlignCenter)
 
-                    task_progress_value = QLabel(f"{task.progress:.0f}%")
+                    task_progress_value = QLabel(f"{task.progress:.2f}<span style='font-size: 14px; font-weight: normal;'> %</span>")
                     task_progress_value.setStyleSheet("font-size: 16px; font-weight: bold;")
                     card_content_layout.addWidget(task_progress_value, row, 4, alignment=Qt.AlignCenter)
 
