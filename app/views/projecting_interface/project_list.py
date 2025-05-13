@@ -147,11 +147,11 @@ class ProjectListWindow(QWidget):
         try:
             projects = session.query(Project).order_by(Project.id.asc()).all()
             
+            # 设置表格行数
+            self.project_table.setRowCount(len(projects))
+
             # 填充表格数据
-            for idx, project in enumerate(projects, 1):
-                row_position = self.project_table.rowCount()
-                self.project_table.insertRow(row_position)
-                
+            for row_position, project in enumerate(projects):
                 # 添加项目信息
                 item = QTableWidgetItem(project.financial_code)
                 item.setData(Qt.UserRole, project.id)  # 存储项目ID

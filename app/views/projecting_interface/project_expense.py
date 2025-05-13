@@ -293,10 +293,13 @@ class ProjectExpenseWidget(QWidget):
     def _populate_table(self, expenses_list):
         """根据给定的支出列表填充表格"""
         self.expense_table.setSortingEnabled(False) # Disable sorting during population
-        self.expense_table.setRowCount(0) # Clear table first
+        # self.expense_table.setRowCount(0) # Remove clearing here
+
+        # Set the row count based on the number of expenses
+        self.expense_table.setRowCount(len(expenses_list))
 
         for row, expense in enumerate(expenses_list):
-            self.expense_table.insertRow(row)
+            # self.expense_table.insertRow(row) # Remove insertRow
 
             id_item = QTableWidgetItem(str(expense.id))
             id_item.setTextAlignment(Qt.AlignCenter)

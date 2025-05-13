@@ -244,6 +244,8 @@ class ProjectDocumentWidget(QWidget):
         selector_layout = QHBoxLayout()
         selector_label = TitleLabel("项目文档-", self)
         self.project_selector = UIUtils.create_project_selector(self.engine, self)
+        # 手动添加“全部数据”选项
+        self.project_selector.insertItem(0, "全部文档", userData="all")
         selector_layout.addWidget(selector_label)
         selector_layout.addWidget(self.project_selector)
         selector_layout.addStretch()
@@ -342,9 +344,13 @@ class ProjectDocumentWidget(QWidget):
 
     def _on_project_selected(self, index):
         """Handles project selection change."""
-        selected_project = self.project_selector.itemData(index)
-        if selected_project and isinstance(selected_project, Project):
-            self.current_project = selected_project
+        selected_data = self.project_selector.itemData(index)
+        if selected_data == "all":
+            self.current_project = None # Set current_project to None for "全部数据"
+            print("DocumentWidget: '全部数据' selected.")
+            self.load_documents(load_all=True) # Load all documents
+        elif selected_data and isinstance(selected_data, Project):
+            self.current_project = selected_data
             print(f"DocumentWidget: Project selected - {self.current_project.name}")
             self.load_documents() # Load documents for the selected project
         else:
@@ -352,24 +358,31 @@ class ProjectDocumentWidget(QWidget):
             self.document_table.setRowCount(0) # Clear table if no project selected
             print("DocumentWidget: No valid project selected.")
 
-    def load_documents(self):
-        """Loads all documents for the current project into memory and populates the table."""
+    def load_documents(self, load_all=False):
+        """Loads documents into memory and populates the table.
+           If load_all is True, loads documents for all projects.
+           Otherwise, loads documents for the current project.
+        """
         self.all_documents = []
         self.current_documents = []
         self.document_table.setRowCount(0)
-        if not self.current_project:
-            print("DocumentWidget: No project selected, cannot load documents.")
-            return
 
-        # Use the stored engine
         Session = sessionmaker(bind=self.engine)
         session = Session()
 
         try:
-            print(f"DocumentWidget: Loading documents for project ID: {self.current_project.id}")
-            self.all_documents = session.query(ProjectDocument).filter(
-                ProjectDocument.project_id == self.current_project.id
-            ).order_by(ProjectDocument.upload_time.desc()).all()
+            if load_all:
+                print("DocumentWidget: Loading all documents.")
+                self.all_documents = session.query(ProjectDocument).order_by(ProjectDocument.upload_time.desc()).all()
+            elif self.current_project:
+                print(f"DocumentWidget: Loading documents for project ID: {self.current_project.id}")
+                self.all_documents = session.query(ProjectDocument).filter(
+                    ProjectDocument.project_id == self.current_project.id
+                ).order_by(ProjectDocument.upload_time.desc()).all()
+            else:
+                print("DocumentWidget: No project selected and load_all is False, cannot load documents.")
+                return
+
             self.current_documents = self.all_documents[:] # Initial view shows all
             self._populate_table(self.current_documents)
         finally:
@@ -378,10 +391,13 @@ class ProjectDocumentWidget(QWidget):
     def _populate_table(self, documents_list):
         """Populates the table based on the provided list of ProjectDocument objects."""
         self.document_table.setSortingEnabled(False)
-        self.document_table.setRowCount(0)
+        # self.document_table.setRowCount(0) # Remove clearing here
+
+        # Set the row count based on the number of documents
+        self.document_table.setRowCount(len(documents_list))
 
         for row, doc in enumerate(documents_list):
-            self.document_table.insertRow(row)
+            # self.document_table.insertRow(row) # Remove insertRow
 
             # Col 0: Name
             name_item = QTableWidgetItem(doc.name)

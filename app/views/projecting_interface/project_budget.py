@@ -311,10 +311,10 @@ class ProjectBudgetWidget(QWidget):
             # 根据平台调整字号
             if sys.platform == 'darwin':  # macOS
                 current_size = font.pointSize()
-                font.setPointSize(current_size + 1 if current_size > 0 else QApplication.font().pointSize() + 1) # Use default app font size + 1 if item font size is invalid
+                font.setPointSize(current_size + 1 if current_size > 0 else 10) # Use a default size of 10 if item font size is invalid
             else:  # Windows/Linux
                 current_size = font.pointSize()
-                font.setPointSize(current_size if current_size > 0 else QApplication.font().pointSize()) # Use default app font size if item font size is invalid
+                font.setPointSize(current_size if current_size > 0 else 10) # Use a default size of 10 if item font size is invalid
 
             font.setBold(True)
             for i in range(6):  # 设置所有列的字体为加粗

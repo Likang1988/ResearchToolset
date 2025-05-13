@@ -255,6 +255,8 @@ class ProjectOutcomeWidget(QWidget):
         selector_layout = QHBoxLayout()
         selector_label = TitleLabel("项目成果-", self)
         self.project_selector = UIUtils.create_project_selector(self.engine, self)
+        # 手动添加“全部数据”选项
+        self.project_selector.insertItem(0, "全部成果", userData="all")
         selector_layout.addWidget(selector_label)
         selector_layout.addWidget(self.project_selector)
         selector_layout.addStretch()
@@ -361,9 +363,13 @@ class ProjectOutcomeWidget(QWidget):
 
     def _on_project_selected(self, index):
         """Handles project selection change."""
-        selected_project = self.project_selector.itemData(index)
-        if selected_project and isinstance(selected_project, Project):
-            self.current_project = selected_project
+        selected_data = self.project_selector.itemData(index)
+        if selected_data == "all":
+            self.current_project = None # Set current_project to None for "全部数据"
+            print("OutcomeWidget: '全部数据' selected.")
+            self.load_outcome(load_all=True) # Load all outcomes
+        elif selected_data and isinstance(selected_data, Project):
+            self.current_project = selected_data
             print(f"OutcomeWidget: Project selected - {self.current_project.name}")
             self.load_outcome() # Load outcome for the selected project
         else:
@@ -371,24 +377,31 @@ class ProjectOutcomeWidget(QWidget):
             self.outcome_table.setRowCount(0) # Clear table if no project selected
             print("OutcomeWidget: No valid project selected.")
 
-    def load_outcome(self):
-        """Loads all outcomes for the current project into memory and populates the table."""
+    def load_outcome(self, load_all=False):
+        """Loads outcomes into memory and populates the table.
+           If load_all is True, loads outcomes for all projects.
+           Otherwise, loads outcomes for the current project.
+        """
         self.all_outcomes = []
         self.current_outcomes = []
         self.outcome_table.setRowCount(0) # Clear table first
-        if not self.current_project:
-            print("OutcomeWidget: No project selected, cannot load outcome.")
-            return
 
-        # Use the stored engine
         Session = sessionmaker(bind=self.engine)
         session = Session()
 
         try:
-            print(f"OutcomeWidget: Loading outcome for project ID: {self.current_project.id}")
-            self.all_outcomes = session.query(ProjectOutcome).filter(
-                ProjectOutcome.project_id == self.current_project.id
-            ).order_by(ProjectOutcome.publish_date.desc()).all() # Order by publish date
+            if load_all:
+                print("OutcomeWidget: Loading all outcomes.")
+                self.all_outcomes = session.query(ProjectOutcome).order_by(ProjectOutcome.publish_date.desc()).all()
+            elif self.current_project:
+                print(f"OutcomeWidget: Loading outcome for project ID: {self.current_project.id}")
+                self.all_outcomes = session.query(ProjectOutcome).filter(
+                    ProjectOutcome.project_id == self.current_project.id
+                ).order_by(ProjectOutcome.publish_date.desc()).all() # Order by publish date
+            else:
+                print("OutcomeWidget: No project selected and load_all is False, cannot load outcome.")
+                return
+
             self.current_outcomes = self.all_outcomes[:] # Initial view shows all
             self._populate_table(self.current_outcomes)
         except Exception as e:
@@ -400,10 +413,13 @@ class ProjectOutcomeWidget(QWidget):
     def _populate_table(self, outcomes_list):
         """Populates the table based on the provided list of ProjectOutcome objects."""
         self.outcome_table.setSortingEnabled(False) # Disable sorting during population
-        self.outcome_table.setRowCount(0) # Clear table first
+        # self.outcome_table.setRowCount(0) # Remove clearing here
+
+        # Set the row count based on the number of outcomes
+        self.outcome_table.setRowCount(len(outcomes_list))
 
         for row, outcome in enumerate(outcomes_list):
-            self.outcome_table.insertRow(row)
+            # self.outcome_table.insertRow(row) # Remove insertRow
 
             # --- Populate Cells ---
             # Col 0: Name

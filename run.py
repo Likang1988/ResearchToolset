@@ -18,9 +18,9 @@ def main():
     # 设置字体
     font = QFont('Microsoft YaHei')
     if is_mac:
-        font.setPixelSize(12)  # macOS下使用稍大的字号
+        font.setPixelSize(12)  
     elif is_windows:
-        font.setPixelSize(12)  # Windows下使用正常字号
+        font.setPixelSize(12)  
     app.setFont(font)
     
     # 设置日志

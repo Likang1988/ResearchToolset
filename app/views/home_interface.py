@@ -63,7 +63,7 @@ class HomeInterface(QWidget):
             self.background_label.setPixmap(pixmap)
             self.background_label.setScaledContents(True)
         else:
-            print(f"背景图片不存在: {bg_path}")
+            pass # 背景图片不存在，不打印信息
 
         # 设置背景标签的大小和位置
         self.background_label.setGeometry(0, 0, self.width(), 340)
@@ -165,6 +165,15 @@ class HomeInterface(QWidget):
 
         try:
             projects = session.query(Project).all()
+
+            # 如果没有项目，显示提示信息
+            if not projects:
+                no_project_label = BodyLabel("暂无项目经费信息")
+                no_project_label.setAlignment(Qt.AlignCenter)
+                self.project_layout.addWidget(no_project_label)
+                return # 退出方法，不再处理项目卡片
+
+            # 如果有项目，继续现有逻辑
             for project in projects:
                 card = CardWidget()
                 card.setFixedHeight(80)  # 设置卡片高度
@@ -257,7 +266,7 @@ class HomeInterface(QWidget):
     def load_tasks(self):
         """加载并显示项目进度概览"""
         if not self.engine:
-            print("数据库引擎未初始化，无法加载项目任务。")
+            # 数据库引擎未初始化，不打印信息
             return
 
         Session = sessionmaker(bind=self.engine)
@@ -265,7 +274,6 @@ class HomeInterface(QWidget):
 
         try:
             # 查询所有一级甘特图任务 (level == 0)，并按项目分组
-            print("正在查询一级项目任务并按项目分组...")
             # 使用 group_by 和 order_by 来按项目分组并保持一致的顺序
             tasks_by_project = session.query(GanttTask).filter(GanttTask.level == 0).order_by(GanttTask.project_id).all()
 
@@ -276,13 +284,12 @@ class HomeInterface(QWidget):
                     item.widget().deleteLater()
 
             if not tasks_by_project:
-                print("没有找到一级项目任务，显示提示信息。")
-                no_task_label = BodyLabel("暂无项目任务信息。")
+                no_task_label = BodyLabel("暂无项目任务信息")
                 no_task_label.setAlignment(Qt.AlignCenter)
                 self.task_layout.addWidget(no_task_label)
                 return
 
-            print("正在创建项目进度卡片...")
+            # 正在创建项目进度卡片...
 
             # 按项目ID分组任务
             grouped_tasks = defaultdict(list)
@@ -353,15 +360,14 @@ class HomeInterface(QWidget):
 
                 self.task_layout.addWidget(card)
 
-            print("项目进度卡片创建完成。")
+            # 项目进度卡片创建完成。
 
         except Exception as e:
-            print(f"加载项目任务失败: {e}")
-            import traceback
-            traceback.print_exc() # 打印详细的异常信息
+            # 加载项目任务失败，不打印详细异常信息
+            pass
         finally:
             session.close()
-            print("数据库会话已关闭。")
+            # 数据库会话已关闭。
 
     def open_project_progress(self, project):
         """打开项目进度界面并加载项目数据"""
@@ -383,7 +389,7 @@ class HomeInterface(QWidget):
                 if hasattr(progress_interface, 'load_project_by_object'):
                     progress_interface.load_project_by_object(project) # Pass the project object
                 else:
-                    print("警告: ProjectProgressWidget 没有 load_project_by_object 方法。") # Warning if method not found
+                    pass # Warning if method not found, do not print
 
     def open_project_budget(self, project):
         # 获取主窗口实例
