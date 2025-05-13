@@ -1,9 +1,9 @@
 import os # Ensure os is imported
 import shutil # Add shutil
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidgetItem, QDialog, QHeaderView, QFileDialog, QApplication 
-from PySide6.QtCore import Qt, QPoint 
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTableWidgetItem, QDialog, QHeaderView, QFileDialog, QApplication 
+from PySide6.QtCore import Qt, QPoint, QDate 
 from PySide6.QtGui import QIcon 
-from qfluentwidgets import TitleLabel, FluentIcon, LineEdit, ComboBox, DateEdit, BodyLabel, PushButton, TableWidget, TableItemDelegate, Dialog, RoundMenu, Action, PlainTextEdit
+from qfluentwidgets import TitleLabel, FluentIcon, LineEdit, ComboBox, DateEdit, CompactDateEdit, BodyLabel, PushButton, TableWidget, TableItemDelegate, Dialog, RoundMenu, Action, PlainTextEdit
 from ...utils.ui_utils import UIUtils
 from ...models.database import Project, Base, sessionmaker, Activity # Import Activity
 from sqlalchemy.orm import sessionmaker
@@ -340,6 +340,25 @@ class ProjectOutcomeWidget(QWidget):
             self.status_filter.addItem(status_enum.value)
         self.status_filter.currentTextChanged.connect(self.apply_filters) # Connect to apply_filters
         search_layout.addWidget(self.status_filter)
+        
+        # 日期范围筛选
+        search_layout.addWidget(QLabel("发表/授权日期:"))
+        self.start_date = CompactDateEdit()
+        self.end_date = CompactDateEdit()
+        # 设置默认日期范围
+        if self.current_project:
+            start_qdate = QDate(self.current_project.start_date.year, self.current_project.start_date.month, self.current_project.start_date.day)
+            self.start_date.setDate(start_qdate)
+        else:
+            self.start_date.setDate(QDate(QDate.currentDate().year() - 1, 1, 1))  # 默认为当前年份的前一年1月1日
+        self.end_date.setDate(QDate.currentDate())
+        
+        self.start_date.dateChanged.connect(self.apply_filters)
+        self.end_date.dateChanged.connect(self.apply_filters)
+        
+        search_layout.addWidget(self.start_date)
+        search_layout.addWidget(QLabel("至"))
+        search_layout.addWidget(self.end_date)
 
         # Add reset button
         reset_btn = PushButton("重置筛选")
@@ -366,16 +385,16 @@ class ProjectOutcomeWidget(QWidget):
         selected_data = self.project_selector.itemData(index)
         if selected_data == "all":
             self.current_project = None # Set current_project to None for "全部数据"
-            print("OutcomeWidget: '全部数据' selected.")
+            UIUtils.show_success(self, "项目成果", "'全部成果' 已选择")
             self.load_outcome(load_all=True) # Load all outcomes
         elif selected_data and isinstance(selected_data, Project):
             self.current_project = selected_data
-            print(f"OutcomeWidget: Project selected - {self.current_project.name}")
+            UIUtils.show_success(self, "项目成果", f"项目已选择: {self.current_project.name}")
             self.load_outcome() # Load outcome for the selected project
         else:
             self.current_project = None
             self.outcome_table.setRowCount(0) # Clear table if no project selected
-            print("OutcomeWidget: No valid project selected.")
+            UIUtils.show_info(self, "项目成果", "请选择一个项目以查看成果")
 
     def load_outcome(self, load_all=False):
         """Loads outcomes into memory and populates the table.
@@ -490,26 +509,32 @@ class ProjectOutcomeWidget(QWidget):
         self.outcome_table.setSortingEnabled(True) # Re-enable sorting
 
     def apply_filters(self):
-        """Applies filters based on search keyword, type, and status using FilterUtils."""
+        """Applies filters based on search keyword, type, status, and date range using FilterUtils."""
         if not self.all_outcomes: # Don't filter if nothing is loaded
              return
 
         keyword = self.search_edit.text() # Keep original case, FilterUtils handles lowercasing
         outcome_type_filter = self.type_filter.currentText()
         outcome_status_filter = self.status_filter.currentText()
+        
+        # 获取日期范围
+        start_date = self.start_date.date().toPython() if self.start_date.date() else None
+        end_date = self.end_date.date().toPython() if self.end_date.date() else None
 
         filter_criteria = {
             'keyword': keyword,
             'keyword_attributes': ['name', 'authors', 'journal', 'description'], # Removed 'remarks'
             'outcome_type': outcome_type_filter,
-            'status': outcome_status_filter
-            # No date or amount range here
+            'status': outcome_status_filter,
+            'start_date': start_date,
+            'end_date': end_date
         }
 
         # Define how filter keys map to ProjectOutcome object attributes
         attribute_mapping = {
             'outcome_type': 'type', # Filter key 'outcome_type' maps to ProjectOutcome.type
-            'status': 'status'      # Filter key 'status' maps to ProjectOutcome.status
+            'status': 'status',     # Filter key 'status' maps to ProjectOutcome.status
+            'date': 'publish_date'  # 使用发表/授权日期进行筛选
         }
 
         # Apply filters using FilterUtils
@@ -521,12 +546,44 @@ class ProjectOutcomeWidget(QWidget):
 
         # Update the table with filtered data
         self._populate_table(self.current_outcomes)
+        
+    def reset_filters(self):
+        """重置所有筛选条件到默认值"""
+        # 重置搜索框
+        self.search_edit.clear()
+        
+        # 重置类型筛选
+        self.type_filter.setCurrentIndex(0)  # 设置为"全部类型"
+        
+        # 重置状态筛选
+        self.status_filter.setCurrentIndex(0)  # 设置为"全部状态"
+        
+        # 重置日期范围
+        if self.current_project:
+            start_qdate = QDate(self.current_project.start_date.year, self.current_project.start_date.month, self.current_project.start_date.day)
+            self.start_date.setDate(start_qdate)
+        else:
+            self.start_date.setDate(QDate(QDate.currentDate().year() - 1, 1, 1))  # 默认为当前年份的前一年1月1日
+        self.end_date.setDate(QDate.currentDate())
+        
+        # 重新加载所有数据
+        self.current_outcomes = self.all_outcomes[:]
+        self._populate_table(self.current_outcomes)
 
     def reset_filters(self):
         """Resets all filter inputs and reapplies filters."""
         self.search_edit.clear()
         self.type_filter.setCurrentText("全部类型")
         self.status_filter.setCurrentText("全部状态")
+        
+        # 重置日期范围
+        if self.current_project:
+            start_qdate = QDate(self.current_project.start_date.year, self.current_project.start_date.month, self.current_project.start_date.day)
+            self.start_date.setDate(start_qdate)
+        else:
+            self.start_date.setDate(QDate(QDate.currentDate().year() - 1, 1, 1))  # 默认为当前年份的前一年1月1日
+        self.end_date.setDate(QDate.currentDate())
+        
         self.apply_filters() # Re-apply filters to show all items
 
     def _generate_outcome_path(self, project, outcome_type_enum, original_filename):

@@ -347,16 +347,16 @@ class ProjectDocumentWidget(QWidget):
         selected_data = self.project_selector.itemData(index)
         if selected_data == "all":
             self.current_project = None # Set current_project to None for "全部数据"
-            print("DocumentWidget: '全部数据' selected.")
+            UIUtils.show_success(self, "项目文档", "'全部文档' 已选择")
             self.load_documents(load_all=True) # Load all documents
         elif selected_data and isinstance(selected_data, Project):
             self.current_project = selected_data
-            print(f"DocumentWidget: Project selected - {self.current_project.name}")
+            UIUtils.show_success(self, "项目文档", f"项目已选择: {self.current_project.name}")
             self.load_documents() # Load documents for the selected project
         else:
             self.current_project = None
             self.document_table.setRowCount(0) # Clear table if no project selected
-            print("DocumentWidget: No valid project selected.")
+            UIUtils.show_info(self, "项目文档", "请选择一个项目以查看文档")
 
     def load_documents(self, load_all=False):
         """Loads documents into memory and populates the table.

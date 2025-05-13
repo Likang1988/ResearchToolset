@@ -15,7 +15,7 @@ class ToolsInterface(QWidget):
         """设置UI界面"""
         # 创建主布局
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(18, 18, 18, 18) # Add some margins
+        main_layout.setContentsMargins(18, 18, 18, 18) 
         # 标题栏
         title_layout = QHBoxLayout()
         title_label = TitleLabel("小工具")

@@ -213,15 +213,15 @@ class ProjectBudgetWidget(QWidget):
         selected_project = self.project_selector.itemData(index)
         if selected_project and isinstance(selected_project, Project):
             self.current_project = selected_project
-            # print(f"BudgetWidget: Project selected - {self.current_project.name}") # Removed print
-            self.title_label.setText(f"预算管理 - {self.current_project.financial_code}")
+            UIUtils.show_success(self, "项目经费", f"项目已选择: {self.current_project.name}")
+            #self.title_label.setText(f"预算管理 - {self.current_project.financial_code}")
             self.load_budgets() # Load budgets for the selected project
         else:
             self.current_project = None
-            self.title_label.setText("项目预算管理") # Reset title
+            #self.title_label.setText("项目预算管理") # Reset title
             self.budget_tree.clear() # Clear tree if no project selected
             self.chart_widget.clear_charts() # Clear charts
-            # print("BudgetWidget: No valid project selected.") # Removed print
+            UIUtils.show_info(self, "项目经费", "请选择一个项目以查看经费")
 
 
     def open_project_expense(self, budget):

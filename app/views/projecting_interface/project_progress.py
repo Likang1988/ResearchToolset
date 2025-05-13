@@ -133,14 +133,14 @@ class ProjectProgressWidget(QWidget):
         selected_project = self.project_selector.itemData(index)
         if selected_project and isinstance(selected_project, Project):
             self.current_project = selected_project
-            # print(f"Project selected in widget: {self.current_project.name}") # Removed print
+            UIUtils.show_success(self, "项目进度", f"项目已选择: {self.current_project.name}")
             self.gantt_bridge.set_project(self.current_project)
             self.web_view.page().runJavaScript("loadInitialData();")
         else:
             self.current_project = None
             self.gantt_bridge.set_project(None)
             self.web_view.page().runJavaScript("clearGantt();")
-            # print("No valid project selected.") # Removed print
+            UIUtils.show_info(self, "项目进度", "请选择一个项目以查看进度")
 
 
     def load_project_by_object(self, project):
