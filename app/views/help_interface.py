@@ -5,7 +5,7 @@ from qfluentwidgets import (ExpandGroupSettingCard, ScrollArea,
                           FluentIcon, CardWidget, TitleLabel, BodyLabel)
 import os
 from PySide6.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView # Import necessary widgets for table
-from ..models.database import sessionmaker, Activity # Import sessionmaker and Activity model
+from ..models.database import sessionmaker, Actionlog # Import sessionmaker and Actionlog model
 import json # Import json for data comparison
 
 def find_diff(old_dict, new_dict):
@@ -305,16 +305,16 @@ class HelpInterface(ScrollArea):
         self.setWidget(self.scrollWidget)
         self.setWidgetResizable(True)
 
-        # Load activities when the help interface is shown
-        # self.load_activities() # Will be called when the tab is shown
+        # Load actionlogs when the help interface is shown
+        # self.load_actionlogs() # Will be called when the tab is shown
 
     def showEvent(self, event):
         """在窗口显示时加载操作日志"""
         super().showEvent(event)
-        self.load_activities()
+        self.load_actionlogs()
 
 
-    def load_activities(self):
+    def load_actionlogs(self):
         """加载并显示操作日志"""
         if not self.engine:
             print("数据库引擎未初始化，无法加载操作日志。")
@@ -327,37 +327,37 @@ class HelpInterface(ScrollArea):
 
         try:
             # 查询活动记录，按时间倒序排列，限制数量
-            activities = session.query(Activity).order_by(Activity.timestamp.desc()).limit(100).all() # Limit to 100 for log
+            actionlogs = session.query(Actionlog).order_by(Actionlog.timestamp.desc()).limit(100).all() # Limit to 100 for log
 
             # 清空现有表格内容
             self.log_table.setRowCount(0)
 
-            for row, activity in enumerate(activities):
+            for row, logs in enumerate(actionlogs):
                 self.log_table.insertRow(row)
 
                 # 时间
-                time_item = QTableWidgetItem(activity.timestamp.strftime("%Y-%m-%d %H:%M:%S"))
+                time_item = QTableWidgetItem(logs.timestamp.strftime("%Y-%m-%d %H:%M:%S"))
                 self.log_table.setItem(row, 0, time_item)
 
                 # 类型
-                type_item = QTableWidgetItem(activity.type)
+                type_item = QTableWidgetItem(logs.type)
                 self.log_table.setItem(row, 1, type_item)
 
                 # 动作
-                action_item = QTableWidgetItem(activity.action)
+                action_item = QTableWidgetItem(logs.action)
                 self.log_table.setItem(row, 2, action_item)
 
                 # 描述
-                description_item = QTableWidgetItem(activity.description)
+                description_item = QTableWidgetItem(logs.description)
                 self.log_table.setItem(row, 3, description_item)
 
                 # 相关信息
-                related_info_item = QTableWidgetItem(activity.related_info or "") # Handle None
+                related_info_item = QTableWidgetItem(logs.related_info or "") # Handle None
                 self.log_table.setItem(row, 4, related_info_item)
 
                 # 原数据 和 新数据 (显示差异)
-                old_data = json.loads(activity.old_data) if activity.old_data else {}
-                new_data = json.loads(activity.new_data) if activity.new_data else {}
+                old_data = json.loads(logs.old_data) if logs.old_data else {}
+                new_data = json.loads(logs.new_data) if logs.new_data else {}
                 
                 diff = find_diff(old_data, new_data)
                 

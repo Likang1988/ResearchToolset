@@ -10,7 +10,7 @@ from PySide6.QtCore import Qt, Signal, QDate, QPoint # Added QPoint
 from PySide6.QtGui import QIcon # Added for button icon updates
 from qfluentwidgets import (FluentIcon, TableWidget, PushButton, ComboBox, CompactDateEdit,
                            LineEdit, TableItemDelegate, Dialog, RoundMenu, Action) # Added Dialog, RoundMenu, Action, ToolButton
-from ...models.database import sessionmaker, BudgetCategory, Expense, BudgetItem, Activity # Import Expense
+from ...models.database import sessionmaker, BudgetCategory, Expense, BudgetItem, Actionlog # Import Expense
 from datetime import datetime
 from ...components.expense_dialog import ExpenseDialog
 from ...utils.ui_utils import UIUtils
@@ -22,7 +22,7 @@ from ...utils.attachment_utils import (
 from ...utils.filter_utils import FilterUtils # Import FilterUtils
 from collections import defaultdict
 import pandas as pd # For export
-import json # For storing activity data
+import json # For storing actionlog data
 
 
 CURRENT_OPERATOR = "系统用户"
@@ -470,10 +470,10 @@ class ProjectExpenseWidget(QWidget):
                     remarks=data.get('备注', '')
                 )
                 session.add(expense)
-                session.flush() # Flush to get expense ID if needed for activity
+                session.flush() # Flush to get expense ID if needed for actionlog
 
                 # 添加活动记录
-                activity = Activity(
+                actionlog = Actionlog(
                     project_id=self.project.id,
                     budget_id=self.budget.id,
                     expense_id=expense.id,
@@ -485,7 +485,7 @@ class ProjectExpenseWidget(QWidget):
                     amount=expense.amount,
                     related_info=f"项目: {self.project.financial_code}, 预算: {self.budget.year}"
                 )
-                session.add(activity)
+                session.add(actionlog)
 
                 # 更新预算子项的已支出金额
                 budget_item = session.query(BudgetItem).filter_by(
@@ -540,7 +540,7 @@ class ProjectExpenseWidget(QWidget):
                 session.add(expense)
                 session.flush() # Flush to get expense ID
 
-                activity = Activity(
+                actionlog = Actionlog(
                     project_id=self.project.id,
                     budget_id=self.budget.id,
                     expense_id=expense.id,
@@ -552,7 +552,7 @@ class ProjectExpenseWidget(QWidget):
                     amount=expense.amount,
                     related_info=f"项目: {self.project.financial_code}, 预算: {self.budget.year}"
                 )
-                session.add(activity)
+                session.add(actionlog)
 
                 # 更新预算子项的已支出金额
                 budget_item = session.query(BudgetItem).filter_by(
@@ -654,7 +654,7 @@ class ProjectExpenseWidget(QWidget):
                     'voucher_path': expense.voucher_path
                 }
 
-                activity = Activity(
+                actionlog = Actionlog(
                     project_id=self.project.id,
                     budget_id=self.budget.id,
                     expense_id=expense.id,
@@ -668,7 +668,7 @@ class ProjectExpenseWidget(QWidget):
                     amount=expense.amount,
                     related_info=f"项目: {self.project.financial_code}, 预算: {self.budget.year}"
                 )
-                session.add(activity)
+                session.add(actionlog)
 
                 # --- 更新预算金额 ---
                 amount_diff = data['amount'] - old_amount
@@ -769,7 +769,7 @@ class ProjectExpenseWidget(QWidget):
                         }
 
                         # 添加活动记录 (在删除前记录)
-                        activity = Activity(
+                        actionlog = Actionlog(
                             project_id=self.project.id,
                             budget_id=self.budget.id,
                             expense_id=expense.id, # Log the ID even though it's being deleted
@@ -782,7 +782,7 @@ class ProjectExpenseWidget(QWidget):
                             amount=expense.amount,
                             related_info=f"项目: {self.project.financial_code}, 预算: {self.budget.year}"
                         )
-                        session.add(activity)
+                        session.add(actionlog)
 
                         # 删除凭证文件（如果存在）
                         if expense.voucher_path and os.path.exists(expense.voucher_path):

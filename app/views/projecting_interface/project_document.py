@@ -6,7 +6,7 @@ from PySide6.QtGui import QIcon
 from qfluentwidgets import TitleLabel, FluentIcon, ComboBox, LineEdit, Dialog, BodyLabel, PushButton, TableWidget, TableItemDelegate, RoundMenu, Action, PlainTextEdit  
 from ...models.database import Project, sessionmaker 
 from ...utils.ui_utils import UIUtils
-from ...models.database import Base, Activity # Project and sessionmaker already imported, add Activity
+from ...models.database import Base, Actionlog # Project and sessionmaker already imported, add Actionlog
 from sqlalchemy import Column, Integer, String, ForeignKey, Enum as SQLEnum, DateTime, Engine 
 from enum import Enum
 from datetime import datetime
@@ -547,7 +547,7 @@ class ProjectDocumentWidget(QWidget):
                 session.commit()
 
                 # 添加操作日志
-                activity = Activity(
+                actionlog = Actionlog(
                     project_id=self.current_project.id,
                     project_document_id=document.id,
                     type="文档",
@@ -556,7 +556,7 @@ class ProjectDocumentWidget(QWidget):
                     operator="当前用户", # TODO: 获取当前登录用户
                     related_info=f"类型: {document.doc_type.value}, 版本: {document.version or '无'}"
                 )
-                session.add(activity)
+                session.add(actionlog)
                 session.commit() # 提交日志
 
                 self.load_documents() # Reload table
@@ -613,7 +613,7 @@ class ProjectDocumentWidget(QWidget):
                 session.commit()
 
                 # 添加操作日志
-                activity = Activity(
+                actionlog = Actionlog(
                     project_id=self.current_project.id,
                     project_document_id=document.id,
                     type="文档",
@@ -622,7 +622,7 @@ class ProjectDocumentWidget(QWidget):
                     operator="当前用户", # TODO: 获取当前登录用户
                     related_info=f"类型: {document.doc_type.value}, 版本: {document.version or '无'}"
                 )
-                session.add(activity)
+                session.add(actionlog)
                 session.commit() # 提交日志
 
                 self.load_documents()
@@ -683,7 +683,7 @@ class ProjectDocumentWidget(QWidget):
                         deleted_count += 1
 
                         # 添加操作日志
-                        activity = Activity(
+                        actionlog = Actionlog(
                             project_id=self.current_project.id,
                             type="文档",
                             action="删除",
@@ -691,7 +691,7 @@ class ProjectDocumentWidget(QWidget):
                             operator="当前用户", # TODO: 获取当前登录用户
                             related_info=f"类型: {document.doc_type.value}, 版本: {document.version or '无'}"
                         )
-                        session.add(activity)
+                        session.add(actionlog)
 
                 session.commit() # 在循环外部统一提交
                 self.load_documents()

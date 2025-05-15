@@ -5,7 +5,7 @@ from PySide6.QtCore import Qt, QPoint, QDate
 from PySide6.QtGui import QIcon 
 from qfluentwidgets import TitleLabel, FluentIcon, LineEdit, ComboBox, DateEdit, CompactDateEdit, BodyLabel, PushButton, TableWidget, TableItemDelegate, Dialog, RoundMenu, Action, PlainTextEdit
 from ...utils.ui_utils import UIUtils
-from ...models.database import Project, Base, sessionmaker, Activity # Import Activity
+from ...models.database import Project, Base, sessionmaker, Actionlog # Import Actionlog
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum as SQLEnum, Engine 
 from enum import Enum
@@ -640,7 +640,7 @@ class ProjectOutcomeWidget(QWidget):
                 session.commit()
 
                 # 添加操作日志
-                activity = Activity(
+                actionlog = Actionlog(
                     project_id=self.current_project.id,
                     project_outcome_id=outcome.id,
                     type="成果",
@@ -649,7 +649,7 @@ class ProjectOutcomeWidget(QWidget):
                     operator="当前用户", # TODO: 获取当前登录用户
                     related_info=f"类型: {outcome.type.value}, 状态: {outcome.status.value}"
                 )
-                session.add(activity)
+                session.add(actionlog)
                 session.commit() # 提交日志
 
                 self.load_outcome()
@@ -898,7 +898,7 @@ class ProjectOutcomeWidget(QWidget):
                 session.commit()
 
                 # 添加操作日志
-                activity = Activity(
+                actionlog = Actionlog(
                     project_id=self.current_project.id,
                     project_outcome_id=outcome.id,
                     type="成果",
@@ -907,7 +907,7 @@ class ProjectOutcomeWidget(QWidget):
                     operator="当前用户", # TODO: 获取当前登录用户
                     related_info=f"类型: {outcome.type.value}, 状态: {outcome.status.value}"
                 )
-                session.add(activity)
+                session.add(actionlog)
                 session.commit() # 提交日志
 
                 self.load_outcome() # Reload all outcomes
@@ -969,7 +969,7 @@ class ProjectOutcomeWidget(QWidget):
                         deleted_count += 1
 
                         # 添加操作日志
-                        activity = Activity(
+                        actionlog = Actionlog(
                             project_id=self.current_project.id,
                             type="成果",
                             action="删除",
@@ -977,7 +977,7 @@ class ProjectOutcomeWidget(QWidget):
                             operator="当前用户", # TODO: 获取当前登录用户
                             related_info=f"类型: {outcome.type.value}, 状态: {outcome.status.value}"
                         )
-                        session.add(activity)
+                        session.add(actionlog)
 
                 session.commit() # 在循环外部统一提交
                 self.load_outcome() # Reload all outcomes

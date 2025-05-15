@@ -7,8 +7,8 @@ from qfluentwidgets import TitleLabel, InfoBar, InfoBarPosition
 from qframelesswindow.webengine import FramelessWebEngineView
 from app.utils.ui_utils import UIUtils
 # 需要在文件顶部导入
-from app.models.database import Project, sessionmaker, Activity # Import Activity
-from app.models.database import sessionmaker, GanttTask, GanttDependency, Project, Activity # Import Activity
+from app.models.database import Project, sessionmaker, Actionlog # Import Actionlog
+from app.models.database import sessionmaker, GanttTask, GanttDependency, Project, Actionlog # Import Actionlog
 from enum import Enum # Import Enum
 import os # 确保导入 os 模块
 import csv
@@ -460,7 +460,7 @@ class GanttBridge(QObject):
                             "responsible": task_to_delete.responsible
                         }, default=str, ensure_ascii=False)
 
-                        activity = Activity(
+                        actionlog = Actionlog(
                             project_id=self.project.id,
                             gantt_task_id=task_to_delete.id, # 关联到数据库中的任务ID
                             type="任务",
@@ -470,7 +470,7 @@ class GanttBridge(QObject):
                             old_data=old_data_str,
                             related_info=f"项目: {self.project.financial_code}"
                         )
-                        session.add(activity)
+                        session.add(actionlog)
 
                 # 先删除依赖这些任务的记录
                 session.query(GanttDependency).filter(
@@ -542,7 +542,7 @@ class GanttBridge(QObject):
                     new_task_id_map[gantt_id] = persistent_gantt_id
 
                     # 添加操作日志 (新增任务)
-                    activity = Activity(
+                    actionlog = Actionlog(
                         project_id=self.project.id,
                         gantt_task_id=new_task.id, # 关联到新创建的任务ID
                         type="任务",
@@ -563,7 +563,7 @@ class GanttBridge(QObject):
                         }, default=str, ensure_ascii=False),
                         related_info=f"项目: {self.project.financial_code}"
                     )
-                    session.add(activity)
+                    session.add(actionlog)
 
                     # print(f"Added new task: {gantt_id} -> {persistent_gantt_id}") # Removed print
                     current_gantt_id = persistent_gantt_id
@@ -625,7 +625,7 @@ class GanttBridge(QObject):
                         new_data_str = json.dumps(new_data, default=str, ensure_ascii=False)
 
                         # 添加操作日志 (编辑任务)
-                        activity = Activity(
+                        actionlog = Actionlog(
                             project_id=self.project.id,
                             gantt_task_id=existing_task.id, # 关联到数据库中的任务ID
                             type="任务",
@@ -636,7 +636,7 @@ class GanttBridge(QObject):
                             new_data=new_data_str,
                             related_info=f"项目: {self.project.financial_code}"
                         )
-                        session.add(activity)
+                        session.add(actionlog)
                         # print(f"Recorded edit for task: {gantt_id}") # Added print for debugging
                     # else:
                         # print(f"Task data for {gantt_id} unchanged, no edit log recorded.") # Added print for debugging
@@ -653,7 +653,7 @@ class GanttBridge(QObject):
                         session.flush()
 
                         # 添加操作日志 (新增任务 - 持久化ID)
-                        activity = Activity(
+                        actionlog = Actionlog(
                             project_id=self.project.id,
                             gantt_task_id=new_task.id, # 关联到新创建的任务ID
                             type="任务",
@@ -674,7 +674,7 @@ class GanttBridge(QObject):
                             }, default=str, ensure_ascii=False),
                             related_info=f"项目: {self.project.financial_code}"
                         )
-                        session.add(activity)
+                        session.add(actionlog)
 
                         # print(f"Inserted task with provided persistent id: {gantt_id}") # Removed print
                         current_gantt_id = gantt_id

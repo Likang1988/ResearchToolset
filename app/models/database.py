@@ -107,9 +107,9 @@ class BudgetPlanItem(Base):
     # 建立自引用关系，用于树形结构
     children = relationship("BudgetPlanItem", backref=backref('parent', remote_side=[id]))
 
-class Activity(Base):
+class Actionlog(Base):
     """操作记录"""
-    __tablename__ = 'activities'
+    __tablename__ = 'actionlogs'
     
     id = Column(Integer, primary_key=True)
     project_id = Column(Integer, ForeignKey('projects.id'), nullable=True)
@@ -132,12 +132,12 @@ class Activity(Base):
     amount = Column(Float)  # 涉及的金额（如有）
     related_info = Column(String(200))  # 相关信息（如项目编号、财务编号等）
 
-    project = relationship("Project", backref="activities")
-    budget = relationship("Budget", backref="activities")
-    expense = relationship("Expense", backref="activities")
-    gantt_task = relationship("GanttTask", backref="activities") # 添加关系
-    project_document = relationship("ProjectDocument", backref="activities") # 添加关系
-    project_outcome = relationship("ProjectOutcome", backref="activities") # 添加关系
+    project = relationship("Project", backref="actionlogs")
+    budget = relationship("Budget", backref="actionlogs")
+    expense = relationship("Expense", backref="actionlogs")
+    gantt_task = relationship("GanttTask", backref="actionlogs") # 添加关系
+    project_document = relationship("ProjectDocument", backref="actionlogs") # 添加关系
+    project_outcome = relationship("ProjectOutcome", backref="actionlogs") # 添加关系
 
 
 class Expense(Base):
@@ -359,10 +359,10 @@ def migrate_db(engine):
                 print("成功添加voucher_path列")
         
         result = connection.execute(
-            text("SELECT name FROM sqlite_master WHERE type='table' AND name='activities'")
+            text("SELECT name FROM sqlite_master WHERE type='table' AND name='actionlogs'")
         )
         if result.fetchone():
-            result = connection.execute(text("PRAGMA table_info(activities)"))
+            result = connection.execute(text("PRAGMA table_info(actionlogs)"))
             columns = {row[1]: row[2] for row in result.fetchall()}
             
             # 需要迁移的情况：
@@ -382,7 +382,7 @@ def migrate_db(engine):
             if needs_migration:
                 # 创建临时表，包含所有新字段和外键
                 connection.execute(text("""
-                    CREATE TABLE activities_temp (
+                    CREATE TABLE actionlogs_temp (
                         id INTEGER PRIMARY KEY,
                         project_id INTEGER,
                         budget_id INTEGER,
@@ -411,7 +411,7 @@ def migrate_db(engine):
                 
                 # 复制数据到临时表，为新字段插入 NULL
                 connection.execute(text("""
-                    INSERT INTO activities_temp (
+                    INSERT INTO actionlogs_temp (
                         id, project_id, budget_id, expense_id, type,
                         action, description, operator, timestamp,
                         old_data, new_data, category, amount, related_info,
@@ -422,20 +422,20 @@ def migrate_db(engine):
                         action, description, operator, datetime(timestamp),
                         old_data, new_data, category, amount, related_info,
                         NULL, NULL, NULL -- 为新字段插入 NULL
-                    FROM activities
+                    FROM actionlogs
                 """))
                 
                 # 删除原表
-                connection.execute(text("DROP TABLE activities"))
+                connection.execute(text("DROP TABLE actionlogs"))
                 
                 # 重命名临时表
-                connection.execute(text("ALTER TABLE activities_temp RENAME TO activities"))
+                connection.execute(text("ALTER TABLE actionlogs_temp RENAME TO actionlogs"))
                 
                 # 提交事务
                 transaction.commit()
-                print("成功更新activities表结构，添加了新字段并修正了timestamp列类型")
+                print("成功更新actionlogs表结构，添加了新字段并修正了timestamp列类型")
             else:
-                 print("activities 表结构无需更新") # 添加无需更新的提示
+                 print("actionlogs 表结构无需更新") # 添加无需更新的提示
         
     except Exception as e:
         print(f"数据库迁移失败: {str(e)}")

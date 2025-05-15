@@ -9,7 +9,7 @@ from ...components.budget_dialog import BudgetDialog, TotalBudgetDialog
 
 # 需要在文件顶部导入
 from ...models.database import Project, sessionmaker
-from ...models.database import sessionmaker, Budget, BudgetCategory, BudgetItem, Expense, Activity, Project # Added Project
+from ...models.database import sessionmaker, Budget, BudgetCategory, BudgetItem, Expense, Actionlog, Project # Added Project
 from sqlalchemy import Engine # Added Engine
 from datetime import datetime
 from sqlalchemy import func
@@ -612,7 +612,7 @@ class ProjectBudgetWidget(QWidget):
                         )
                         session.add(budget_item)
 
-                    activity = Activity(
+                    actionlog = Actionlog(
                         project_id=self.current_project.id, # Use current_project.id
                         budget_id=budget.id,                 # 添加 budget_id 关联
                         type="预算",                         # 添加 type
@@ -621,7 +621,7 @@ class ProjectBudgetWidget(QWidget):
                         operator="系统用户",                 # 修正: 使用 operator
                         timestamp=datetime.now()             # 保留 timestamp
                     )
-                    session.add(activity)
+                    session.add(actionlog)
 
                     session.commit()
                     self.load_budgets()
@@ -683,7 +683,7 @@ class ProjectBudgetWidget(QWidget):
                         ).delete(synchronize_session=False)
                         session.query(Budget).filter_by(project_id=self.current_project.id).delete(synchronize_session=False) # Use current_project.id
 
-                        activity = Activity(
+                        actionlog = Actionlog(
                             project_id=self.current_project.id, # Use current_project.id
                             type="预算",                             # 添加 type
                             action="删除",                           # 设置 action
@@ -691,7 +691,7 @@ class ProjectBudgetWidget(QWidget):
                             operator="系统用户",                     # 修正: 使用 operator
                             timestamp=datetime.now()                 # 保留 timestamp
                         )
-                        session.add(activity)
+                        session.add(actionlog)
 
                         session.commit()
                         self.load_budgets() # 重新加载以显示空状态或默认状态
@@ -717,7 +717,7 @@ class ProjectBudgetWidget(QWidget):
                         # 删除预算本身
                         session.delete(budget)
 
-                        activity = Activity(
+                        actionlog = Actionlog(
                             project_id=self.current_project.id, # Use current_project.id
                             budget_id=budget.id,                 # 添加 budget_id 关联
                             type="预算",                         # 添加 type
@@ -726,7 +726,7 @@ class ProjectBudgetWidget(QWidget):
                             operator="系统用户",                 # 修正: 使用 operator
                             timestamp=datetime.now()             # 保留 timestamp
                         )
-                        session.add(activity)
+                        session.add(actionlog)
 
                         session.commit()
                         self.load_budgets() # 重新加载
@@ -810,7 +810,7 @@ class ProjectBudgetWidget(QWidget):
 
                     # 记录编辑总预算的活动
                     new_data_str = f"总预算额: {budget.total_amount}"
-                    activity = Activity(
+                    actionlog = Actionlog(
                         project_id=self.current_project.id, # Use current_project.id
                         budget_id=budget.id,                 # 添加 budget_id 关联
                         type="预算",                         # 添加 type
@@ -820,7 +820,7 @@ class ProjectBudgetWidget(QWidget):
                         old_data=old_data_str,
                         new_data=new_data_str
                     )
-                    session.add(activity)
+                    session.add(actionlog)
 
                     session.commit()
                     self.load_budgets()
@@ -915,7 +915,7 @@ class ProjectBudgetWidget(QWidget):
 
                     # 记录编辑年度预算的活动
                     new_data_str = f"年度: {year}, 预算额: {budget.total_amount}"
-                    activity = Activity(
+                    actionlog = Actionlog(
                         project_id=self.current_project.id, # Use current_project.id
                         budget_id=budget.id,                 # 添加 budget_id 关联
                         type="预算",                         # 添加 type
@@ -925,7 +925,7 @@ class ProjectBudgetWidget(QWidget):
                         old_data=old_data_str,
                         new_data=new_data_str
                     )
-                    session.add(activity)
+                    session.add(actionlog)
 
                     session.commit()
                     self.load_budgets()

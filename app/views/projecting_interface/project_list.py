@@ -6,7 +6,7 @@ from qfluentwidgets import FluentIcon, TableWidget, TableItemDelegate, RoundMenu
 import os # 导入 os 模块
 import shutil # 导入 shutil 模块
 from ...components.project_dialog import ProjectDialog
-from ...models.database import init_db, add_project_to_db, sessionmaker, Project, Budget, Expense, Activity, GanttTask, GanttDependency # 导入 GanttTask 和 GanttDependency
+from ...models.database import init_db, add_project_to_db, sessionmaker, Project, Budget, Expense, Actionlog, GanttTask, GanttDependency # 导入 GanttTask 和 GanttDependency
 from ...utils.ui_utils import UIUtils
 from datetime import datetime
 
@@ -286,7 +286,7 @@ class ProjectListWindow(QWidget):
                 self.project_id = project.id
                 
                 # 记录添加项目的活动
-                activity = Activity(
+                actionlog = Actionlog(
                     project_id=project.id,
                     type="项目",
                     action="新增",
@@ -294,7 +294,7 @@ class ProjectListWindow(QWidget):
                     operator="系统用户",
                     new_data=f"名称: {name}, 财务编号: {financial_code}, 项目编号: {project_code}, 类型: {project_type}, 开始日期: {start_date}, 结束日期: {end_date}, 总经费: {total_budget}, 负责人: {director}"
                 )
-                session.add(activity)
+                session.add(actionlog)
                 
                 # 提交事务
                 session.commit()
@@ -366,7 +366,7 @@ class ProjectListWindow(QWidget):
                     old_data_str = f"名称: {old_name}, 财务编号: {old_financial_code}, 项目编号: {project.project_code}, 类型: {project.project_type}, 开始日期: {project.start_date}, 结束日期: {project.end_date}, 总经费: {project.total_budget}, 负责人: {project.director}"
                     new_data_str = f"名称: {project.name}, 财务编号: {project.financial_code}, 项目编号: {project.project_code}, 类型: {project.project_type}, 开始日期: {project.start_date}, 结束日期: {project.end_date}, 总经费: {project.total_budget}, 负责人: {project.director}"
 
-                    activity = Activity(
+                    actionlog = Actionlog(
                         project_id=project.id,
                         type="项目",
                         action="编辑",
@@ -375,7 +375,7 @@ class ProjectListWindow(QWidget):
                         old_data=old_data_str,
                         new_data=new_data_str
                     )
-                    session.add(activity)
+                    session.add(actionlog)
                     
                     session.commit()
                     self.refresh_project_table()
@@ -456,14 +456,14 @@ class ProjectListWindow(QWidget):
 
                 # --- 2. 数据库删除操作 ---
                 # 记录删除项目的活动
-                activity = Activity(
+                actionlog = Actionlog(
                     project_id=project.id, # 使用 project.id 保证关联
                     type="项目",
                     action="删除",
                     description=f"删除项目及其所有关联数据：{project_name_for_log} - {project_code_for_log}",
                     operator="系统用户"
                 )
-                session.add(activity)
+                session.add(actionlog)
 
                 session.query(GanttTask).filter(GanttTask.project_id == project_id).delete(synchronize_session='fetch')
                 session.query(GanttDependency).filter(GanttDependency.project_id == project_id).delete(synchronize_session='fetch')
