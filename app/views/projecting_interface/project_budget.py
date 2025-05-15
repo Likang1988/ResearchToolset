@@ -221,7 +221,7 @@ class ProjectBudgetWidget(QWidget):
             #self.title_label.setText("项目预算管理") # Reset title
             self.budget_tree.clear() # Clear tree if no project selected
             self.chart_widget.clear_charts() # Clear charts
-            UIUtils.show_info(self, "项目经费", "请选择一个项目以查看经费")
+            #UIUtils.show_info(self, "项目经费", "请选择一个项目以查看经费")
 
 
     def open_project_expense(self, budget):
