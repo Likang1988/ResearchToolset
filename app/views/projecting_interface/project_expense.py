@@ -52,6 +52,7 @@ class ProjectExpenseWidget(QWidget):
 
         # 标题
         title_layout = UIUtils.create_title_layout(f"支出管理-{self.project.financial_code}-{self.budget.year}")
+        title_layout.itemAt(0).widget().setToolTip("用于创建和管理项目的经费支出信息")
         main_layout.addLayout(title_layout)
 
         # 按钮栏

@@ -254,7 +254,9 @@ class ProjectOutcomeWidget(QWidget):
         # --- Add Project Selector ---
         selector_layout = QHBoxLayout()
         selector_label = TitleLabel("项目成果-", self)
+        selector_label.setToolTip("用于创建和管理项目的成果信息")
         self.project_selector = UIUtils.create_project_selector(self.engine, self)
+
         # 手动添加“全部数据”选项
         self.project_selector.insertItem(0, "全部成果", userData="all")
         selector_layout.addWidget(selector_label)
@@ -445,57 +447,36 @@ class ProjectOutcomeWidget(QWidget):
             name_item = QTableWidgetItem(outcome.name)
             name_item.setData(Qt.UserRole, outcome.id) # Store ID here
             self.outcome_table.setItem(row, 0, name_item)
-            # UIUtils.set_item_tooltip(name_item) # Removed tooltip call
-
             # Col 1: Type
             type_item = QTableWidgetItem(outcome.type.value)
             type_item.setTextAlignment(Qt.AlignCenter)
             self.outcome_table.setItem(row, 1, type_item)
-            # UIUtils.set_item_tooltip(type_item) # Removed tooltip call
-
             # Col 2: Status
             status_item = QTableWidgetItem(outcome.status.value)
             status_item.setTextAlignment(Qt.AlignCenter)
             self.outcome_table.setItem(row, 2, status_item)
-            # UIUtils.set_item_tooltip(status_item) # Removed tooltip call
-
             # Col 3: Authors
             authors_item = QTableWidgetItem(outcome.authors or "")
             authors_item.setTextAlignment(Qt.AlignCenter)
             self.outcome_table.setItem(row, 3, authors_item)
-            # UIUtils.set_item_tooltip(authors_item) # Removed tooltip call
-
             # Col 4: Submit Date
             submit_date_str = str(outcome.submit_date) if outcome.submit_date else ""
             submit_date_item = QTableWidgetItem(submit_date_str)
             submit_date_item.setTextAlignment(Qt.AlignCenter)
             submit_date_item.setData(Qt.UserRole + 1, outcome.submit_date) # Store date for sorting
             self.outcome_table.setItem(row, 4, submit_date_item)
-            # UIUtils.set_item_tooltip(submit_date_item) # Tooltip likely not needed for date
-
             # Col 5: Publish Date
             publish_date_str = str(outcome.publish_date) if outcome.publish_date else ""
             publish_date_item = QTableWidgetItem(publish_date_str)
             publish_date_item.setTextAlignment(Qt.AlignCenter)
             publish_date_item.setData(Qt.UserRole + 1, outcome.publish_date) # Store date for sorting
             self.outcome_table.setItem(row, 5, publish_date_item)
-            # UIUtils.set_item_tooltip(publish_date_item) # Tooltip likely not needed for date
-
             # Col 6: Journal
             journal_item = QTableWidgetItem(outcome.journal or "")
             self.outcome_table.setItem(row, 6, journal_item)
-            # UIUtils.set_item_tooltip(journal_item) # Removed tooltip call
-
             # Col 7: Description
             description_item = QTableWidgetItem(outcome.description or "")
             self.outcome_table.setItem(row, 7, description_item)
-            # UIUtils.set_item_tooltip(description_item) # Removed tooltip call
-
-            # Col 8: Remarks (Removed)
-            # remarks_item = QTableWidgetItem(outcome.remarks or "")
-            # remarks_item.setTextAlignment(Qt.AlignCenter)
-            # self.outcome_table.setItem(row, 8, remarks_item)
-
             # Col 8: Attachment Button (Index changed from 9 to 8)
             container = create_attachment_button(
                 item_id=outcome.id,

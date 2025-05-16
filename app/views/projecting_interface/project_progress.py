@@ -106,6 +106,7 @@ class ProjectProgressWidget(QWidget):
 
         selector_layout = QHBoxLayout()
         selector_label = TitleLabel("项目进度-", self)
+        selector_label.setToolTip("请选择项目以查看预算")
         self.project_selector = UIUtils.create_project_selector(self.engine, self)
         selector_layout.addWidget(selector_label)
         selector_layout.addWidget(self.project_selector)

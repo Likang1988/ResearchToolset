@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (QWidget, QHeaderView, QVBoxLayout, QHBoxLayout,
                                  QTableWidgetItem, QStackedWidget, QApplication)
-from qfluentwidgets import Dialog
+from qfluentwidgets import Dialog, BodyLabel, ToolTipFilter, ToolTipPosition
 from PySide6.QtCore import Qt, Signal # 导入 Signal
 from qfluentwidgets import FluentIcon, TableWidget, TableItemDelegate, RoundMenu, Action
 import os # 导入 os 模块
@@ -48,6 +48,15 @@ class ProjectListWindow(QWidget):
         # 标题
         title_layout = UIUtils.create_title_layout("项目清单")
         layout.addLayout(title_layout)
+        # 标题悬停提示
+        title_layout.itemAt(0).widget().setToolTip("用于创建和管理项目的基本信息，后续项目经费、进度、文档、成果管理基于此列表中项目")
+        #title_layout.installEventFilter(ToolTipFilter(ToolTipFilter, showDelay=300, position=ToolTipPosition.TOP))
+
+        # 添加副标题
+        #subtitle_label = BodyLabel("用于创建和管理项目的基本信息，后续项目经费、进度、文档、成果管理基于此列表中项目", self)
+        #subtitle_label.setObjectName("listSubtitle")
+        #subtitle_label.setStyleSheet("#listSubtitle { color: rgba(0, 0, 0, 0.6); font-size: 12px; }")
+        #layout.addWidget(subtitle_label)
         
         # 按钮栏
         button_layout = QHBoxLayout()
@@ -72,6 +81,7 @@ class ProjectListWindow(QWidget):
         # 添加鼠标悬停提示
         import_btn.setToolTip("从JSON文件导入项目基本信息、预算配置、支出记录数据")
         export_btn.setToolTip("将项目基本信息、预算配置、支出记录数据导出为JSON文件")
+        
         
         right_buttons.addStretch()
         right_buttons.addWidget(import_btn)

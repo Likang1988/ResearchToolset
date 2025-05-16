@@ -95,25 +95,21 @@ class ProjectBudgetWidget(QWidget):
             # print("ProjectBudgetWidget: Project selector refreshed.") # Removed print
 
     def setup_ui(self):
-        """设置UI界面"""
-        self.setWindowTitle("预算管理")
+        """设置UI界面"""        
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(18, 18, 18, 18) # Add some margins
         main_layout.setSpacing(10)
 
         selector_layout = QHBoxLayout()        
         selector_label = TitleLabel("项目经费-", self)
+        selector_label.setToolTip("用于创建和管理项目的经费预算信息")
         self.project_selector = UIUtils.create_project_selector(self.engine, self)
         selector_layout.addWidget(selector_label)
         selector_layout.addWidget(self.project_selector)
         selector_layout.addStretch()
         main_layout.addLayout(selector_layout)
-        self.project_selector.currentIndexChanged.connect(self._on_project_selected)
-
-        self.title_label = TitleLabel("项目预算管理") # Store title label reference
-        title_layout = QHBoxLayout()
-        title_layout.addWidget(self.title_label)
-        title_layout.addStretch() 
+        self.project_selector.currentIndexChanged.connect(self._on_project_selected)                
+        
 
         layout = main_layout # Use main_layout directly
 

@@ -11,6 +11,7 @@ from .home_interface import HomeInterface
 from .help_interface import HelpInterface
 from .budgeting_interface import BudgetingInterface
 from .tools_interface import ToolsInterface
+from .activity_interface import ActivityInterface # Import Activity Interface
 import os
 import sys # Import sys for path joining robustness if needed, though os should suffice
 
@@ -95,6 +96,15 @@ class MainWindow(FluentWindow):
             self.achievement_interface,
             QIcon(UIUtils.get_svg_icon_path('outcome')), 
             "项目成果"
+        )
+
+        # 添加学术活动导航项
+        self.activity_interface = ActivityInterface(self.engine)
+        self.activity_interface.setObjectName("activityInterface")
+        self.addSubInterface(
+            self.activity_interface,
+            QIcon(UIUtils.get_svg_icon_path('activity')),
+            "学术活动"
         )
         
         # 添加预算编制导航项

@@ -243,7 +243,9 @@ class ProjectDocumentWidget(QWidget):
         # --- Add Project Selector ---
         selector_layout = QHBoxLayout()
         selector_label = TitleLabel("项目文档-", self)
+        selector_label.setToolTip("用于创建和管理项目的文档信息")
         self.project_selector = UIUtils.create_project_selector(self.engine, self)
+
         # 手动添加“全部数据”选项
         self.project_selector.insertItem(0, "全部文档", userData="all")
         selector_layout.addWidget(selector_label)
@@ -402,31 +404,21 @@ class ProjectDocumentWidget(QWidget):
             # Col 0: Name
             name_item = QTableWidgetItem(doc.name)
             name_item.setData(Qt.UserRole, doc.id) # Store ID here
-            self.document_table.setItem(row, 0, name_item)
-            # UIUtils.set_item_tooltip(name_item) # Removed tooltip call
+            self.document_table.setItem(row, 0, name_item)            
             # Col 1: Type
             type_item = QTableWidgetItem(doc.doc_type.value); type_item.setTextAlignment(Qt.AlignCenter); self.document_table.setItem(row, 1, type_item)
-            # UIUtils.set_item_tooltip(type_item) # Removed tooltip call
             # Col 2: Version
             version_item = QTableWidgetItem(doc.version or ""); version_item.setTextAlignment(Qt.AlignCenter); self.document_table.setItem(row, 2, version_item)
-            # UIUtils.set_item_tooltip(version_item) # Removed tooltip call
             # Col 3: Keywords (Index changed from 4 to 3)
             keywords_item = QTableWidgetItem(doc.keywords or ""); self.document_table.setItem(row, 3, keywords_item)
-            # UIUtils.set_item_tooltip(keywords_item) # Removed tooltip call
             # Col 4: Upload Time (Index changed from 6 to 4)
             upload_time_str = doc.upload_time.strftime("%Y-%m-%d %H:%M") if doc.upload_time else ""
             upload_time_item = QTableWidgetItem(upload_time_str); upload_time_item.setTextAlignment(Qt.AlignCenter)
             upload_time_item.setData(Qt.UserRole + 1, doc.upload_time) # Store datetime for sorting
             self.document_table.setItem(row, 4, upload_time_item)
-            # UIUtils.set_item_tooltip(upload_time_item) # Tooltip likely not needed for date/time
             # Col 5: Description (Index changed from 3 to 5)
             description_item = QTableWidgetItem(doc.description or ""); self.document_table.setItem(row, 5, description_item)
-            # UIUtils.set_item_tooltip(description_item) # Removed tooltip call
-            # Col 5: Uploader (Removed)
-            # uploader_item = QTableWidgetItem(doc.uploader or ""); uploader_item.setTextAlignment(Qt.AlignCenter); self.document_table.setItem(row, 5, uploader_item)
-            # Col 7: File Path (Removed)
-            # file_path_item = QTableWidgetItem(doc.file_path or ""); self.document_table.setItem(row, 7, file_path_item) # 移除文件路径列
-
+            
             # Col 6: Attachment Button (Index changed from 7 to 6)
             container = create_attachment_button(
                 item_id=doc.id,

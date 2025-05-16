@@ -101,11 +101,14 @@ class BudgetingInterface(QWidget):
         title_label = TitleLabel("预算编制")
         layout.addWidget(title_label)
         
+        # 标题悬停提示
+        title_label.setToolTip("用于课题申请或年度预算上报时的预算计划编制")
+
         # 添加副标题
-        subtitle_label = BodyLabel("用于课题申请或年度预算上报时的预算计划编制")
-        subtitle_label.setObjectName("budgetingSubtitle")
-        subtitle_label.setStyleSheet("#budgetingSubtitle { color: rgba(0, 0, 0, 0.6); font-size: 12px; }")
-        layout.addWidget(subtitle_label)
+        #subtitle_label = BodyLabel("用于课题申请或年度预算上报时的预算计划编制")
+        #subtitle_label.setObjectName("budgetingSubtitle")
+        #subtitle_label.setStyleSheet("#budgetingSubtitle { color: rgba(0, 0, 0, 0.6); font-size: 12px; }")
+        #layout.addWidget(subtitle_label)
         
         # 按钮栏
         button_layout = QHBoxLayout()
