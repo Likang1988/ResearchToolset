@@ -81,16 +81,19 @@ def create_attachment_menu(parent, attachment_path, item_id, handle_attachment_f
         view_action = Action(FluentIcon.VIEW, "查看", parent)
         download_action = Action(FluentIcon.DOWNLOAD, "下载", parent) # Added Download Action
         replace_action = Action(FluentIcon.SYNC, "替换", parent)
+        open_path_action = Action(FluentIcon.FOLDER, "路径", parent) # Added Open Path Action
         delete_action = Action(FluentIcon.DELETE, "删除", parent)
 
         view_action.triggered.connect(lambda: handle_attachment_func("view", item_id))
         download_action.triggered.connect(lambda: handle_attachment_func("download", item_id)) # Connect Download Action
         replace_action.triggered.connect(lambda: handle_attachment_func("replace", item_id))
+        open_path_action.triggered.connect(lambda: handle_attachment_func("open_path", item_id)) # Connect Open Path Action
         delete_action.triggered.connect(lambda: handle_attachment_func("delete", item_id))
 
         menu.addAction(view_action)
         menu.addAction(download_action) # Add Download Action to menu
         menu.addAction(replace_action)
+        menu.addAction(open_path_action) # Add Open Path Action to menu
         menu.addSeparator()
         menu.addAction(delete_action)
     else:
@@ -117,6 +120,25 @@ def view_attachment(attachment_path, parent_widget):
                 subprocess.call(['xdg-open', attachment_path])
         except Exception as e:
             UIUtils.show_error(parent_widget, "错误", f"无法打开附件：{e}")
+    else:
+        UIUtils.show_warning(parent_widget, "提示", "附件文件不存在或路径无效")
+
+
+def open_attachment_path(attachment_path, parent_widget):
+    """Opens the directory containing the attachment file."""
+    if attachment_path and os.path.exists(attachment_path):
+        attachment_dir = os.path.dirname(attachment_path)
+        try:
+            if os.name == 'nt':
+                os.startfile(attachment_dir)
+            elif sys.platform == 'darwin': # Use sys.platform for macOS check
+                subprocess.call(['open', attachment_dir])
+            else: # Assume Linux/other Unix-like
+                subprocess.call(['xdg-open', attachment_dir])
+        except Exception as e:
+            UIUtils.show_error(parent_widget, "错误", f"无法打开附件路径：{e}")
+    elif attachment_path:
+        UIUtils.show_warning(parent_widget, "提示", f"附件路径不存在：{os.path.dirname(attachment_path)}")
     else:
         UIUtils.show_warning(parent_widget, "提示", "附件文件不存在或路径无效")
 
