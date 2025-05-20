@@ -11,9 +11,10 @@ from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum as SQLEnu
 from enum import Enum
 from datetime import datetime
 from ...utils.attachment_utils import (
-    create_attachment_button, # Keep
+    create_attachment_button,
     sanitize_filename, ensure_directory_exists, get_timestamp_str, get_attachment_icon_path,
-    view_attachment, download_attachment, ROOT_DIR 
+    view_attachment, download_attachment, ROOT_DIR,
+    generate_attachment_path, handle_attachment, execute_attachment_action # 添加新导入的函数
 )
 from ...utils.filter_utils import FilterUtils 
 import pandas as pd 
@@ -567,31 +568,7 @@ class ProjectOutcomeWidget(QWidget):
         
         self.apply_filters() # Re-apply filters to show all items
 
-    def _generate_outcome_path(self, project, outcome_type_enum, original_filename):
-        """Generates the specific path for a project outcome based on business rules."""
-        if not project or not outcome_type_enum or not original_filename:
-            print("Error: Missing project, outcome type, or filename for path generation.")
-            return None
-
-        base_folder = "outcomes"
-        project_code = project.financial_code if project.financial_code else "unknown_project"
-        # Use the enum value, sanitize it
-        outcome_type_str = sanitize_filename(outcome_type_enum.value)
-        timestamp = get_timestamp_str()
-
-        # Sanitize original filename
-        original_basename = os.path.basename(original_filename)
-        base_name, ext = os.path.splitext(original_basename)
-        sanitized_base_name = sanitize_filename(base_name)
-
-        # Construct filename: <timestamp>_<sanitized_original_name>.ext
-        new_filename = f"{timestamp}_{sanitized_base_name}{ext}"
-
-        # Construct full path
-        target_dir = os.path.join(ROOT_DIR, base_folder, project_code, outcome_type_str)
-        full_path = os.path.join(target_dir, new_filename)
-
-        return os.path.normpath(full_path)
+    # _generate_outcome_path 方法已移除，使用 attachment_utils.py 中的 generate_attachment_path 函数
 
     def add_outcome(self):
         if not self.current_project:
@@ -642,199 +619,29 @@ class ProjectOutcomeWidget(QWidget):
                 session.close()
 
     
-    def _handle_outcome_attachment_new(self, event, btn): # RENAMED function
-        """Handles outcome attachment actions directly within the outcome widget."""
+    def _handle_outcome_attachment_new(self, event, btn):
+        """处理成果附件操作，使用通用附件处理函数"""
         outcome_id = btn.property("item_id")
-        if outcome_id is None:
-            UIUtils.show_error(self, "错误", "无法获取成果项ID")
-            return
-
         Session = sessionmaker(bind=self.engine)
-        session = Session()
-        try:
-            # Initial fetch for context menu logic
-            outcome_check = session.query(ProjectOutcome).get(outcome_id)
-            if not outcome_check:
-                UIUtils.show_error(self, "错误", f"找不到ID为 {outcome_id} 的成果项")
-                return # Session closed in finally
-
-            action_type = None
-            current_path_check = outcome_check.attachment_path
-
-            if event is None: # Left-click
-                button_path = btn.property("attachment_path")
-                if button_path and os.path.exists(button_path):
-                    # Show menu
-                    menu = RoundMenu(parent=self)
-                    view_action = Action(FluentIcon.VIEW, "查看", self)
-                    download_action = Action(FluentIcon.DOWNLOAD, "下载", self)
-                    replace_action = Action(FluentIcon.SYNC, "替换", self)
-                    delete_action = Action(FluentIcon.DELETE, "删除", self)
-
-                    view_action.triggered.connect(lambda: self._execute_outcome_action_new("view", outcome_id, btn, session))
-                    download_action.triggered.connect(lambda: self._execute_outcome_action_new("download", outcome_id, btn, session))
-                    replace_action.triggered.connect(lambda: self._execute_outcome_action_new("replace", outcome_id, btn, session))
-                    delete_action.triggered.connect(lambda: self._execute_outcome_action_new("delete", outcome_id, btn, session))
-
-                    menu.addAction(view_action)
-                    menu.addAction(download_action)
-                    menu.addAction(replace_action)
-                    menu.addSeparator()
-                    menu.addAction(delete_action)
-                    menu.exec(btn.mapToGlobal(btn.rect().bottomLeft()))
-                    return # Menu handles action
-                else:
-                    action_type = "replace" # Treat left-click on empty as 'replace' (upload)
-            elif isinstance(event, QPoint): # Right-click
-                menu = RoundMenu(parent=self)
-                if current_path_check and os.path.exists(current_path_check):
-                    view_action = Action(FluentIcon.VIEW, "查看", self)
-                    download_action = Action(FluentIcon.DOWNLOAD, "下载", self)
-                    replace_action = Action(FluentIcon.SYNC, "替换", self)
-                    delete_action = Action(FluentIcon.DELETE, "删除", self)
-                    view_action.triggered.connect(lambda: self._execute_outcome_action_new("view", outcome_id, btn, session))
-                    download_action.triggered.connect(lambda: self._execute_outcome_action_new("download", outcome_id, btn, session))
-                    replace_action.triggered.connect(lambda: self._execute_outcome_action_new("replace", outcome_id, btn, session))
-                    delete_action.triggered.connect(lambda: self._execute_outcome_action_new("delete", outcome_id, btn, session))
-                    menu.addAction(view_action)
-                    menu.addAction(download_action)
-                    menu.addAction(replace_action)
-                    menu.addSeparator()
-                    menu.addAction(delete_action)
-                else:
-                    # If no path in DB, only allow 'replace' (upload)
-                    replace_action = Action(FluentIcon.SYNC, "上传/替换", self)
-                    replace_action.triggered.connect(lambda: self._execute_outcome_action_new("replace", outcome_id, btn, session))
-                    menu.addAction(replace_action)
-                menu.exec(btn.mapToGlobal(event))
-                return # Menu handles action
-
-            # Execute action if determined (e.g., left-click on empty)
-            if action_type:
-                self._execute_outcome_action_new(action_type, outcome_id, btn, session)
-
-        except Exception as e:
-            UIUtils.show_error(self, "处理附件时出错", f"发生意外错误: {e}")
-            if session.is_active:
-                session.rollback()
-        finally:
-            if session.is_active:
-                session.close()
-
-    def _execute_outcome_action_new(self, action_type, outcome_id, btn, session): # RENAMED function
-        """Executes the specific outcome attachment action."""
-        try:
-            outcome = session.query(ProjectOutcome).get(outcome_id)
-            if not outcome:
-                UIUtils.show_error(self, "错误", f"执行操作时找不到ID为 {outcome_id} 的成果项")
-                return
-
-            # Need project for path generation
-            project = session.query(Project).get(outcome.project_id)
-            if not project:
-                 UIUtils.show_error(self, "错误", f"找不到成果关联的项目 (ID: {outcome.project_id})")
-                 return
-
-            current_path = outcome.attachment_path
-
-            if action_type == "view":
-                if current_path and os.path.exists(current_path):
-                    view_attachment(current_path, self)
-                else:
-                    UIUtils.show_warning(self, "提示", "附件不存在")
-
-            elif action_type == "download":
-                if current_path and os.path.exists(current_path):
-                    download_attachment(current_path, self)
-                else:
-                    UIUtils.show_warning(self, "提示", "附件不存在")
-
-            elif action_type == "replace": # Handles both upload and replace
-                source_file_path, _ = QFileDialog.getOpenFileName(self, "选择成果附件", "", "所有文件 (*.*)")
-                if not source_file_path:
-                    return # User cancelled
-
-                old_path = current_path
-                # Use the outcome's type for path generation
-                new_path = self._generate_outcome_path(project, outcome.type, source_file_path)
-
-                if not new_path:
-                    UIUtils.show_error(self, "错误", "无法生成成果附件保存路径")
-                    return
-
-                # --- Transaction Start ---
-                try:
-                    ensure_directory_exists(os.path.dirname(new_path))
-                    shutil.copy2(source_file_path, new_path)
-
-                    outcome.attachment_path = new_path
-                    # Optionally update a timestamp field if one exists for outcomes
-                    # outcome.last_updated = datetime.now()
-                    session.commit()
-
-                    # Delete old file if replacing and path changed
-                    if old_path and os.path.exists(old_path) and os.path.normpath(old_path) != os.path.normpath(new_path):
-                        try:
-                            os.remove(old_path)
-                        except OSError as e:
-                            print(f"警告: 无法删除旧成果附件 {old_path}: {e}")
-
-                    # Update button
-                    btn.setIcon(QIcon(get_attachment_icon_path('attach.svg')))
-                    btn.setToolTip("管理附件")
-                    btn.setProperty("attachment_path", new_path)
-
-                    UIUtils.show_success(self, "成功", "成果附件已更新")
-                    # Optionally reload table or update row directly if needed
-                    # self.load_outcome()
-
-                except Exception as e:
-                    session.rollback()
-                    UIUtils.show_error(self, "错误", f"更新成果附件失败: {e}")
-                    # Clean up potentially copied file
-                    if os.path.exists(new_path):
-                         session.expire(outcome)
-                         db_path_after_rollback = getattr(session.query(ProjectOutcome).get(outcome_id), 'attachment_path', None)
-                         if db_path_after_rollback != new_path:
-                             try:
-                                 print(f"Attempting to remove orphaned file: {new_path}")
-                                 os.remove(new_path)
-                             except Exception as remove_err:
-                                 print(f"Error removing orphaned file {new_path}: {remove_err}")
-                # --- Transaction End ---
-
-            elif action_type == "delete":
-                if not current_path or not os.path.exists(current_path):
-                    UIUtils.show_warning(self, "提示", "没有可删除的附件")
-                    return
-
-                confirm_dialog = Dialog('确认删除', '确定要删除此成果附件吗？文件将被删除，但成果记录保留。此操作不可恢复！', self)
-                if confirm_dialog.exec():
-                    # --- Transaction Start ---
-                    try:
-                        os.remove(current_path)
-                        outcome.attachment_path = None # Set path to None in DB
-                        session.commit()
-
-                        # Update button
-                        btn.setIcon(QIcon(get_attachment_icon_path('add_outline.svg')))
-                        btn.setToolTip("添加附件")
-                        btn.setProperty("attachment_path", None)
-
-                        UIUtils.show_success(self, "成功", "成果附件已删除")
-                        # Optionally reload table or update row directly
-                        # self.load_outcome()
-
-                    except Exception as e:
-                        session.rollback()
-                        UIUtils.show_error(self, "错误", f"删除成果附件失败: {e}")
-                    # --- Transaction End ---
-
-        except Exception as e:
-             UIUtils.show_error(self, "处理附件操作时出错", f"发生意外错误: {e}")
-             if session.is_active:
-                 try: session.rollback()
-                 except: pass
+        
+        # 定义获取成果对象的函数
+        def get_outcome(session, outcome_id):
+            return session.query(ProjectOutcome).get(outcome_id)
+        
+        # 调用通用附件处理函数
+        handle_attachment(
+            event=event,
+            btn=btn,
+            item_id=outcome_id,
+            item_type="outcome",
+            session_maker=Session,
+            parent_widget=self,
+            get_item_func=get_outcome,
+            attachment_attr="attachment_path",
+            project_attr="project_id",
+            base_folder="outcomes"
+        )
+    # 剩余的附件处理代码已移除，使用 attachment_utils.py 中的 execute_attachment_action 函数
 
     def edit_outcome(self):
         if not self.current_project:

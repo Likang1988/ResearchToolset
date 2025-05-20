@@ -12,7 +12,8 @@ from datetime import datetime
 from ..utils.attachment_utils import (
     create_attachment_button,
     sanitize_filename, ensure_directory_exists, get_timestamp_str, get_attachment_icon_path,
-    view_attachment, download_attachment, ROOT_DIR
+    view_attachment, download_attachment, ROOT_DIR,
+    generate_attachment_path, handle_attachment, execute_attachment_action
 )
 from ..utils.filter_utils import FilterUtils
 import pandas as pd
@@ -252,26 +253,9 @@ class ActivityInterface(QWidget):
         self.setup_ui()
         self.load_activities()
 
-    def _generate_activity_path(self, activity_type_enum, original_filename):
-        """Generates the specific path for an activity attachment."""
-        if not activity_type_enum or not original_filename:
-            print("Error: Missing activity type or filename for path generation.")
-            return None
-
-        activity_type_str = sanitize_filename(activity_type_enum.value)
-        timestamp = get_timestamp_str()
-
-        original_basename = os.path.basename(original_filename)
-        base_name, ext = os.path.splitext(original_basename)
-        sanitized_base_name = sanitize_filename(base_name)
-
-        new_filename = f"{timestamp}_{sanitized_base_name}{ext}"
-
-        target_dir = os.path.join(ACTIVITY_ATTACHMENTS_DIR, activity_type_str)
-        full_path = os.path.join(target_dir, new_filename)
-
-        ensure_directory_exists(target_dir)
-        return os.path.normpath(full_path)
+    def _get_activity(self, session, activity_id):
+        """获取活动对象的辅助函数，供attachment_utils使用"""
+        return session.query(AcademicActivity).get(activity_id)
 
     def setup_ui(self):
         self.main_layout = QVBoxLayout(self)
@@ -448,7 +432,11 @@ class ActivityInterface(QWidget):
             attachment_widget_container = create_attachment_button(
                 item_id=activity.id,
                 attachment_path=activity.attachment_path,
-                handle_attachment_func=self._handle_activity_attachment_action,
+                handle_attachment_func=lambda event, btn: handle_attachment(
+                    event, btn, btn.property("item_id"), "activity", 
+                    sessionmaker(bind=self.engine), self, self._get_activity, 
+                    "attachment_path", None, "activities"
+                ),
                 parent_widget=self,
                 item_type='activity' # Clarify item type
             )
@@ -678,31 +666,49 @@ class ActivityInterface(QWidget):
 
         menu.addSeparator()
 
-        # Attachment actions
+        # 附件操作 - 使用通用的attachment_utils函数
+        menu.addSeparator()
+        
         Session_ctx = sessionmaker(bind=self.engine)
         session_ctx = Session_ctx()
         activity_for_menu = session_ctx.query(AcademicActivity).get(activity_id)
         has_attachment = activity_for_menu and activity_for_menu.attachment_path and os.path.exists(activity_for_menu.attachment_path)
+        session_ctx.close() # 关闭用于检查附件状态的会话
         
         if has_attachment:
             view_attach_action = Action(FluentIcon.VIEW, "查看附件", self)
-            view_attach_action.triggered.connect(lambda: self._execute_activity_attachment_action("view", activity_id, None, session_ctx))
+            view_attach_action.triggered.connect(lambda checked, aid=activity_id: 
+                execute_attachment_action("view", aid, None, None, None, 
+                                         self._get_activity, "attachment_path", 
+                                         None, "activities", self))
             menu.addAction(view_attach_action)
 
             download_attach_action = Action(FluentIcon.DOWNLOAD, "下载附件", self)
-            download_attach_action.triggered.connect(lambda: self._execute_activity_attachment_action("download", activity_id, None, session_ctx))
+            download_attach_action.triggered.connect(lambda checked, aid=activity_id: 
+                execute_attachment_action("download", aid, None, None, None, 
+                                         self._get_activity, "attachment_path", 
+                                         None, "activities", self))
             menu.addAction(download_attach_action)
 
             replace_attach_action = Action(FluentIcon.SYNC, "替换附件", self)
-            replace_attach_action.triggered.connect(lambda: self._execute_activity_attachment_action("replace", activity_id, None, session_ctx))
+            replace_attach_action.triggered.connect(lambda checked, aid=activity_id: 
+                execute_attachment_action("replace", aid, None, None, None, 
+                                         self._get_activity, "attachment_path", 
+                                         None, "activities", self))
             menu.addAction(replace_attach_action)
 
             delete_attach_action = Action(FluentIcon.DELETE, "删除附件", self)
-            delete_attach_action.triggered.connect(lambda: self._execute_activity_attachment_action("delete", activity_id, None, session_ctx))
+            delete_attach_action.triggered.connect(lambda checked, aid=activity_id: 
+                execute_attachment_action("delete", aid, None, None, None, 
+                                         self._get_activity, "attachment_path", 
+                                         None, "activities", self))
             menu.addAction(delete_attach_action)
         else:
             upload_attach_action = Action(FluentIcon.UPLOAD, "上传附件", self)
-            upload_attach_action.triggered.connect(lambda: self._execute_activity_attachment_action("replace", activity_id, None, session_ctx)) # 'replace' handles upload too
+            upload_attach_action.triggered.connect(lambda checked, aid=activity_id: 
+                execute_attachment_action("replace", aid, None, None, None, 
+                                         self._get_activity, "attachment_path", 
+                                         None, "activities", self))
             menu.addAction(upload_attach_action)
         
         # session_ctx will be closed by _execute_activity_attachment_action if it creates its own session
@@ -723,221 +729,16 @@ class ActivityInterface(QWidget):
         # This is problematic for context menu. So, for context menu, we should NOT pass the session.
         # Let _execute_activity_attachment_action create and close its own session for context menu calls.
 
-        # Re-doing context menu action connections to not pass session_ctx
-        menu.removeAction(view_attach_action) if has_attachment else None
-        menu.removeAction(download_attach_action) if has_attachment else None
-        menu.removeAction(replace_attach_action) if has_attachment else None
-        menu.removeAction(delete_attach_action) if has_attachment else None
-        menu.removeAction(upload_attach_action) if not has_attachment else None
-        session_ctx.close() # Close the session used for checking attachment status
-
-        if has_attachment:
-            view_attach_action = Action(FluentIcon.VIEW, "查看附件", self)
-            view_attach_action.triggered.connect(lambda checked, aid=activity_id: self._execute_activity_attachment_action("view", aid, None))
-            menu.addAction(view_attach_action)
-
-            download_attach_action = Action(FluentIcon.DOWNLOAD, "下载附件", self)
-            download_attach_action.triggered.connect(lambda checked, aid=activity_id: self._execute_activity_attachment_action("download", aid, None))
-            menu.addAction(download_attach_action)
-
-            replace_attach_action = Action(FluentIcon.SYNC, "替换附件", self)
-            replace_attach_action.triggered.connect(lambda checked, aid=activity_id: self._execute_activity_attachment_action("replace", aid, None))
-            menu.addAction(replace_attach_action)
-
-            delete_attach_action = Action(FluentIcon.DELETE, "删除附件", self)
-            delete_attach_action.triggered.connect(lambda checked, aid=activity_id: self._execute_activity_attachment_action("delete", aid, None))
-            menu.addAction(delete_attach_action)
-        else:
-            upload_attach_action = Action(FluentIcon.UPLOAD, "上传附件", self)
-            upload_attach_action.triggered.connect(lambda checked, aid=activity_id: self._execute_activity_attachment_action("replace", aid, None))
-            menu.addAction(upload_attach_action)
+        # 显示菜单
 
         # 显示菜单
         menu.exec(self.activity_table.viewport().mapToGlobal(pos))
 
-    def _handle_activity_attachment_action(self, event, btn):
-        """Handles activity attachment actions triggered by the table button (left/right click)."""
-        activity_id = btn.property("item_id")
-        if activity_id is None:
-            UIUtils.show_error(self, "错误", "无法获取活动项ID")
-            return
+    # 已移除_handle_activity_attachment_action函数
+    # 该函数已被attachment_utils.py中的handle_attachment函数替代
 
-        Session = sessionmaker(bind=self.engine)
-        session = Session()
-        try:
-            activity_check = session.query(AcademicActivity).get(activity_id)
-            if not activity_check:
-                UIUtils.show_error(self, "错误", f"找不到ID为 {activity_id} 的活动项")
-                return
-
-            action_type = None
-            current_path_check = activity_check.attachment_path
-
-            if event is None:  # Left-click
-                button_attachment_path = btn.property("attachment_path")
-                if button_attachment_path and os.path.exists(button_attachment_path):
-                    menu = RoundMenu(parent=self)
-                    view_action = Action(FluentIcon.VIEW, "查看", self)
-                    download_action = Action(FluentIcon.DOWNLOAD, "下载", self)
-                    replace_action = Action(FluentIcon.SYNC, "替换", self)
-                    delete_action = Action(FluentIcon.DELETE, "删除", self)
-
-                    view_action.triggered.connect(lambda: self._execute_activity_attachment_action("view", activity_id, btn, session))
-                    download_action.triggered.connect(lambda: self._execute_activity_attachment_action("download", activity_id, btn, session))
-                    replace_action.triggered.connect(lambda: self._execute_activity_attachment_action("replace", activity_id, btn, session))
-                    delete_action.triggered.connect(lambda: self._execute_activity_attachment_action("delete", activity_id, btn, session))
-
-                    menu.addAction(view_action)
-                    menu.addAction(download_action)
-                    menu.addAction(replace_action)
-                    menu.addSeparator()
-                    menu.addAction(delete_action)
-                    menu.exec(btn.mapToGlobal(btn.rect().bottomLeft()))
-                    return # Menu handles action
-                else:
-                    action_type = "replace"  # Treat left-click on empty as 'replace' (upload)
-            elif isinstance(event, QPoint):  # Right-click (customContextMenuRequested)
-                menu = RoundMenu(parent=self)
-                if current_path_check and os.path.exists(current_path_check):
-                    view_action = Action(FluentIcon.VIEW, "查看", self)
-                    download_action = Action(FluentIcon.DOWNLOAD, "下载", self)
-                    replace_action = Action(FluentIcon.SYNC, "替换", self)
-                    delete_action = Action(FluentIcon.DELETE, "删除", self)
-                    view_action.triggered.connect(lambda: self._execute_activity_attachment_action("view", activity_id, btn, session))
-                    download_action.triggered.connect(lambda: self._execute_activity_attachment_action("download", activity_id, btn, session))
-                    replace_action.triggered.connect(lambda: self._execute_activity_attachment_action("replace", activity_id, btn, session))
-                    delete_action.triggered.connect(lambda: self._execute_activity_attachment_action("delete", activity_id, btn, session))
-                    menu.addAction(view_action)
-                    menu.addAction(download_action)
-                    menu.addAction(replace_action)
-                    menu.addSeparator()
-                    menu.addAction(delete_action)
-                else:
-                    replace_action = Action(FluentIcon.SYNC, "上传附件", self) # Changed text for clarity
-                    replace_action.triggered.connect(lambda: self._execute_activity_attachment_action("replace", activity_id, btn, session))
-                    menu.addAction(replace_action)
-                menu.exec(btn.mapToGlobal(event))
-                return # Menu handles action
-
-            if action_type: # e.g. left-click on empty button
-                self._execute_activity_attachment_action(action_type, activity_id, btn, session)
-
-        except Exception as e:
-            UIUtils.show_error(self, "处理附件时出错", f"发生意外错误: {e}")
-            if session.is_active:
-                session.rollback()
-        finally:
-            if session.is_active:
-                session.close()
-
-    def _execute_activity_attachment_action(self, action_type, activity_id, btn_or_none, session_param=None):
-        """Executes the specific activity attachment action. btn_or_none can be the button from table or None if called from context menu without a direct button ref."""
-        # Ensure a session is available
-        if session_param and session_param.is_active:
-            session = session_param
-            close_session_locally = False
-        else:
-            NewSession = sessionmaker(bind=self.engine)
-            session = NewSession()
-            close_session_locally = True
-        
-        try:
-            activity = session.query(AcademicActivity).get(activity_id)
-            if not activity:
-                UIUtils.show_error(self, "错误", f"执行操作时找不到ID为 {activity_id} 的活动项")
-                return
-
-            current_path = activity.attachment_path
-
-            if action_type == "view":
-                if current_path and os.path.exists(current_path):
-                    view_attachment(current_path, self)
-                else:
-                    UIUtils.show_warning(self, "提示", "附件不存在或路径无效")
-
-            elif action_type == "download":
-                if current_path and os.path.exists(current_path):
-                    download_attachment(current_path, self)
-                else:
-                    UIUtils.show_warning(self, "提示", "附件不存在或路径无效")
-
-            elif action_type == "replace":  # Handles both upload and replace
-                source_file_path, _ = QFileDialog.getOpenFileName(self, "选择活动附件", "", "所有文件 (*.*)")
-                if not source_file_path:
-                    return  # User cancelled
-
-                old_path_to_delete = current_path
-                new_generated_path = self._generate_activity_path(activity.type, source_file_path)
-
-                if not new_generated_path:
-                    UIUtils.show_error(self, "错误", "无法生成活动附件保存路径")
-                    return
-                
-                try:
-                    ensure_directory_exists(os.path.dirname(new_generated_path))
-                    shutil.copy2(source_file_path, new_generated_path)
-
-                    activity.attachment_path = new_generated_path
-                    session.commit()
-
-                    if old_path_to_delete and os.path.exists(old_path_to_delete) and os.path.normpath(old_path_to_delete) != os.path.normpath(new_generated_path):
-                        try:
-                            os.remove(old_path_to_delete)
-                        except OSError as e_remove:
-                            print(f"警告: 无法删除旧活动附件 {old_path_to_delete}: {e_remove}")
-                    
-                    if btn_or_none: # Update button in table if applicable
-                        btn_or_none.setIcon(QIcon(get_attachment_icon_path('attach.svg')))
-                        btn_or_none.setToolTip("管理附件")
-                        btn_or_none.setProperty("attachment_path", new_generated_path)
-
-                    UIUtils.show_success(self, "成功", "活动附件已更新")
-                    self.load_activities() # Reload to reflect changes in table (e.g. button state)
-
-                except Exception as e_commit:
-                    session.rollback()
-                    UIUtils.show_error(self, "错误", f"更新活动附件失败: {e_commit}")
-                    # Clean up potentially copied file if DB update failed
-                    if os.path.exists(new_generated_path):
-                        # Check if the path in DB is still the old one or None
-                        session.expire(activity) # Refresh activity state from DB
-                        db_path_after_rollback = getattr(session.query(AcademicActivity).get(activity_id), 'attachment_path', None)
-                        if db_path_after_rollback != new_generated_path:
-                            try: os.remove(new_generated_path)
-                            except Exception as e_remove_orphan: print(f"Error removing orphaned file {new_generated_path}: {e_remove_orphan}")
-
-            elif action_type == "delete":
-                if not current_path or not os.path.exists(current_path):
-                    UIUtils.show_warning(self, "提示", "没有可删除的附件")
-                    return
-
-                confirm_dialog = Dialog('确认删除', '确定要删除此活动附件吗？文件将被物理删除。', self)
-                if confirm_dialog.exec():
-                    try:
-                        os.remove(current_path)
-                        activity.attachment_path = None
-                        session.commit()
-
-                        if btn_or_none: # Update button in table if applicable
-                            btn_or_none.setIcon(QIcon(get_attachment_icon_path('add_outline.svg')))
-                            btn_or_none.setToolTip("添加附件")
-                            btn_or_none.setProperty("attachment_path", None)
-
-                        UIUtils.show_success(self, "成功", "活动附件已删除")
-                        self.load_activities() # Reload to reflect changes
-
-                    except Exception as e_commit:
-                        session.rollback()
-                        UIUtils.show_error(self, "错误", f"删除活动附件失败: {e_commit}")
-        
-        except Exception as e_outer:
-            UIUtils.show_error(self, "处理附件操作时出错", f"发生意外错误: {e_outer}")
-            if session.is_active and not (session_param and session_param.is_active): # only rollback if session was created here
-                try: session.rollback()
-                except: pass # Ignore rollback errors if session is already bad
-        finally:
-            if close_session_locally and session.is_active:
-                session.close()
+    # 已移除_execute_activity_attachment_action函数
+    # 该函数已被attachment_utils.py中的execute_attachment_action函数替代
 
     def view_activity_attachment(self, file_path):
         # This method might become obsolete or call _execute_activity_attachment_action

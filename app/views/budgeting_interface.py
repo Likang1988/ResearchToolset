@@ -43,8 +43,6 @@ class BudgetingInterface(QWidget):
                 for category in BudgetCategory:
                     category_item = QTreeWidgetItem(project_item)
                     category_item.setText(0, category.value)
-                    category_item.setFlags(category_item.flags() & ~Qt.ItemIsEditable)  # 禁止编辑
-
                     
                     # 查询该类别的预算项
                     budget_items = session.query(BudgetPlanItem).filter(
@@ -82,6 +80,23 @@ class BudgetingInterface(QWidget):
                     # 从第二级开始加载
                     if budget_items:
                         add_sub_items(category_item, budget_items[0].id)
+                        
+                    # 检查是否有子项，如果没有子项则设置为可编辑
+                    has_children = False
+                    if budget_items:
+                        # 检查是否有子项
+                        sub_items = session.query(BudgetPlanItem).filter(
+                            BudgetPlanItem.plan_id == plan.id,
+                            BudgetPlanItem.category == category,
+                            BudgetPlanItem.parent_id == budget_items[0].id
+                        ).all()
+                        has_children = len(sub_items) > 0
+                    
+                    # 如果没有子项，则设置为可编辑，否则禁止编辑
+                    if has_children:
+                        category_item.setFlags(category_item.flags() & ~Qt.ItemIsEditable)  # 禁止编辑
+                    else:
+                        category_item.setFlags(category_item.flags() | Qt.ItemIsEditable)  # 允许编辑
             
             session.close()
             
@@ -222,7 +237,7 @@ class BudgetingInterface(QWidget):
         for category in BudgetCategory:
             category_item = QTreeWidgetItem(project_item)
             category_item.setText(0, category.value)
-            category_item.setFlags(category_item.flags() & ~Qt.ItemIsEditable)  # 禁止编辑
+            category_item.setFlags(category_item.flags() | Qt.ItemIsEditable)  # 允许编辑（因为初始时没有子项）
         
         self.budget_tree.expandAll()
         

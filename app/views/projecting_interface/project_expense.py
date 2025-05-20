@@ -15,9 +15,10 @@ from datetime import datetime
 from ...components.expense_dialog import ExpenseDialog
 from ...utils.ui_utils import UIUtils
 from ...utils.attachment_utils import (
-    create_attachment_button, # Keep this one
-    sanitize_filename, ensure_directory_exists, get_attachment_icon_path,
-    view_attachment, download_attachment, ROOT_DIR # Import necessary utils
+    create_attachment_button,
+    sanitize_filename, ensure_directory_exists, get_timestamp_str, get_attachment_icon_path,
+    view_attachment, download_attachment, ROOT_DIR,
+    generate_attachment_path, handle_attachment, execute_attachment_action
 )
 from ...utils.filter_utils import FilterUtils # Import FilterUtils
 from collections import defaultdict
@@ -830,206 +831,17 @@ class ProjectExpenseWidget(QWidget):
             finally:
                 session.close()
 
-    def _generate_voucher_path(self, expense, project, original_filename):
-        """Generates the specific path for an expense voucher based on business rules."""
-        if not expense or not project or not original_filename:
-            print("Error: Missing expense, project, or filename for path generation.")
-            return None # Or raise an error
-
-        base_folder = "vouchers"
-        project_code = project.financial_code if project.financial_code else "unknown_project"
-        expense_year = str(expense.date.year) if expense.date else "unknown_year"
-        expense_category = expense.category.value if expense.category else "unknown_category"
-        sanitized_category = sanitize_filename(expense_category)
-        expense_amount = f"{expense.amount:.2f}" if expense.amount is not None else "0.00"
-
-        original_basename = os.path.basename(original_filename)
-        base_name, ext = os.path.splitext(original_basename)
-        sanitized_base_name = sanitize_filename(base_name) # Sanitize only the base name
-
-        new_filename = f"{sanitized_category}_{expense_amount}_{sanitized_base_name}{ext}"
-
-        target_dir = os.path.join(ROOT_DIR, base_folder, project_code, expense_year)
-        full_path = os.path.join(target_dir, new_filename)
-
-        return os.path.normpath(full_path)
+    def _get_expense(self, session, expense_id):
+        """获取支出对象的辅助函数，供attachment_utils使用"""
+        return session.query(Expense).get(expense_id)
 
     def handle_voucher_wrapper(self, event, btn):
-        """Handles voucher attachment actions directly within the expense widget."""
-        expense_id = btn.property("item_id")
-        if expense_id is None:
-            UIUtils.show_error(self, "错误", "无法获取支出项ID")
-            return
-
-        Session = sessionmaker(bind=self.engine)
-        session = Session()
-        try:
-            expense_check = session.query(Expense).get(expense_id)
-            if not expense_check:
-                UIUtils.show_error(self, "错误", f"找不到ID为 {expense_id} 的支出项")
-                return # Session closed in finally
-
-            action_type = None
-            current_path_check = expense_check.voucher_path # Get current path from DB for menu logic
-
-            if event is None: # Left-click
-                button_path = btn.property("attachment_path") # Check button's state first
-                if button_path and os.path.exists(button_path):
-                    menu = RoundMenu(parent=self)
-                    view_action = Action(FluentIcon.VIEW, "查看", self)
-                    download_action = Action(FluentIcon.DOWNLOAD, "下载", self)
-                    replace_action = Action(FluentIcon.SYNC, "替换", self)
-                    delete_action = Action(FluentIcon.DELETE, "删除", self)
-
-                    view_action.triggered.connect(lambda: self._execute_voucher_action("view", expense_id, btn, session))
-                    download_action.triggered.connect(lambda: self._execute_voucher_action("download", expense_id, btn, session))
-                    replace_action.triggered.connect(lambda: self._execute_voucher_action("replace", expense_id, btn, session))
-                    delete_action.triggered.connect(lambda: self._execute_voucher_action("delete", expense_id, btn, session))
-
-                    menu.addAction(view_action)
-                    menu.addAction(download_action)
-                    menu.addAction(replace_action)
-                    menu.addSeparator()
-                    menu.addAction(delete_action)
-                    menu.exec(btn.mapToGlobal(btn.rect().bottomLeft()))
-                    return # Menu handles the action, exit wrapper
-                else:
-                    action_type = "upload"
-            elif isinstance(event, QPoint): # Right-click (Context menu request)
-                menu = RoundMenu(parent=self)
-                if current_path_check and os.path.exists(current_path_check):
-                    view_action = Action(FluentIcon.VIEW, "查看", self)
-                    download_action = Action(FluentIcon.DOWNLOAD, "下载", self)
-                    replace_action = Action(FluentIcon.SYNC, "替换", self)
-                    delete_action = Action(FluentIcon.DELETE, "删除", self)
-                    view_action.triggered.connect(lambda: self._execute_voucher_action("view", expense_id, btn, session))
-                    download_action.triggered.connect(lambda: self._execute_voucher_action("download", expense_id, btn, session))
-                    replace_action.triggered.connect(lambda: self._execute_voucher_action("replace", expense_id, btn, session))
-                    delete_action.triggered.connect(lambda: self._execute_voucher_action("delete", expense_id, btn, session))
-                    menu.addAction(view_action)
-                    menu.addAction(download_action)
-                    menu.addAction(replace_action)
-                    menu.addSeparator()
-                    menu.addAction(delete_action)
-                else:
-                    upload_action = Action(FluentIcon.ADD_TO, "上传附件", self)
-                    upload_action.triggered.connect(lambda: self._execute_voucher_action("upload", expense_id, btn, session))
-                    menu.addAction(upload_action)
-                menu.exec(btn.mapToGlobal(event))
-                return # Menu handles the action, exit wrapper
-
-            if action_type:
-                 self._execute_voucher_action(action_type, expense_id, btn, session)
-
-        except Exception as e:
-            UIUtils.show_error(self, "处理附件时出错", f"发生意外错误: {e}")
-            if session.is_active:
-                session.rollback() # Rollback on any exception during fetch or initial logic
-        finally:
-            if session.is_active: # Check if session is still active before closing
-                session.close()
-
-
-    def _execute_voucher_action(self, action_type, expense_id, btn, session):
-        """Executes the specific voucher action (called by wrapper or menu)."""
-        try:
-            expense = session.query(Expense).get(expense_id)
-            if not expense:
-                UIUtils.show_error(self, "错误", f"执行操作时找不到ID为 {expense_id} 的支出项")
-                return # Session will be closed by the caller
-
-            current_path = expense.voucher_path
-
-            if action_type == "view":
-                if current_path and os.path.exists(current_path):
-                    view_attachment(current_path, self)
-                else:
-                    UIUtils.show_warning(self, "提示", "附件不存在")
-
-            elif action_type == "download":
-                if current_path and os.path.exists(current_path):
-                    download_attachment(current_path, self)
-                else:
-                    UIUtils.show_warning(self, "提示", "附件不存在")
-
-            elif action_type == "upload" or action_type == "replace":
-                source_file_path, _ = QFileDialog.getOpenFileName(self, "选择凭证文件", "", "图片文件 (*.png *.jpg *.jpeg *.bmp *.gif);;PDF文件 (*.pdf);;所有文件 (*.*)") # Filter added
-                if not source_file_path:
-                    return # User cancelled
-
-                old_path = current_path # Path before potential change
-                new_path = self._generate_voucher_path(expense, self.project, source_file_path)
-
-                if not new_path:
-                    UIUtils.show_error(self, "错误", "无法生成附件保存路径")
-                    return
-
-                try:
-                    ensure_directory_exists(os.path.dirname(new_path))
-                    shutil.copy2(source_file_path, new_path)
-
-                    expense.voucher_path = new_path
-                    session.commit() # Commit this specific change
-
-                    if action_type == "replace" and old_path and os.path.exists(old_path) and os.path.normpath(old_path) != os.path.normpath(new_path):
-                        try:
-                            os.remove(old_path)
-                        except OSError as e:
-                            print(f"警告: 无法删除旧凭证 {old_path}: {e}") # Log warning
-
-                    btn.setIcon(QIcon(get_attachment_icon_path('attach.svg')))
-                    btn.setToolTip("管理附件")
-                    btn.setProperty("attachment_path", new_path)
-
-                    UIUtils.show_success(self, "成功", "凭证已更新")
-                    self.expense_updated.emit() # Notify budget window if needed
-                    self.load_statistics() # Update stats immediately
-
-                except Exception as e:
-                    session.rollback() # Rollback this specific transaction
-                    UIUtils.show_error(self, "错误", f"更新凭证失败: {e}")
-                    if os.path.exists(new_path):
-                         session.expire(expense) # Mark expense as expired to force re-fetch
-                         db_path_after_rollback = getattr(session.query(Expense).get(expense_id), 'voucher_path', None)
-                         if db_path_after_rollback != new_path:
-                             try:
-                                 print(f"Attempting to remove orphaned file: {new_path}")
-                                 os.remove(new_path)
-                             except Exception as remove_err:
-                                 print(f"Error removing orphaned file {new_path}: {remove_err}")
-
-            elif action_type == "delete":
-                if not current_path or not os.path.exists(current_path):
-                    UIUtils.show_warning(self, "提示", "没有可删除的凭证")
-                    return
-
-                confirm_dialog = Dialog('确认删除', '确定要删除此凭证吗？此操作不可恢复！', self)
-                if confirm_dialog.exec():
-                    try:
-                        os.remove(current_path)
-                        expense.voucher_path = None
-                        session.commit() # Commit this specific change
-
-                        btn.setIcon(QIcon(get_attachment_icon_path('add_outline.svg')))
-                        btn.setToolTip("添加附件")
-                        btn.setProperty("attachment_path", None)
-
-                        UIUtils.show_success(self, "成功", "凭证已删除")
-                        self.expense_updated.emit() # Notify budget window if needed
-                        self.load_statistics() # Update stats immediately
-
-                    except Exception as e:
-                        session.rollback() # Rollback this specific transaction
-                        UIUtils.show_error(self, "错误", f"删除凭证失败: {e}")
-
-        except Exception as e:
-             UIUtils.show_error(self, "处理附件操作时出错", f"发生意外错误: {e}")
-             if session.is_active:
-                 try:
-                     session.rollback()
-                 except Exception as rb_err:
-                     print(f"Error during rollback in _execute_voucher_action: {rb_err}")
-
+        """处理凭证附件操作的包装函数"""
+        handle_attachment(
+            event, btn, btn.property("item_id"), "expense", 
+            sessionmaker(bind=self.engine), self, self._get_expense, 
+            "voucher_path", "project_attr", "vouchers"
+        )
 
     def reset_filters(self):
         """重置所有筛选条件"""

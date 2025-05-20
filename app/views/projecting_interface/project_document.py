@@ -13,7 +13,8 @@ from datetime import datetime
 from ...utils.attachment_utils import (
     create_attachment_button, # Keep
     sanitize_filename, ensure_directory_exists, get_timestamp_str, get_attachment_icon_path,
-    view_attachment, download_attachment, ROOT_DIR # Import necessary utils
+    view_attachment, download_attachment, ROOT_DIR, # Import necessary utils
+    handle_attachment # 添加handle_attachment函数导入
 )
 from ...utils.filter_utils import FilterUtils # Import FilterUtils
 import pandas as pd 
@@ -461,32 +462,7 @@ class ProjectDocumentWidget(QWidget):
         self.type_filter.setCurrentText("全部类型")
         self.apply_filters() # Re-apply filters to show all items
 
-    def _generate_document_path(self, project, doc_type_enum, original_filename):
-        """Generates the specific path for a project document based on business rules."""
-        if not project or not doc_type_enum or not original_filename:
-            print("Error: Missing project, document type, or filename for path generation.")
-            return None
-
-        base_folder = "documents"
-        project_code = project.financial_code if project.financial_code else "unknown_project"
-        # Use the enum value, sanitize it for path safety
-        doc_type_str = sanitize_filename(doc_type_enum.value)
-        timestamp = get_timestamp_str() # Get current timestamp string
-
-        # Sanitize original filename and split extension
-        original_basename = os.path.basename(original_filename)
-        base_name, ext = os.path.splitext(original_basename)
-        sanitized_base_name = sanitize_filename(base_name)
-
-        # Construct filename: <timestamp>_<sanitized_original_name>.ext
-        new_filename = f"{timestamp}_{sanitized_base_name}{ext}"
-
-        # Construct full path using ROOT_DIR
-        target_dir = os.path.join(ROOT_DIR, base_folder, project_code, doc_type_str)
-        full_path = os.path.join(target_dir, new_filename)
-
-        # Normalize the path
-        return os.path.normpath(full_path)
+    # _generate_document_path 方法已移除，使用attachment_utils.py中的generate_attachment_path函数代替
 
     def add_document(self):
         if not self.current_project:
@@ -736,197 +712,29 @@ class ProjectDocumentWidget(QWidget):
             session.close()
 
     def handle_document_attachment(self, event, btn):
-        """Handles document attachment actions directly within the document widget."""
+        """处理文档附件操作，使用通用附件处理函数"""
         doc_id = btn.property("item_id")
-        if doc_id is None:
-            UIUtils.show_error(self, "错误", "无法获取文档项ID")
-            return
-
         Session = sessionmaker(bind=self.engine)
-        session = Session()
-        try:
-            # Initial fetch for context menu logic
-            doc_check = session.query(ProjectDocument).get(doc_id)
-            if not doc_check:
-                UIUtils.show_error(self, "错误", f"找不到ID为 {doc_id} 的文档项")
-                return # Session closed in finally
+        
+        # 定义获取文档对象的函数
+        def get_document(session, doc_id):
+            return session.query(ProjectDocument).get(doc_id)
+        
+        # 调用通用附件处理函数
+        handle_attachment(
+            event=event,
+            btn=btn,
+            item_id=doc_id,
+            item_type="document",
+            session_maker=Session,
+            parent_widget=self,
+            get_item_func=get_document,
+            attachment_attr="file_path",
+            project_attr="project_id",
+            base_folder="documents"
+        )
 
-            action_type = None
-            current_path_check = doc_check.file_path
-
-            if event is None: # Left-click
-                button_path = btn.property("attachment_path")
-                if button_path and os.path.exists(button_path):
-                    # Show menu
-                    menu = RoundMenu(parent=self)
-                    view_action = Action(FluentIcon.VIEW, "查看", self)
-                    download_action = Action(FluentIcon.DOWNLOAD, "下载", self)
-                    replace_action = Action(FluentIcon.SYNC, "替换", self)
-                    delete_action = Action(FluentIcon.DELETE, "删除", self)
-
-                    view_action.triggered.connect(lambda: self._execute_document_action("view", doc_id, btn, session))
-                    download_action.triggered.connect(lambda: self._execute_document_action("download", doc_id, btn, session))
-                    replace_action.triggered.connect(lambda: self._execute_document_action("replace", doc_id, btn, session))
-                    delete_action.triggered.connect(lambda: self._execute_document_action("delete", doc_id, btn, session))
-
-                    menu.addAction(view_action)
-                    menu.addAction(download_action)
-                    menu.addAction(replace_action)
-                    menu.addSeparator()
-                    menu.addAction(delete_action)
-                    menu.exec(btn.mapToGlobal(btn.rect().bottomLeft()))
-                    return # Menu handles action
-                else:
-                    action_type = "replace" # Treat left-click on empty as 'replace' (or upload)
-            elif isinstance(event, QPoint): # Right-click
-                menu = RoundMenu(parent=self)
-                if current_path_check and os.path.exists(current_path_check):
-                    view_action = Action(FluentIcon.VIEW, "查看", self)
-                    download_action = Action(FluentIcon.DOWNLOAD, "下载", self)
-                    replace_action = Action(FluentIcon.SYNC, "替换", self)
-                    delete_action = Action(FluentIcon.DELETE, "删除", self)
-                    view_action.triggered.connect(lambda: self._execute_document_action("view", doc_id, btn, session))
-                    download_action.triggered.connect(lambda: self._execute_document_action("download", doc_id, btn, session))
-                    replace_action.triggered.connect(lambda: self._execute_document_action("replace", doc_id, btn, session))
-                    delete_action.triggered.connect(lambda: self._execute_document_action("delete", doc_id, btn, session))
-                    menu.addAction(view_action)
-                    menu.addAction(download_action)
-                    menu.addAction(replace_action)
-                    menu.addSeparator()
-                    menu.addAction(delete_action)
-                else:
-                    # If no path in DB, only allow 'replace' (upload)
-                    replace_action = Action(FluentIcon.SYNC, "上传/替换", self)
-                    replace_action.triggered.connect(lambda: self._execute_document_action("replace", doc_id, btn, session))
-                    menu.addAction(replace_action)
-                menu.exec(btn.mapToGlobal(event))
-                return # Menu handles action
-
-            # Execute action if determined (e.g., left-click on empty)
-            if action_type:
-                self._execute_document_action(action_type, doc_id, btn, session)
-
-        except Exception as e:
-            UIUtils.show_error(self, "处理附件时出错", f"发生意外错误: {e}")
-            if session.is_active:
-                session.rollback()
-        finally:
-            if session.is_active:
-                session.close()
-
-    def _execute_document_action(self, action_type, doc_id, btn, session):
-        """Executes the specific document attachment action."""
-        try:
-            document = session.query(ProjectDocument).get(doc_id)
-            if not document:
-                UIUtils.show_error(self, "错误", f"执行操作时找不到ID为 {doc_id} 的文档项")
-                return
-
-            # We need the project object for path generation
-            project = session.query(Project).get(document.project_id)
-            if not project:
-                 UIUtils.show_error(self, "错误", f"找不到文档关联的项目 (ID: {document.project_id})")
-                 return
-
-            current_path = document.file_path
-
-            if action_type == "view":
-                if current_path and os.path.exists(current_path):
-                    view_attachment(current_path, self)
-                else:
-                    UIUtils.show_warning(self, "提示", "附件不存在")
-
-            elif action_type == "download":
-                if current_path and os.path.exists(current_path):
-                    download_attachment(current_path, self)
-                else:
-                    UIUtils.show_warning(self, "提示", "附件不存在")
-
-            elif action_type == "replace": # Handles both upload and replace
-                source_file_path, _ = QFileDialog.getOpenFileName(self, "选择文档文件", "", "所有文件 (*.*)")
-                if not source_file_path:
-                    return # User cancelled
-
-                old_path = current_path
-                # Use the document's type for path generation
-                new_path = self._generate_document_path(project, document.doc_type, source_file_path)
-
-                if not new_path:
-                    UIUtils.show_error(self, "错误", "无法生成文档保存路径")
-                    return
-
-                # --- Transaction Start ---
-                try:
-                    ensure_directory_exists(os.path.dirname(new_path))
-                    shutil.copy2(source_file_path, new_path)
-
-                    document.file_path = new_path
-                    document.upload_time = datetime.now() # Update upload time on replace
-                    session.commit()
-
-                    # Delete old file if replacing and path changed
-                    if old_path and os.path.exists(old_path) and os.path.normpath(old_path) != os.path.normpath(new_path):
-                        try:
-                            os.remove(old_path)
-                        except OSError as e:
-                            print(f"警告: 无法删除旧文档 {old_path}: {e}")
-
-                    # Update button
-                    btn.setIcon(QIcon(get_attachment_icon_path('attach.svg')))
-                    btn.setToolTip("管理附件")
-                    btn.setProperty("attachment_path", new_path)
-
-                    UIUtils.show_success(self, "成功", "文档附件已更新")
-                    # Optionally reload table or update row directly if needed
-                    # self.load_documents()
-
-                except Exception as e:
-                    session.rollback()
-                    UIUtils.show_error(self, "错误", f"更新文档附件失败: {e}")
-                    # Clean up potentially copied file
-                    if os.path.exists(new_path):
-                         session.expire(document)
-                         db_path_after_rollback = getattr(session.query(ProjectDocument).get(doc_id), 'file_path', None)
-                         if db_path_after_rollback != new_path:
-                             try:
-                                 print(f"Attempting to remove orphaned file: {new_path}")
-                                 os.remove(new_path)
-                             except Exception as remove_err:
-                                 print(f"Error removing orphaned file {new_path}: {remove_err}")
-                # --- Transaction End ---
-
-            elif action_type == "delete":
-                if not current_path or not os.path.exists(current_path):
-                    UIUtils.show_warning(self, "提示", "没有可删除的附件")
-                    return
-
-                confirm_dialog = Dialog('确认删除', '确定要删除此文档附件吗？文件将被删除，但文档记录保留。此操作不可恢复！', self)
-                if confirm_dialog.exec():
-                    # --- Transaction Start ---
-                    try:
-                        os.remove(current_path)
-                        document.file_path = None # Set path to None in DB
-                        session.commit()
-
-                        # Update button
-                        btn.setIcon(QIcon(get_attachment_icon_path('add_outline.svg')))
-                        btn.setToolTip("添加附件")
-                        btn.setProperty("attachment_path", None)
-
-                        UIUtils.show_success(self, "成功", "文档附件已删除")
-                        # Optionally reload table or update row directly
-                        # self.load_documents()
-
-                    except Exception as e:
-                        session.rollback()
-                        UIUtils.show_error(self, "错误", f"删除文档附件失败: {e}")
-                    # --- Transaction End ---
-
-        except Exception as e:
-             UIUtils.show_error(self, "处理附件操作时出错", f"发生意外错误: {e}")
-             if session.is_active:
-                 try: session.rollback()
-                 except: pass
+    # _execute_document_action 方法已移除，使用attachment_utils.py中的execute_attachment_action函数代替
 
     def sort_table(self, column):
         """Sorts the table based on the clicked column."""
