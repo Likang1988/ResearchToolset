@@ -285,6 +285,9 @@ class ProjectDocumentWidget(QWidget):
         self.document_table.setItemDelegate(TableItemDelegate(self.document_table))
         UIUtils.set_table_style(self.document_table) # 应用通用样式
 
+        # 禁止直接编辑
+        self.document_table.setEditTriggers(TableWidget.NoEditTriggers)
+
         # 设置列宽模式和排序
         header = self.document_table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.Interactive)

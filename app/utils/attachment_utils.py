@@ -415,6 +415,12 @@ def execute_attachment_action(action_type, item_id, btn, session, item, get_item
             else:
                 UIUtils.show_warning(parent_widget, "提示", "附件不存在")
 
+        elif action_type == "open_path":
+            if current_path and os.path.exists(current_path):
+                open_attachment_path(current_path, parent_widget)
+            else:
+                UIUtils.show_warning(parent_widget, "提示", "附件不存在或路径无效")
+
         elif action_type == "replace":  # 处理上传和替换
             source_file_path, _ = QFileDialog.getOpenFileName(parent_widget, "选择附件", "", "所有文件 (*.*)") 
             if not source_file_path:

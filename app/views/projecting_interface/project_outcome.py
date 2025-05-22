@@ -320,6 +320,8 @@ class ProjectOutcomeWidget(QWidget):
 
         self.outcome_table.setSelectionMode(TableWidget.ExtendedSelection)
         self.outcome_table.setSelectionBehavior(TableWidget.SelectRows)
+        # 禁止直接编辑
+        self.outcome_table.setEditTriggers(TableWidget.NoEditTriggers)
 
         self.main_layout.addWidget(self.outcome_table)
 
