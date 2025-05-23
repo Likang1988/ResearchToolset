@@ -48,6 +48,7 @@ function Task(id, name, code, level, start, end, duration, collapsed) {
   this.type = "";
   this.typeId = "";
   this.description = "";
+  this.responsible = "";
   
   // Monitor progress changes
   Object.defineProperty(this, 'progress', {

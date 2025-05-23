@@ -132,6 +132,7 @@ GridEditor.prototype.addTask = function (task, row, hideIfParentCollapsed) {
   return taskRow;
 };
 
+
 GridEditor.prototype.refreshExpandStatus = function (task) {
   //console.debug("refreshExpandStatus",task);
   if (!task) return;
@@ -161,6 +162,7 @@ GridEditor.prototype.refreshTaskRow = function (task) {
   row.find(".indentCell").css("padding-left", task.level * 10 + 18);
   row.find("[name=name]").val(task.name);
   row.find("[name=code]").val(task.code).prop("readonly", true); // Set code field to readonly
+  row.find("[name=description]").val(task.description);
   row.find("[status]").attr("status", task.status);
 
   row.find("[name=duration]").val(durationToString(task.duration)).prop("readonly",!canWrite || task.isParent() && task.master.shrinkParent);
@@ -543,6 +545,7 @@ GridEditor.prototype.openFullEditor = function (task, editOnlyAssig) {
   taskEditor.find("#name").val(task.name);
   taskEditor.find("#description").val(task.description);
   taskEditor.find("#code").val(task.code);
+  taskEditor.find("#responsible").val(task.responsible);
   taskEditor.find("#progress").val(task.progress ? parseFloat(task.progress) : 0).prop("readonly",task.progressByWorklog==true);
   taskEditor.find("#progressByWorklog").prop("checked",task.progressByWorklog);
   taskEditor.find("#status").val(task.status);
@@ -634,6 +637,7 @@ GridEditor.prototype.openFullEditor = function (task, editOnlyAssig) {
       task.name = taskEditor.find("#name").val();
       task.description = taskEditor.find("#description").val();
       task.code = taskEditor.find("#code").val();
+      task.responsible = taskEditor.find("#responsible").val();
       task.progress = parseFloat(taskEditor.find("#progress").val());
       //task.duration = parseInt(taskEditor.find("#duration").val()); //bicch rimosso perchè devono essere ricalcolata dalla start end, altrimenti sbaglia
       task.startIsMilestone = taskEditor.find("#startIsMilestone").is(":checked");

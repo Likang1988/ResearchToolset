@@ -650,8 +650,8 @@ function showBaselineInfo (event,element){
       <th class="gdfColHeader gdfResizable" style="width:60px;">工期(天)</th>
       <th class="gdfColHeader gdfResizable" style="width:60px;">进度(%)</th>
       <th class="gdfColHeader gdfResizable requireCanSeeDep" style="width:50px;">依赖项</th>
-      <th class="gdfColHeader gdfResizable" style="width:80px;">负责人</th> <!-- Added Responsible column header -->
-      <th class="gdfColHeader gdfResizable" style="width:1000px; text-align: left; padding-left: 10px;">负责人</th>
+      <th class="gdfColHeader gdfResizable" style="width:80px;">负责人</th>
+      <th class="gdfColHeader gdfResizable" style="width:500px;">描述</th>      
     </tr>
     </thead>
   </table>
@@ -673,7 +673,8 @@ function showBaselineInfo (event,element){
     <td class="gdfCell"><input type="text" name="duration" autocomplete="off" value="(#=obj.duration#)"></td>
     <td class="gdfCell"><input type="text" name="progress" class="validated" entrytype="PERCENTILE" autocomplete="off" value="(#=obj.progress?obj.progress:''#)" (#=obj.progressByWorklog?"readOnly":""#)></td>
     <td class="gdfCell requireCanSeeDep"><input type="text" name="depends" autocomplete="off" value="(#=obj.depends#)" (#=obj.hasExternalDep?"readonly":""#)></td>
-    <td class="gdfCell"><input type="text" name="responsible" value="(#=obj.responsible?obj.responsible:''#)" placeholder=""></td> <!-- Added Responsible cell -->
+    <td class="gdfCell"><input type="text" name="responsible" value="(#=obj.responsible?obj.responsible:''#)" placeholder=""></td>
+    <td class="gdfCell"><input type="text" name="description" value="(#=obj.description?obj.description:''#)" placeholder=""></td>
     <td class="gdfCell taskAssigs">(#=obj.getAssigsString()#)</td>
   </tr>
   --></div>
@@ -757,7 +758,7 @@ function showBaselineInfo (event,element){
       </tr>
 
       <tr>
-        <td  colspan="2">
+        <td>
           <label for="status" class=" ">状态</label><br>
           <select id="status" name="status" class="taskStatus" status="(#=obj.status#)"  onchange="$(this).attr('STATUS',$(this).val());">
             <option value="STATUS_ACTIVE" class="taskStatus" status="STATUS_ACTIVE" >进行中</option>
@@ -768,11 +769,17 @@ function showBaselineInfo (event,element){
             <option value="STATUS_UNDEFINED" class="taskStatus" status="STATUS_UNDEFINED" >未定义</option>
           </select>
         </td>
-
-        <td valign="top" nowrap>
+        
+        <td nowrap="">
           <label>进度(%)</label><br>
           <input type="text" name="progress" id="progress" size="7" class="formElements validated percentile" autocomplete="off" maxlength="255" value="" oldvalue="1" entrytype="PERCENTILE">
         </td>
+        <td nowrap="">
+          <label for="responsible">负责人</label><br>
+          <input type="text" name="responsible" id="responsible" size="15" class="formElements" value="" oldvalue="1">
+        </td>
+
+        
       </tr>
 
           </tr>
