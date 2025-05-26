@@ -667,13 +667,13 @@ function showBaselineInfo (event,element){
       <input type="text" name="name" value="(#=obj.name#)" placeholder="任务名称">
     </td>
     <td class="gdfCell" align="center"><input type="checkbox" name="startIsMilestone"></td>
-    <td class="gdfCell"><input type="text" name="start"  value="" class="date"></td>
+    <td class="gdfCell" style="text-align: center;"><input type="text" name="start"  value="" class="date"></td>
     <td class="gdfCell" align="center"><input type="checkbox" name="endIsMilestone"></td>
-    <td class="gdfCell"><input type="text" name="end" value="" class="date"></td>
-    <td class="gdfCell"><input type="text" name="duration" autocomplete="off" value="(#=obj.duration#)"></td>
-    <td class="gdfCell"><input type="text" name="progress" class="validated" entrytype="PERCENTILE" autocomplete="off" value="(#=obj.progress?obj.progress:''#)" (#=obj.progressByWorklog?"readOnly":""#)></td>
-    <td class="gdfCell requireCanSeeDep"><input type="text" name="depends" autocomplete="off" value="(#=obj.depends#)" (#=obj.hasExternalDep?"readonly":""#)></td>
-    <td class="gdfCell"><input type="text" name="responsible" value="(#=obj.responsible?obj.responsible:''#)" placeholder=""></td>
+    <td class="gdfCell" style="text-align: center;"><input type="text" name="end" value="" class="date"></td>
+    <td class="gdfCell" style="text-align: center;"><input type="text" name="duration" autocomplete="off" value="(#=obj.duration#)"></td>
+    <td class="gdfCell" style="text-align: right;"><input type="text" name="progress" class="validated" entrytype="PERCENTILE" autocomplete="off" value="(#=obj.progress?obj.progress:''#)" (#=obj.progressByWorklog?"readOnly":""#)></td>
+    <td class="gdfCell requireCanSeeDep" style="text-align: center;"><input type="text" name="depends" autocomplete="off" value="(#=obj.depends#)" (#=obj.hasExternalDep?"readonly":""#)></td>
+    <td class="gdfCell" style="text-align: center;"><input type="text" name="responsible" value="(#=obj.responsible?obj.responsible:''#)" placeholder=""></td>
     <td class="gdfCell"><input type="text" name="description" value="(#=obj.description?obj.description:''#)" placeholder=""></td>
     <td class="gdfCell taskAssigs">(#=obj.getAssigsString()#)</td>
   </tr>

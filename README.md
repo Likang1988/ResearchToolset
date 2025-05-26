@@ -83,7 +83,8 @@
 *支出管理*
 
 ## 下载安装
-前往 Releases 下载后解压双击 ResearchToolset.exe 打开图形界面
+1.前往 Releases 下载后解压双击 ResearchToolset.exe 打开图形界面
+2.通过网盘: https://pan.baidu.com/s/1DJ6CfuZvdc10kh-X6cZxBw 提取码: 6teq ,下载后解压双击 ResearchToolset.exe 打开图形界面
 
 ## 源码运行
 1. 克隆项目到本地：
