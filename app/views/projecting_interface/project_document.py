@@ -306,9 +306,12 @@ class ProjectDocumentWidget(QWidget):
         header.resizeSection(5, 250) # 描述 (索引改为5)
         header.resizeSection(6, 80)  # 附件列 (索引改为6)
 
-    # 允许用户调整列宽和移动列
+        # 允许用户调整列宽和移动列
         header.setSectionsMovable(True)
         # header.setStretchLastSection(True) # 取消最后一列拉伸
+
+        vheader = self.document_table.verticalHeader()        
+        vheader.setDefaultAlignment(Qt.AlignCenter)
 
         self.document_table.setSelectionMode(TableWidget.ExtendedSelection)
         self.document_table.setSelectionBehavior(TableWidget.SelectRows)

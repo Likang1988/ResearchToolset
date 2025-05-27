@@ -314,9 +314,12 @@ class ProjectOutcomeWidget(QWidget):
         header.resizeSection(7, 200) # 描述
         header.resizeSection(8, 80)  # 附件列 (索引从9改为8)
 
-    # 允许用户调整列宽和移动列
+        # 允许用户调整列宽和移动列
         header.setSectionsMovable(True)
         # header.setStretchLastSection(True) # 取消最后一列拉伸，手动设置附件列宽度
+        
+        vheader = self.outcome_table.verticalHeader()        
+        vheader.setDefaultAlignment(Qt.AlignCenter)
 
         self.outcome_table.setSelectionMode(TableWidget.ExtendedSelection)
         self.outcome_table.setSelectionBehavior(TableWidget.SelectRows)

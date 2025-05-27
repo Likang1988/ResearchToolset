@@ -117,12 +117,16 @@ class ProjectExpenseWidget(QWidget):
         header.sectionClicked.connect(self.sort_table)  # 连接点击事件到排序函数
 
         # 隐藏行号
-        self.expense_table.verticalHeader().setVisible(False)
+        #self.expense_table.verticalHeader().setVisible(False)
+    
+        vheader = self.expense_table.verticalHeader()        
+        vheader.setDefaultAlignment(Qt.AlignCenter)
+        
 
         # 设置初始列宽
-        header.resizeSection(0, 72)  # 支出ID
+        header.hideSection(0)  # 支出ID (完全隐藏)
         header.resizeSection(1, 100)  # 费用类别
-        header.resizeSection(2, 200)  # 开支内容
+        header.resizeSection(2, 210)  # 开支内容
         header.resizeSection(3, 160)  # 规格型号
         header.resizeSection(4, 160)  # 供应商
         header.resizeSection(5, 100)  # 报账金额

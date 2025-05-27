@@ -3,7 +3,7 @@ from PySide6.QtGui import QIcon
 from qfluentwidgets import FluentWindow, FluentIcon, NavigationItemPosition
 from ..utils.ui_utils import UIUtils
 from .projecting_interface.project_list import ProjectListWindow
-from .projecting_interface.project_budget import ProjectBudgetWidget
+from .projecting_interface.project_fund import ProjectBudgetWidget
 from .projecting_interface.project_progress import ProjectProgressWidget
 from .projecting_interface.project_document import ProjectDocumentWidget # Import Document Widget
 from .projecting_interface.project_outcome import ProjectOutcomeWidget # Import Outcome Widget
@@ -24,7 +24,7 @@ class MainWindow(FluentWindow):
     def __init__(self, engine=None):
         super().__init__()
         self.engine = engine
-        self.project_budget_interface = None
+        self.project_fund_interface = None
         
         current_dir = os.path.dirname(os.path.abspath(__file__))
         icon_path = os.path.abspath(os.path.join(current_dir, '..', 'assets', 'icon.ico'))
@@ -60,14 +60,14 @@ class MainWindow(FluentWindow):
         self.projecting_interface.project_list_updated.connect(self.project_updated)
 
         # 添加项目经费导航项
-        self.project_budget_interface = ProjectBudgetWidget(self.engine) 
-        self.project_budget_interface.setObjectName("projectBudgetInterface")
+        self.project_fund_interface = ProjectBudgetWidget(self.engine) 
+        self.project_fund_interface.setObjectName("projectBudgetInterface")
         self.addSubInterface(
-            self.project_budget_interface,
+            self.project_fund_interface,
             QIcon(UIUtils.get_svg_icon_path('budgeting_tab')), 
             "项目经费"
         )
-        self.project_budget_interface.budget_updated.connect(self.budget_or_expense_updated)
+        self.project_fund_interface.budget_updated.connect(self.budget_or_expense_updated)
         
         # 添加项目进度导航项
         self.progress_interface = ProjectProgressWidget(self.engine) 
@@ -137,8 +137,8 @@ class MainWindow(FluentWindow):
                 
         if hasattr(self.progress_interface, '_refresh_project_selector'):
             self.project_updated.connect(self.progress_interface._refresh_project_selector)
-        if hasattr(self.project_budget_interface, '_refresh_project_selector'):
-            self.project_updated.connect(self.project_budget_interface._refresh_project_selector)
+        if hasattr(self.project_fund_interface, '_refresh_project_selector'):
+            self.project_updated.connect(self.project_fund_interface._refresh_project_selector)
         if hasattr(self.document_interface, '_refresh_project_selector'):
             self.project_updated.connect(self.document_interface._refresh_project_selector)
         if hasattr(self.achievement_interface, '_refresh_project_selector'):

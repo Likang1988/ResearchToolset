@@ -256,7 +256,7 @@ class HomeInterface(QWidget):
                 card_layout.addLayout(grid_layout)
 
                 # 点击事件
-                card.mousePressEvent = lambda event, p=project: self.open_project_budget(p)
+                card.mousePressEvent = lambda event, p=project: self.open_project_fund(p)
 
                 self.project_layout.addWidget(card)
         finally:
@@ -391,11 +391,11 @@ class HomeInterface(QWidget):
                 else:
                     pass # Warning if method not found, do not print
 
-    def open_project_budget(self, project):
+    def open_project_fund(self, project):
         # 获取主窗口实例
         main_window = self.window()
-        if main_window and hasattr(main_window, 'project_budget_interface'):
-            budget_interface = main_window.project_budget_interface
+        if main_window and hasattr(main_window, 'project_fund_interface'):
+            budget_interface = main_window.project_fund_interface
 
             # 确保只触发一次界面切换
             if main_window.stackedWidget.currentWidget() != budget_interface:
