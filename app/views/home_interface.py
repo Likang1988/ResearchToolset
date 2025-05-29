@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QHBoxLayout, QGridLayout
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from qfluentwidgets import (TitleLabel, ScrollArea, CardWidget,
+from qfluentwidgets import (TitleLabel, ScrollArea, ElevatedCardWidget,
                           BodyLabel)
 from ..models.database import sessionmaker, Project, get_budget_usage, GanttTask
 import os
@@ -34,8 +34,8 @@ class HomeInterface(QWidget):
 
     def refresh_data(self):
         # 清空现有项目经费布局
-        for i in reversed(range(self.project_layout.count())):
-            self.project_layout.itemAt(i).widget().setParent(None)
+        for i in reversed(range(self.fund_layout.count())):
+            self.fund_layout.itemAt(i).widget().setParent(None)
 
         # 清空现有项目进度布局
         while self.task_layout.count():
@@ -44,7 +44,7 @@ class HomeInterface(QWidget):
                 item.widget().deleteLater()
 
         # 重新加载数据
-        self.load_projects()
+        self.load_funds()
         self.load_tasks() # 添加这行来刷新任务概览
 
     def setup_background(self):
@@ -95,10 +95,10 @@ class HomeInterface(QWidget):
         hbox.setSpacing(20)
 
         # 左侧项目经费概览
-        self.project_overview = ScrollArea()
-        self.project_overview.setWidgetResizable(True)
-        self.project_overview.setFixedWidth(530)
-        self.project_overview.setStyleSheet("""
+        self.fund_overview = ScrollArea()
+        self.fund_overview.setWidgetResizable(True)
+#        self.fund_overview.setFixedWidth(530)
+        self.fund_overview.setStyleSheet("""
             QScrollArea {
                 background-color: transparent;
                 border: 1px solid rgba(0, 0, 0, 0.1);
@@ -109,19 +109,19 @@ class HomeInterface(QWidget):
             }
         """)
 
-        project_container = QWidget()
-        project_container.setObjectName("qt_scrollarea_viewport")
-        self.project_layout = QVBoxLayout(project_container)
-        self.project_layout.setSpacing(10)
-        self.project_layout.setAlignment(Qt.AlignTop)
+        fund_container = QWidget()
+        fund_container.setObjectName("qt_scrollarea_viewport")
+        self.fund_layout = QVBoxLayout(fund_container)
+        self.fund_layout.setSpacing(10)
+        self.fund_layout.setAlignment(Qt.AlignTop)
 
         # 左侧项目经费概览标题
-        project_title = TitleLabel("项目经费概览", self)
-        project_title.setStyleSheet("font-size: 20px; margin-bottom: 10px;")
-        project_title.setGeometry(20, 320, self.width() - 36, 40)
+        fund_title = TitleLabel("项目经费概览", self)
+        fund_title.setStyleSheet("font-size: 20px; margin-bottom: 10px;")
+        fund_title.setGeometry(20, 320, self.width() - 36, 40)
 
-        self.project_overview.setWidget(project_container)
-        hbox.addWidget(self.project_overview)
+        self.fund_overview.setWidget(fund_container)
+        hbox.addWidget(self.fund_overview)
 
 
 
@@ -156,29 +156,31 @@ class HomeInterface(QWidget):
         main_layout.addLayout(hbox)
 
         # 加载数据
-        self.load_projects()
+        self.load_funds()
         self.load_tasks() # Call the new method
 
-    def load_projects(self):
+    def load_funds(self):
         Session = sessionmaker(bind=self.engine)
         session = Session()
 
         try:
-            projects = session.query(Project).all()
+            funds = session.query(Project).all()
 
             # 如果没有项目，显示提示信息
-            if not projects:
-                no_project_label = BodyLabel("暂无项目经费信息")
-                no_project_label.setAlignment(Qt.AlignCenter)
-                self.project_layout.addWidget(no_project_label)
+            if not funds:
+                no_fund_label = BodyLabel("暂无项目经费信息")
+                no_fund_label.setAlignment(Qt.AlignCenter)
+                self.fund_layout.addWidget(no_fund_label)
                 return # 退出方法，不再处理项目卡片
 
             # 如果有项目，继续现有逻辑
-            for project in projects:
-                card = CardWidget()
+            for project in funds:
+                card = ElevatedCardWidget()
                 card.setFixedHeight(80)  # 设置卡片高度
                 card_layout = QVBoxLayout(card)
                 card_layout.setContentsMargins(15, 15, 15, 15)
+
+
 
                 # 创建网格布局用于显示项目信息
                 grid_layout = QGridLayout()
@@ -258,7 +260,7 @@ class HomeInterface(QWidget):
                 # 点击事件
                 card.mousePressEvent = lambda event, p=project: self.open_project_fund(p)
 
-                self.project_layout.addWidget(card)
+                self.fund_layout.addWidget(card)
         finally:
             session.close()
 
@@ -300,7 +302,7 @@ class HomeInterface(QWidget):
                 if not tasks:
                     continue # Skip if no tasks for this project
 
-                card = CardWidget()
+                card = ElevatedCardWidget()
                 card_content_layout = QGridLayout(card) # Use QGridLayout for the card content
                 card_content_layout.setContentsMargins(15, 15, 15, 15)
                 card_content_layout.setSpacing(10) # Adjust spacing
