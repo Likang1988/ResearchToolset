@@ -298,7 +298,6 @@ class ProjectOutcomeWidget(QWidget):
         header = self.outcome_table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.Interactive)
         header.setSortIndicatorShown(True) # 启用排序
-        header.sectionClicked.connect(self.sort_table) # 连接排序信号
 
         # 隐藏行号
         #self.outcome_table.verticalHeader().setVisible(False)
@@ -781,53 +780,7 @@ class ProjectOutcomeWidget(QWidget):
             finally:
                 session.close()
 
-    # Add sort_table method similar to ProjectExpenseWidget
-    def sort_table(self, column):
-        """根据点击的列对 self.current_outcomes 列表进行排序并更新表格"""
-        if not self.current_outcomes: return
-
-        # Map column index to attribute name and type
-        column_map = {
-            0: ('name', 'str'),
-            1: ('type', 'enum'),
-            2: ('status', 'enum'),
-            3: ('authors', 'str_none'),
-            4: ('submit_date', 'date'),
-            5: ('publish_date', 'date'),
-            6: ('journal', 'str_none'),
-            7: ('description', 'str_none')
-            # 8: ('remarks', 'str_none') # Removed remarks column (was index 8)
-            # Column 8 (attachment) is not sortable (Index changed from 9 to 8)
-        }
-
-        if column not in column_map: return
-
-        attr_name, sort_type = column_map[column]
-        current_order = self.outcome_table.horizontalHeader().sortIndicatorOrder()
-        reverse = (current_order == Qt.DescendingOrder)
-
-        def sort_key(outcome):
-            value = getattr(outcome, attr_name, None)
-            if sort_type == 'enum':
-                return value.value if value else ""
-            elif sort_type == 'str_none':
-                return value.lower() if value else ""
-            elif sort_type == 'str':
-                return value.lower()
-            elif sort_type == 'date':
-                 if isinstance(value, datetime): return value.date()
-                 # Use a very early date for None to sort them first/last depending on order
-                 return value if value else datetime.min.date()
-            return value if value is not None else ""
-
-        try:
-            self.current_outcomes.sort(key=sort_key, reverse=reverse)
-        except Exception as e:
-            print(f"Error during outcome sorting: {e}")
-            return
-
-        self._populate_table(self.current_outcomes)
-        self.outcome_table.horizontalHeader().setSortIndicator(column, current_order)
+   
 
     def show_outcome_context_menu(self, pos):
         """显示成果表格的右键菜单"""

@@ -114,7 +114,6 @@ class ProjectExpenseWidget(QWidget):
         header = self.expense_table.horizontalHeader()  # 获取水平表头
         header.setSectionResizeMode(QHeaderView.Interactive)  # 可调整列宽
         header.setSortIndicatorShown(True)  # 显示排序指示器
-        header.sectionClicked.connect(self.sort_table)  # 连接点击事件到排序函数
 
         # 隐藏行号
         #self.expense_table.verticalHeader().setVisible(False)
@@ -331,9 +330,9 @@ class ProjectExpenseWidget(QWidget):
             supp_item.setTextAlignment(Qt.AlignCenter)
             self.expense_table.setItem(row, 4, supp_item)
 
-            amount_item = QTableWidgetItem(f"{expense.amount:.2f}")
+            amount_item = QTableWidgetItem()
+            amount_item.setData(Qt.DisplayRole, expense.amount) # Set float directly for display role
             amount_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-            amount_item.setData(Qt.UserRole + 1, expense.amount)
             self.expense_table.setItem(row, 5, amount_item)
 
             date_str = expense.date.strftime("%Y-%m-%d")
@@ -1050,48 +1049,4 @@ class ProjectExpenseWidget(QWidget):
         except ValueError:
             sender.setStyleSheet("border: 1px solid red;") # Example: red border
 
-    def sort_table(self, column):
-        """根据点击的列对 self.current_expenses 列表进行排序并更新表格"""
-        if not self.current_expenses: return # Nothing to sort
-
-        column_map = {
-            0: ('id', 'int'),
-            1: ('category', 'enum'), # Sort by enum value
-            2: ('content', 'str'),
-            3: ('specification', 'str_none'), # Handle None values
-            4: ('supplier', 'str_none'),      # Handle None values
-            5: ('amount', 'float'),
-            6: ('date', 'date'),
-            7: ('remarks', 'str_none')       # Handle None values
-        }
-
-        if column not in column_map: return # Clicked on non-sortable column
-
-        attr_name, sort_type = column_map[column]
-        current_order = self.expense_table.horizontalHeader().sortIndicatorOrder()
-
-        reverse = (current_order == Qt.DescendingOrder)
-
-        def sort_key(expense):
-            value = getattr(expense, attr_name, None)
-            if sort_type == 'enum':
-                return value.value if value else "" # Sort by enum value string
-            elif sort_type == 'str_none':
-                return value.lower() if value else "" # Lowercase string or empty for None
-            elif sort_type == 'str':
-                return value.lower() # Assume non-None string
-            elif sort_type == 'date':
-                 if isinstance(value, datetime): return value.date()
-                 return value if value else datetime.min.date()
-            return value if value is not None else (0 if sort_type in ['int', 'float'] else "")
-
-
-        try:
-            self.current_expenses.sort(key=sort_key, reverse=reverse)
-        except Exception as e:
-            print(f"Error during sorting: {e}") # Catch potential comparison errors
-            return
-
-        self._populate_table(self.current_expenses)
-
-        self.expense_table.horizontalHeader().setSortIndicator(column, current_order)
+    

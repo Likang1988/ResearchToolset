@@ -81,7 +81,7 @@ class HomeInterface(QWidget):
     def setup_ui(self):
         # 主布局
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(20, 350, 20, 20)
+        main_layout.setContentsMargins(20, 300, 20, 20)
 
         # 标题
         title_label = TitleLabel("科研工具集", self)
@@ -94,10 +94,18 @@ class HomeInterface(QWidget):
         hbox = QHBoxLayout()
         hbox.setSpacing(20)
 
-        # 左侧项目经费概览
+        # 左侧项目经费概览部分
+        fund_section_layout = QVBoxLayout()
+        fund_section_layout.setContentsMargins(0, 0, 0, 0) # 移除边距
+        fund_section_layout.setSpacing(6) # 设置标题和ScrollArea之间的间距
+
+        # 左侧项目经费概览标题
+        fund_title = TitleLabel("项目经费概览", self)
+        fund_title.setStyleSheet("font-size: 20px;") # 移除 margin-bottom
+        fund_section_layout.addWidget(fund_title, alignment=Qt.AlignLeft | Qt.AlignTop) # 左上对齐
+
         self.fund_overview = ScrollArea()
         self.fund_overview.setWidgetResizable(True)
-#        self.fund_overview.setFixedWidth(530)
         self.fund_overview.setStyleSheet("""
             QScrollArea {
                 background-color: transparent;
@@ -115,17 +123,21 @@ class HomeInterface(QWidget):
         self.fund_layout.setSpacing(10)
         self.fund_layout.setAlignment(Qt.AlignTop)
 
-        # 左侧项目经费概览标题
-        fund_title = TitleLabel("项目经费概览", self)
-        fund_title.setStyleSheet("font-size: 20px; margin-bottom: 10px;")
-        fund_title.setGeometry(20, 320, self.width() - 36, 40)
-
         self.fund_overview.setWidget(fund_container)
-        hbox.addWidget(self.fund_overview)
+        fund_section_layout.addWidget(self.fund_overview)
+        hbox.addLayout(fund_section_layout)
 
 
+        # 右侧项目进度概览部分
+        task_section_layout = QVBoxLayout()
+        task_section_layout.setContentsMargins(0, 0, 0, 0) # 移除边距
+        task_section_layout.setSpacing(6) # 设置标题和ScrollArea之间的间距
 
-        # 右侧项目进度概览
+        # 右侧项目进度概览标题
+        task_title = TitleLabel("项目进度概览", self)
+        task_title.setStyleSheet("font-size: 20px;") # 移除 margin-bottom
+        task_section_layout.addWidget(task_title, alignment=Qt.AlignLeft | Qt.AlignTop) # 左上对齐
+
         self.task_overview = ScrollArea()
         self.task_overview.setWidgetResizable(True)
         self.task_overview.setStyleSheet("""
@@ -145,13 +157,9 @@ class HomeInterface(QWidget):
         self.task_layout.setSpacing(10)
         self.task_layout.setAlignment(Qt.AlignTop)
 
-        # 右侧项目进度概览标题
-        task_title = TitleLabel("项目进度概览", self)
-        task_title.setStyleSheet("font-size: 20px; margin-bottom: 10px;")
-        task_title.setGeometry(570, 320, 530, 40) # Adjust position as needed
-
         self.task_overview.setWidget(task_container)
-        hbox.addWidget(self.task_overview)
+        task_section_layout.addWidget(self.task_overview)
+        hbox.addLayout(task_section_layout)
 
         main_layout.addLayout(hbox)
 

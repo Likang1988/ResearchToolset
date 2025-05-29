@@ -297,7 +297,6 @@ class ActivityInterface(QWidget):
         header = self.activity_table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.Interactive)
         header.setSortIndicatorShown(True)
-        header.sectionClicked.connect(self.sort_table)
 
         header.resizeSection(0, 200)  # 活动名称
         header.resizeSection(1, 80)   # 类型
@@ -305,7 +304,7 @@ class ActivityInterface(QWidget):
         header.resizeSection(3, 150)  # 主办方
         header.resizeSection(4, 92)   # 开始日期
         header.resizeSection(5, 92)   # 结束日期
-        header.resizeSection(6, 120)  # 活动地点
+        header.resizeSection(6, 110)  # 活动地点
         header.resizeSection(7, 200)  # 参与人员
         header.resizeSection(8, 80)   # 活动附件
 
@@ -314,6 +313,9 @@ class ActivityInterface(QWidget):
         self.activity_table.setSelectionBehavior(TableWidget.SelectRows)
 
         self.main_layout.addWidget(self.activity_table)
+
+        vheader = self.activity_table.verticalHeader()        
+        vheader.setDefaultAlignment(Qt.AlignCenter)
 
         # 搜索栏
         search_layout = QHBoxLayout()
@@ -590,9 +592,6 @@ class ActivityInterface(QWidget):
             UIUtils.show_error(self, "错误", f"删除活动失败: {e}")
         finally:
             session.close()
-
-    def sort_table(self, column):
-        self.activity_table.sortItems(column)
 
     def apply_filters(self):
         filtered_activities = self.all_activities[:]

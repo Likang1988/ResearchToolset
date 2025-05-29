@@ -292,7 +292,6 @@ class ProjectDocumentWidget(QWidget):
         header = self.document_table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.Interactive)
         header.setSortIndicatorShown(True) # 启用排序
-        header.sectionClicked.connect(self.sort_table) # 连接排序信号
 
         # 隐藏行号
         #self.document_table.verticalHeader().setVisible(False)
@@ -742,51 +741,7 @@ class ProjectDocumentWidget(QWidget):
 
     # _execute_document_action 方法已移除，使用attachment_utils.py中的execute_attachment_action函数代替
 
-    def sort_table(self, column):
-        """Sorts the table based on the clicked column."""
-        if not self.current_documents: return
-
-        # Map column index to attribute name and type
-        column_map = {
-            0: ('name', 'str'),
-            1: ('doc_type', 'enum'),
-            2: ('version', 'str_none'),
-            3: ('keywords', 'str_none'),    # Index changed from 4 to 3
-            4: ('upload_time', 'datetime'), # Index changed from 6 to 4
-            5: ('description', 'str_none'), # Index changed from 3 to 5
-            # 6: ('attachment', None) # Not sortable (Index changed from 7 to 6)
-            # Removed 'uploader' (was index 5)
-        }
-
-        if column not in column_map: return
-
-        attr_name, sort_type = column_map[column]
-        current_order = self.document_table.horizontalHeader().sortIndicatorOrder()
-        reverse = (current_order == Qt.DescendingOrder)
-
-        def sort_key(doc):
-            value = getattr(doc, attr_name, None)
-            if sort_type == 'enum':
-                return value.value if value else ""
-            elif sort_type == 'str_none':
-                return value.lower() if value else ""
-            elif sort_type == 'str':
-                return value.lower()
-            elif sort_type == 'datetime':
-                 # Use epoch for None datetimes to sort them consistently
-                 return value.timestamp() if value else 0
-            return value if value is not None else "" # Fallback for other types
-
-        try:
-            self.current_documents.sort(key=sort_key, reverse=reverse)
-        except Exception as e:
-            print(f"Error during document sorting: {e}")
-            return
-
-        self._populate_table(self.current_documents)
-        self.document_table.horizontalHeader().setSortIndicator(column, current_order)
-
-
+    
     def show_document_context_menu(self, pos):
         """显示文档表格的右键菜单"""
         menu = RoundMenu(parent=self)
