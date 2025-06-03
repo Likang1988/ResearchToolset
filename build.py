@@ -39,6 +39,8 @@ def build_app():
         '--distpath=' + dist_dir,  # 指定输出目录
         '--workpath=' + build_dir,  # 指定构建目录
         '--specpath=' + spec_dir,  # spec文件位置
+        '--upx-dir=D:/Environments/upx-5.0.1-win64',  # 使用 UPX 压缩
+        '--exclude-module=matplotlib',  # 排除 matplotlib 模块
     ]
     
     run(pyinstaller_args)

@@ -5,7 +5,7 @@ from PySide6.QtGui import QFont, QIcon  # 将QFont导入提前
 from app.views.main_window import MainWindow
 from app.models.database import init_db, migrate_db, Base
 import logging
-import matplotlib as mpl
+#import matplotlib as mpl
 
 def main():
     # 添加平台检测
@@ -26,8 +26,8 @@ def main():
     # 设置日志
     logging.basicConfig(level=logging.INFO) 
 
-    mpl.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'Arial']
-    mpl.rcParams['axes.unicode_minus'] = False  
+    #mpl.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'Arial']
+    #mpl.rcParams['axes.unicode_minus'] = False  
     
     # 设置应用程序图标
     icon_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'app', 'assets', 'icon.ico'))

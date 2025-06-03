@@ -535,29 +535,6 @@ class ProjectOutcomeWidget(QWidget):
         self._populate_table(self.current_outcomes)
         
     def reset_filters(self):
-        """重置所有筛选条件到默认值"""
-        # 重置搜索框
-        self.search_edit.clear()
-        
-        # 重置类型筛选
-        self.type_filter.setCurrentIndex(0)  # 设置为"全部类型"
-        
-        # 重置状态筛选
-        self.status_filter.setCurrentIndex(0)  # 设置为"全部状态"
-        
-        # 重置日期范围
-        if self.current_project:
-            start_qdate = QDate(self.current_project.start_date.year, self.current_project.start_date.month, self.current_project.start_date.day)
-            self.start_date.setDate(start_qdate)
-        else:
-            self.start_date.setDate(QDate(QDate.currentDate().year() - 1, 1, 1))  # 默认为当前年份的前一年1月1日
-        self.end_date.setDate(QDate.currentDate())
-        
-        # 重新加载所有数据
-        self.current_outcomes = self.all_outcomes[:]
-        self._populate_table(self.current_outcomes)
-
-    def reset_filters(self):
         """Resets all filter inputs and reapplies filters."""
         self.search_edit.clear()
         self.type_filter.setCurrentText("全部类型")
@@ -572,8 +549,6 @@ class ProjectOutcomeWidget(QWidget):
         self.end_date.setDate(QDate.currentDate())
         
         self.apply_filters() # Re-apply filters to show all items
-
-    # _generate_outcome_path 方法已移除，使用 attachment_utils.py 中的 generate_attachment_path 函数
 
     def add_outcome(self):
         if not self.current_project:

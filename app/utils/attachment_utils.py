@@ -95,6 +95,7 @@ def create_attachment_button(item_id, attachment_path, handle_attachment_func, p
 
     layout.addWidget(btn, 0, Qt.AlignCenter) # Ensure vertical centering
     container.setLayout(layout)
+    container.setFixedHeight(28) # Ensure the container has a fixed height to stabilize the button's vertical position
     return container
 
 def create_attachment_menu(parent, attachment_path, item_id, handle_attachment_func):
