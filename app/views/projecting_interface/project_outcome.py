@@ -3,7 +3,7 @@ import shutil # Add shutil
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTableWidgetItem, QDialog, QHeaderView, QFileDialog, QApplication 
 from PySide6.QtCore import Qt, QPoint, QDate 
 from PySide6.QtGui import QIcon 
-from qfluentwidgets import TitleLabel, FluentIcon, LineEdit, ComboBox, DateEdit, CompactDateEdit, BodyLabel, PushButton, TableWidget, TableItemDelegate, Dialog, RoundMenu, Action, PlainTextEdit
+from qfluentwidgets import TitleLabel, FluentIcon, LineEdit, ComboBox, DateEdit, CompactDateEdit, BodyLabel, PushButton, TableWidget, TableItemDelegate, Dialog, RoundMenu, Action, PlainTextEdit, ToolTipFilter, ToolTipPosition
 from ...utils.ui_utils import UIUtils
 from ...models.database import Project, Base, sessionmaker, Actionlog # Import Actionlog
 from sqlalchemy.orm import sessionmaker
@@ -256,6 +256,7 @@ class ProjectOutcomeWidget(QWidget):
         selector_layout = QHBoxLayout()
         selector_label = TitleLabel("项目成果-", self)
         selector_label.setToolTip("用于创建和管理项目的成果信息")
+        selector_label.installEventFilter(ToolTipFilter(selector_label, showDelay=300, position=ToolTipPosition.RIGHT))
         self.project_selector = UIUtils.create_project_selector(self.engine, self)
 
         # 手动添加“全部数据”选项

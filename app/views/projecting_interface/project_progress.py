@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QFileDialog # Added QHBoxLayout, QLabel, QFileDialog
 from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtCore import QUrl, Signal, QObject, Slot
-from qfluentwidgets import TitleLabel, InfoBar, InfoBarPosition
+from qfluentwidgets import TitleLabel, InfoBar, InfoBarPosition, ToolTipFilter, ToolTipPosition
 from qframelesswindow.webengine import FramelessWebEngineView
 from app.utils.ui_utils import UIUtils
 # 需要在文件顶部导入
@@ -107,6 +107,7 @@ class ProjectProgressWidget(QWidget):
         selector_layout = QHBoxLayout()
         selector_label = TitleLabel("项目进度-", self)
         selector_label.setToolTip("以甘特图形式管理项目任务进度")
+        selector_label.installEventFilter(ToolTipFilter(selector_label, showDelay=300, position=ToolTipPosition.RIGHT))
         self.project_selector = UIUtils.create_project_selector(self.engine, self)
         selector_layout.addWidget(selector_label)
         selector_layout.addWidget(self.project_selector)

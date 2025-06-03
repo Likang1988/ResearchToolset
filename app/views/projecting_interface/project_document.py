@@ -3,7 +3,7 @@ import shutil # Ensure shutil is imported
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidgetItem, QFileDialog, QDialog, QHeaderView, QApplication
 from PySide6.QtCore import Qt, QPoint 
 from PySide6.QtGui import QIcon 
-from qfluentwidgets import TitleLabel, FluentIcon, ComboBox, LineEdit, Dialog, BodyLabel, PushButton, TableWidget, TableItemDelegate, RoundMenu, Action, PlainTextEdit  
+from qfluentwidgets import TitleLabel, FluentIcon, ComboBox, LineEdit, Dialog, BodyLabel, PushButton, TableWidget, TableItemDelegate, RoundMenu, Action, PlainTextEdit, ToolTipFilter, ToolTipPosition
 from ...models.database import Project, sessionmaker 
 from ...utils.ui_utils import UIUtils
 from ...models.database import Base, Actionlog # Project and sessionmaker already imported, add Actionlog
@@ -245,6 +245,7 @@ class ProjectDocumentWidget(QWidget):
         selector_layout = QHBoxLayout()
         selector_label = TitleLabel("项目文档-", self)
         selector_label.setToolTip("用于创建和管理项目的文档信息")
+        selector_label.installEventFilter(ToolTipFilter(selector_label, showDelay=300, position=ToolTipPosition.RIGHT))
         self.project_selector = UIUtils.create_project_selector(self.engine, self)
 
         # 手动添加“全部数据”选项

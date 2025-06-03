@@ -2,7 +2,7 @@ import os
 import sys
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QSplitter,
                                 QTreeWidgetItem, QApplication) # Keep QStackedWidget for now, might be used by parent, Added QApplication for clipboard
-from qfluentwidgets import TreeWidget, FluentIcon, ToolButton, Dialog, TitleLabel # Added ComboBox
+from qfluentwidgets import TreeWidget, FluentIcon, ToolButton, Dialog, TitleLabel, ToolTipFilter, ToolTipPosition # Added ComboBox
 from PySide6.QtCore import Qt, QSize, Signal
 from PySide6.QtGui import QIcon 
 from ...components.budget_dialog import BudgetDialog, TotalBudgetDialog
@@ -103,6 +103,7 @@ class ProjectBudgetWidget(QWidget):
         selector_layout = QHBoxLayout()        
         selector_label = TitleLabel("项目经费-", self)
         selector_label.setToolTip("用于创建和管理项目的经费预算信息")
+        selector_label.installEventFilter(ToolTipFilter(selector_label, showDelay=300, position=ToolTipPosition.RIGHT))
         self.project_selector = UIUtils.create_project_selector(self.engine, self)
         selector_layout.addWidget(selector_label)
         selector_layout.addWidget(self.project_selector)

@@ -20,7 +20,6 @@ class ProjectListWindow(QWidget):
         
         
         self.project = None
-        self.setWindowTitle("经费追踪")
         self.setup_ui()
 
     
@@ -49,14 +48,9 @@ class ProjectListWindow(QWidget):
         title_layout = UIUtils.create_title_layout("项目清单")
         layout.addLayout(title_layout)
         # 标题悬停提示
-        title_layout.itemAt(0).widget().setToolTip("用于创建和管理项目的基本信息，后续项目经费、进度、文档、成果管理基于此列表中项目")
-        #title_layout.installEventFilter(ToolTipFilter(ToolTipFilter, showDelay=300, position=ToolTipPosition.TOP))
-
-        # 添加副标题
-        #subtitle_label = BodyLabel("用于创建和管理项目的基本信息，后续项目经费、进度、文档、成果管理基于此列表中项目", self)
-        #subtitle_label.setObjectName("listSubtitle")
-        #subtitle_label.setStyleSheet("#listSubtitle { color: rgba(0, 0, 0, 0.6); font-size: 12px; }")
-        #layout.addWidget(subtitle_label)
+        self.title_label = title_layout.itemAt(0).widget()
+        self.title_label.setToolTip("用于创建和管理项目的基本信息，后续项目经费、进度、文档、成果管理基于此列表中项目")
+        self.title_label.installEventFilter(ToolTipFilter(self.title_label, showDelay=300, position=ToolTipPosition.RIGHT))
         
         # 按钮栏
         button_layout = QHBoxLayout()

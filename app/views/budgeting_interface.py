@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTreeWidget, QTreeWidgetItem,
                              QHeaderView)
-from qfluentwidgets import TitleLabel, BodyLabel, FluentIcon, TreeWidget, Dialog
+from qfluentwidgets import TitleLabel, BodyLabel, FluentIcon, TreeWidget, Dialog, ToolTipFilter, ToolTipPosition
 from PySide6.QtCore import Qt
 from ..models.database import sessionmaker, BudgetCategory, BudgetPlan, BudgetPlanItem
 from ..utils.ui_utils import UIUtils
@@ -118,13 +118,9 @@ class BudgetingInterface(QWidget):
         
         # 标题悬停提示
         title_label.setToolTip("用于课题申请或年度预算上报时的预算计划编制")
+        title_label.installEventFilter(ToolTipFilter(title_label, showDelay=300, position=ToolTipPosition.TOP))
 
-        # 添加副标题
-        #subtitle_label = BodyLabel("用于课题申请或年度预算上报时的预算计划编制")
-        #subtitle_label.setObjectName("budgetingSubtitle")
-        #subtitle_label.setStyleSheet("#budgetingSubtitle { color: rgba(0, 0, 0, 0.6); font-size: 12px; }")
-        #layout.addWidget(subtitle_label)
-        
+
         # 按钮栏
         button_layout = QHBoxLayout()
         

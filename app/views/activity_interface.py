@@ -2,7 +2,7 @@ import os
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTableWidgetItem, QDialog, QHeaderView, QFileDialog, QApplication
 from PySide6.QtCore import Qt, QPoint, QDate
 from PySide6.QtGui import QIcon
-from qfluentwidgets import TitleLabel, FluentIcon, LineEdit, ComboBox, DateEdit, CompactDateEdit, BodyLabel, PushButton, TableWidget, TableItemDelegate, Dialog, RoundMenu, Action, PlainTextEdit
+from qfluentwidgets import TitleLabel, FluentIcon, LineEdit, ComboBox, DateEdit, CompactDateEdit, BodyLabel, PushButton, TableWidget, TableItemDelegate, Dialog, RoundMenu, Action, PlainTextEdit, ToolTipFilter, ToolTipPosition
 from ..utils.ui_utils import UIUtils
 from ..models.database import Base, sessionmaker, Actionlog
 from sqlalchemy.orm import sessionmaker
@@ -266,6 +266,7 @@ class ActivityInterface(QWidget):
         title_layout = QHBoxLayout()
         title_label = TitleLabel("学术活动", self)
         title_label.setToolTip("用于创建和管理学术活动信息")
+        title_label.installEventFilter(ToolTipFilter(title_label, showDelay=300, position=ToolTipPosition.RIGHT))
         title_layout.addWidget(title_label)
         title_layout.addStretch()
         self.main_layout.addLayout(title_layout)
