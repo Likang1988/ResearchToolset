@@ -22,13 +22,14 @@ class ProgressBarDelegate(QStyledItemDelegate):
 
         # 创建进度条选项
         progress_bar = QStyleOptionProgressBar()
-        progress_bar.rect = option.rect.adjusted(4, 4, -4, -4)  # 设置边距
+        progress_bar.rect = option.rect.adjusted(4, 8, -4, -8)  # 设置边距
         progress_bar.minimum = 0
         progress_bar.maximum = 100
         progress_bar.progress = min(int(rate), 100)  # 限制进度不超过100%
         progress_bar.text = f"{rate:.2f}%"
         progress_bar.textVisible = True
         progress_bar.textAlignment = Qt.AlignCenter
+        
 
         # 保存画笔状态
         painter.save()

@@ -1,9 +1,10 @@
 import os
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout
 from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QColor, QPainter
+from PySide6.QtGui import QColor, QPainter, QIcon
 from PySide6.QtCharts import QChart, QChartView, QPieSeries, QPieSlice
-from qfluentwidgets import ToolButton, FluentIcon
+from qfluentwidgets import ToolButton, FluentIconBase
+from ..utils.ui_utils import UIUtils
 from collections import defaultdict
 from abc import ABC, abstractmethod
 
@@ -177,8 +178,7 @@ class BudgetChartWidget(QWidget):
         button_layout.setAlignment(Qt.AlignTop | Qt.AlignRight)
         
         # 类别分布按钮
-        self.category_btn = ToolButton()
-        self.category_btn.setIcon(FluentIcon.APPLICATION)
+        self.category_btn = ToolButton(QIcon(UIUtils.get_svg_icon_path("category")))
         self.category_btn.setToolTip("类别分布")
         self.category_btn.setCheckable(True)
         self.category_btn.setChecked(True)
@@ -205,8 +205,7 @@ class BudgetChartWidget(QWidget):
         """)
         
         # 时间分布按钮
-        self.time_btn = ToolButton()
-        self.time_btn.setIcon(FluentIcon.CALENDAR)
+        self.time_btn = ToolButton(QIcon(UIUtils.get_svg_icon_path("calendar")))
         self.time_btn.setToolTip("时间分布")
         self.time_btn.setCheckable(True)
         self.time_btn.setFixedSize(28, 28)

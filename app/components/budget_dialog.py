@@ -5,12 +5,13 @@
 """
 
 from PySide6.QtWidgets import (
+    QListWidget, # Changed from ListWidget
     QDialog, QVBoxLayout, QHBoxLayout, 
      QGridLayout, QGroupBox
 )
 from PySide6.QtCore import Qt, QDate, Signal
 from qfluentwidgets import (
-    SpinBox, DoubleSpinBox, PushButton, BodyLabel, FluentIcon
+    SpinBox, DoubleSpinBox, PushButton, BodyLabel, FluentIcon, ComboBox, ToolTipFilter, ToolTipPosition # Added ComboBox for selection
 )
 from ..models.database import BudgetCategory, Budget, BudgetItem, sessionmaker
 from sqlalchemy.orm import sessionmaker
@@ -18,6 +19,7 @@ from ..utils.ui_utils import UIUtils
 from sqlalchemy import func
 
 class TotalBudgetDialog(QDialog):
+    budget_plan_imported = Signal(dict) # Signal to emit imported budget data
     """
     总预算对话框类，用于编辑项目总预算信息
     
@@ -32,6 +34,8 @@ class TotalBudgetDialog(QDialog):
         self.project = project # Use passed project
         self.engine = engine # Use passed engine
         self.budget = budget
+        self.is_new = budget is None
+        self.engine = engine # Store the engine, it's needed for importing budget plans
         self.setup_ui()
         self.load_budget_data()
         
@@ -100,6 +104,15 @@ class TotalBudgetDialog(QDialog):
         
         self.setLayout(layout)
         
+        # 导入预算计划按钮
+        import_budget_plan_btn = PushButton("导入预算计划", self, FluentIcon.DOWNLOAD)
+        import_budget_plan_btn.setFixedWidth(150)
+        import_budget_plan_btn.clicked.connect(self.import_budget_plan)
+        import_budget_plan_btn.setToolTip("可导入“预算编制”界面中预算计划")
+        import_budget_plan_btn.installEventFilter(ToolTipFilter(import_budget_plan_btn, showDelay=300, position=ToolTipPosition.TOP))
+        # 将导入按钮添加到保存和取消按钮的左边
+        button_layout.insertWidget(0, import_budget_plan_btn) # Insert at the beginning of the layout
+
         # 信号连接
         save_btn.clicked.connect(self.validate_and_accept)
         cancel_btn.clicked.connect(self.reject)
@@ -133,6 +146,97 @@ class TotalBudgetDialog(QDialog):
                 content=f'加载总预算数据失败：{str(e)}',
                 parent=self
             )
+        finally:
+            session.close()
+
+    def import_budget_plan(self):
+        """导入预算计划"""
+        from ..models.database import BudgetPlan, BudgetPlanItem # Local import to avoid circular dependency if any
+
+        if not self.engine:
+            UIUtils.show_error(title="错误", content="数据库引擎未初始化，无法导入预算计划。", parent=self)
+            return
+
+        Session = sessionmaker(bind=self.engine)
+        session = Session()
+        try:
+            budget_plans = session.query(BudgetPlan).all()
+            if not budget_plans:
+                UIUtils.show_info(title="提示", content="没有可用的预算计划。", parent=self)
+                return
+
+            dialog = QDialog(self)
+            dialog.setWindowTitle("选择预算计划导入")
+            dialog.setMinimumWidth(400) # Set a minimum width for better layout
+            layout = QVBoxLayout(dialog)
+            
+            layout.addWidget(BodyLabel("请选择要导入的预算计划："))
+            combo_box = ComboBox(dialog)
+            for plan in budget_plans:
+                combo_box.addItem(plan.name, userData=plan.id) # Store plan.id as userData
+            
+            layout.addWidget(combo_box)
+            
+            buttons_layout = QHBoxLayout()
+            ok_button = PushButton("确定")
+            cancel_button = PushButton("取消")
+            buttons_layout.addStretch()
+            buttons_layout.addWidget(ok_button)
+            buttons_layout.addWidget(cancel_button)
+            layout.addLayout(buttons_layout)
+
+            ok_button.clicked.connect(dialog.accept)
+            cancel_button.clicked.connect(dialog.reject)
+
+            if dialog.exec():
+                selected_plan_id = combo_box.currentData()
+                if selected_plan_id:
+                    # 获取选定预算计划的费用类别预算数
+                    # We need to query BudgetPlanItem where category is one of BudgetCategory enum values
+                    # and parent_id is NULL (meaning it's a direct child of the plan, representing a category total)
+                    # However, the budgeting_interface.py structure is: Plan -> Category -> Items
+                    # So we need to get the items that are direct children of the plan, which are categories.
+                    # Then for each category, sum up its children if it has any, or take its amount if it doesn't.
+                    # For simplicity here, we'll assume the first-level items under a plan ARE the categories with their total amounts.
+                    # This matches how `budgeting_interface.py` loads `BudgetPlanItem` for categories without children.
+
+                    # Corrected query to get category-level budget items from the selected plan
+                    category_budget_items = session.query(BudgetPlanItem).join(BudgetPlan).filter(
+                        BudgetPlanItem.plan_id == selected_plan_id,
+                        BudgetPlanItem.parent_id.is_(None) # This gets the top-level items under the plan
+                    ).all()
+
+                    imported_data = {}
+                    for item in category_budget_items:
+                        # The 'category' of these top-level BudgetPlanItems should already be a BudgetCategory enum
+                        if item.category is None:
+                            print(f"Warning: Budget plan item category is None for item ID {item.id} from plan ID {selected_plan_id}.")
+                            continue
+                        try:
+                            category_enum = item.category # Use the already-defined BudgetCategory enum
+                            # The 'amount' of this item is the total for that category in the plan
+                            imported_data[category_enum] = item.amount 
+                        except Exception as e:
+                            print(f"Warning: Could not process budget plan item '{item.name}' (ID: {item.id}) from plan ID {selected_plan_id}: {e}")
+                            continue
+                    
+                    if not imported_data:
+                        UIUtils.show_warning(title="警告", content="选择的预算计划中没有找到有效的费用类别预算数据。", parent=self)
+                        return
+
+                    # 填充到当前对话框
+                    for category, spinbox in self.amount_inputs.items():
+                        if category in imported_data:
+                            spinbox.setValue(imported_data[category] / 10000) # Assuming plan amount is in Yuan, dialog is in Wan Yuan
+                        else:
+                            spinbox.setValue(0.00) # Reset if not in imported data
+
+                    self.update_total() # Update total after populating
+                    self.budget_plan_imported.emit(imported_data) # Emit signal with imported data
+                    UIUtils.show_success(title="成功", content="预算计划导入成功！", parent=self)
+        except Exception as e:
+            UIUtils.show_error(title="错误", content=f"导入预算计划失败：{str(e)}", parent=self)
+            # import traceback
         finally:
             session.close()
         
@@ -197,7 +301,7 @@ class TotalBudgetDialog(QDialog):
         if total <= 0:
             UIUtils.show_warning(
                 title='警告',
-                content='总预算金额必须大于0！',
+                content='该年度预算已存在，请勿重复添加！',
                 parent=self
             )
             return
@@ -215,6 +319,7 @@ class TotalBudgetDialog(QDialog):
         }
 
 class BudgetDialog(QDialog):
+    budget_plan_imported = Signal(dict) # Signal to emit imported budget data
     """
     年度预算对话框类，用于创建和编辑年度预算信息
     
@@ -238,6 +343,7 @@ class BudgetDialog(QDialog):
         self.project = project # Use passed project
         self.engine = engine # Use passed engine
         self.budget = budget
+        self.is_new = budget is None
         self.setup_ui()
         
         if budget:
@@ -355,6 +461,15 @@ class BudgetDialog(QDialog):
         
         self.setLayout(layout)
         
+        # 导入预算计划按钮
+        import_budget_plan_btn = PushButton("导入预算计划", self, FluentIcon.DOWNLOAD)
+        import_budget_plan_btn.setFixedWidth(150)
+        import_budget_plan_btn.clicked.connect(self.import_budget_plan)
+        import_budget_plan_btn.setToolTip("可导入“预算编制”界面中预算计划")
+        import_budget_plan_btn.installEventFilter(ToolTipFilter(import_budget_plan_btn, showDelay=300, position=ToolTipPosition.TOP))
+        # 将导入按钮添加到保存和取消按钮的左边
+        button_layout.insertWidget(0, import_budget_plan_btn) # Insert at the beginning of the layout
+
         # 信号连接
         save_btn.clicked.connect(self.validate_and_accept)
         cancel_btn.clicked.connect(self.reject)
@@ -381,6 +496,97 @@ class BudgetDialog(QDialog):
             
             # 更新结余金额显示
             self.update_balance_amounts()
+        finally:
+            session.close()
+
+    def import_budget_plan(self):
+        """导入预算计划"""
+        from ..models.database import BudgetPlan, BudgetPlanItem # Local import to avoid circular dependency if any
+
+        if not self.engine:
+            UIUtils.show_error(title="错误", content="数据库引擎未初始化，无法导入预算计划。", parent=self)
+            return
+
+        Session = sessionmaker(bind=self.engine)
+        session = Session()
+        try:
+            budget_plans = session.query(BudgetPlan).all()
+            if not budget_plans:
+                UIUtils.show_info(title="提示", content="没有可用的预算计划。", parent=self)
+                return
+
+            dialog = QDialog(self)
+            dialog.setWindowTitle("选择预算计划导入")
+            dialog.setMinimumWidth(400) # Set a minimum width for better layout
+            layout = QVBoxLayout(dialog)
+            
+            layout.addWidget(BodyLabel("请选择要导入的预算计划："))
+            combo_box = ComboBox(dialog)
+            for plan in budget_plans:
+                combo_box.addItem(plan.name, userData=plan.id) # Store plan.id as userData
+            
+            layout.addWidget(combo_box)
+            
+            buttons_layout = QHBoxLayout()
+            ok_button = PushButton("确定")
+            cancel_button = PushButton("取消")
+            buttons_layout.addStretch()
+            buttons_layout.addWidget(ok_button)
+            buttons_layout.addWidget(cancel_button)
+            layout.addLayout(buttons_layout)
+
+            ok_button.clicked.connect(dialog.accept)
+            cancel_button.clicked.connect(dialog.reject)
+
+            if dialog.exec():
+                selected_plan_id = combo_box.currentData()
+                if selected_plan_id:
+                    # 获取选定预算计划的费用类别预算数
+                    # We need to query BudgetPlanItem where category is one of BudgetCategory enum values
+                    # and parent_id is NULL (meaning it's a direct child of the plan, representing a category total)
+                    # However, the budgeting_interface.py structure is: Plan -> Category -> Items
+                    # So we need to get the items that are direct children of the plan, which are categories.
+                    # Then for each category, sum up its children if it has any, or take its amount if it doesn't.
+                    # For simplicity here, we'll assume the first-level items under a plan ARE the categories with their total amounts.
+                    # This matches how `budgeting_interface.py` loads `BudgetPlanItem` for categories without children.
+
+                    # Corrected query to get category-level budget items from the selected plan
+                    category_budget_items = session.query(BudgetPlanItem).join(BudgetPlan).filter(
+                        BudgetPlanItem.plan_id == selected_plan_id,
+                        BudgetPlanItem.parent_id.is_(None) # This gets the top-level items under the plan
+                    ).all()
+
+                    imported_data = {}
+                    for item in category_budget_items:
+                        # The 'category' of these top-level BudgetPlanItems should already be a BudgetCategory enum
+                        if item.category is None:
+                            print(f"Warning: Budget plan item category is None for item ID {item.id} from plan ID {selected_plan_id}.")
+                            continue
+                        try:
+                            category_enum = item.category # Use the already-defined BudgetCategory enum
+                            # The 'amount' of this item is the total for that category in the plan
+                            imported_data[category_enum] = item.amount 
+                        except Exception as e:
+                            print(f"Warning: Could not process budget plan item '{item.name}' (ID: {item.id}) from plan ID {selected_plan_id}: {e}")
+                            continue
+                    
+                    if not imported_data:
+                        UIUtils.show_warning(title="警告", content="选择的预算计划中没有找到有效的费用类别预算数据。", parent=self)
+                        return
+
+                    # 填充到当前对话框
+                    for category, spinbox in self.amount_inputs.items():
+                        if category in imported_data:
+                            spinbox.setValue(imported_data[category] / 10000) # Assuming plan amount is in Yuan, dialog is in Wan Yuan
+                        else:
+                            spinbox.setValue(0.00) # Reset if not in imported data
+
+                    self.update_total() # Update total after populating
+                    self.budget_plan_imported.emit(imported_data) # Emit signal with imported data
+                    UIUtils.show_success(title="成功", content="预算计划导入成功！", parent=self)
+        except Exception as e:
+            UIUtils.show_error(title="错误", content=f"导入预算计划失败：{str(e)}", parent=self)
+            # import traceback
         finally:
             session.close()
             
@@ -445,7 +651,7 @@ class BudgetDialog(QDialog):
         if total <= 0:
             UIUtils.show_warning(
                 title='警告',
-                content='预算总额必须大于0！',
+                content='总预算金额必须大于0！',
                 parent=self
             )
             return
