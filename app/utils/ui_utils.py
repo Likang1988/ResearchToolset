@@ -165,7 +165,7 @@ class UIUtils:
             item.setToolTip(item.text())
 
     @staticmethod
-    def get_svg_icon_path(icon_name: str) -> str:
+    def my_svgicon(icon_name: str) -> str:
         """获取SVG图标文件的完整路径
         
         Args:

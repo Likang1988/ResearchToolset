@@ -3,7 +3,7 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QColor, QPainter, QIcon
 from PySide6.QtCharts import QChart, QChartView, QPieSeries, QPieSlice
-from qfluentwidgets import ToolButton, FluentIconBase
+from qfluentwidgets import ToolButton, ToolTipFilter, ToolTipPosition
 from ..utils.ui_utils import UIUtils
 from collections import defaultdict
 from abc import ABC, abstractmethod
@@ -178,8 +178,9 @@ class BudgetChartWidget(QWidget):
         button_layout.setAlignment(Qt.AlignTop | Qt.AlignRight)
         
         # 类别分布按钮
-        self.category_btn = ToolButton(QIcon(UIUtils.get_svg_icon_path("category")))
+        self.category_btn = ToolButton(QIcon(UIUtils.my_svgicon("category")))
         self.category_btn.setToolTip("类别分布")
+        self.category_btn.installEventFilter(ToolTipFilter(self.category_btn, showDelay=300, position=ToolTipPosition.TOP))
         self.category_btn.setCheckable(True)
         self.category_btn.setChecked(True)
         self.category_btn.setFixedSize(28, 28)
@@ -205,8 +206,9 @@ class BudgetChartWidget(QWidget):
         """)
         
         # 时间分布按钮
-        self.time_btn = ToolButton(QIcon(UIUtils.get_svg_icon_path("calendar")))
+        self.time_btn = ToolButton(QIcon(UIUtils.my_svgicon("calendar")))
         self.time_btn.setToolTip("时间分布")
+        self.time_btn.installEventFilter(ToolTipFilter(self.time_btn, showDelay=300, position=ToolTipPosition.TOP))
         self.time_btn.setCheckable(True)
         self.time_btn.setFixedSize(28, 28)
         self.time_btn.setIconSize(QSize(20, 20))
@@ -283,12 +285,8 @@ class BudgetChartWidget(QWidget):
         # 创建对应的图表处理器
         if is_total_budget:
             self.chart_handler = TotalBudgetChart(self.budget_items, self.expenses)
-            self.category_btn.setText("类别分布")
-            self.time_btn.setText("年度分布")
         else:
             self.chart_handler = AnnualBudgetChart(self.budget_items, self.expenses)
-            self.category_btn.setText("类别分布")
-            self.time_btn.setText("月度分布")
         
         # 更新当前视图
         if self.current_view == "category":
