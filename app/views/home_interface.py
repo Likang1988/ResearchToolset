@@ -55,7 +55,7 @@ class HomeInterface(QWidget):
         # 加载背景图片
         current_dir = os.path.dirname(os.path.abspath(__file__))
         app_dir = os.path.dirname(current_dir)
-        bg_path = os.path.join(app_dir, 'assets', 'header1.png')
+        bg_path = os.path.join(app_dir, 'assets', 'header.png')
         bg_path = os.path.normpath(bg_path)
 
         if os.path.exists(bg_path):
@@ -81,7 +81,7 @@ class HomeInterface(QWidget):
     def setup_ui(self):
         # 主布局
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(20, 300, 20, 20)
+        main_layout.setContentsMargins(20, 280, 20, 20)
 
         # 标题
         title_label = TitleLabel("科研工具集", self)

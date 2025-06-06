@@ -107,6 +107,7 @@ class MainWindow(FluentWindow):
             "学术活动"
         )
         
+
         # 添加预算编制导航项
         self.budget_edit_interface = BudgetingInterface(self.engine)
         self.budget_edit_interface.setObjectName("budgetingInterface")

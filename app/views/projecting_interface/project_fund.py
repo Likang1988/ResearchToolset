@@ -428,9 +428,9 @@ class ProjectBudgetWidget(QWidget):
                 expense_btn.clicked.connect(lambda checked=False, b=budget: self.open_project_expense(b))
                 btn_layout.addWidget(expense_btn)
                 # 按钮大小 - 增加尺寸以提高用户体验
-                expense_btn.setFixedSize(28, 28)
+                expense_btn.setFixedSize(26, 26)
                 # 设置图标大小
-                expense_btn.setIconSize(QSize(22, 22))
+                expense_btn.setIconSize(QSize(20, 20))
 
                 self.budget_tree.setItemWidget(year_item, 5, btn_widget)
 
@@ -774,12 +774,12 @@ class ProjectBudgetWidget(QWidget):
                 if dialog.exec():
                     data = dialog.get_data()
 
-                    # 检查修改后的总预算是否小于已分配的年度预算总和
-                    annual_total = self.calculate_annual_budgets_total(session)
-                    if data['total_amount'] < annual_total:
-                        UIUtils.show_warning(
-                            title="警告",
-                            content=f"总预算({data['total_amount']}万元)不能小于已分配的年度预算总和({annual_total:.2f}万元)！",
+                    # 检查修改后的总预算是否等于项目总经费
+                    total_fund = session.query(func.sum(Project.total_budget)).filter_by(id=self.current_project.id).scalar()
+                    if data['total_amount'] != total_fund:
+                        UIUtils.show_error(
+                            title="错误",
+                            content=f"总预算({data['total_amount']}万元)不等于项目总经费({total_fund:.2f}万元)！",
                             parent=self
                         )
                         session.close()
