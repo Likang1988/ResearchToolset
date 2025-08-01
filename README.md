@@ -8,7 +8,7 @@
   基于 PySide6 和 QFluentWidgets 的跨平台科研工具软件
 </p>
 
-![界面](app\assets\screenshots\经费追踪-预算管理.png)
+![界面](app/assets/screenshots/项目经费-预算管理.png)
 
 ## 项目简介
 
