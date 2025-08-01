@@ -54,7 +54,7 @@ class MainWindow(FluentWindow):
         self.projecting_interface.setObjectName("projectingInterface")
         self.addSubInterface(  
             self.projecting_interface,
-            QIcon(UIUtils.my_svgicon('projecting_tab')),
+            QIcon(UIUtils.my_svgicon('tab_project')),
             "项目清单"
         )
         self.projecting_interface.project_list_updated.connect(self.project_updated)
@@ -64,7 +64,7 @@ class MainWindow(FluentWindow):
         self.project_fund_interface.setObjectName("projectBudgetInterface")
         self.addSubInterface(
             self.project_fund_interface,
-            QIcon(UIUtils.my_svgicon('budgeting_tab')), 
+            QIcon(UIUtils.my_svgicon('tab_fund')), 
             "项目经费"
         )
         self.project_fund_interface.budget_updated.connect(self.budget_or_expense_updated)
@@ -74,7 +74,7 @@ class MainWindow(FluentWindow):
         self.progress_interface.setObjectName("progressInterface")
         self.addSubInterface(
             self.progress_interface,
-            QIcon(UIUtils.my_svgicon('progress')), 
+            QIcon(UIUtils.my_svgicon('tab_progress')), 
             "项目进度"
         )
         # 连接 progress_updated 信号到 HomeInterface 的 refresh_data 槽
@@ -85,7 +85,7 @@ class MainWindow(FluentWindow):
         self.document_interface.setObjectName("documentInterface")
         self.addSubInterface(
             self.document_interface,
-            QIcon(UIUtils.my_svgicon('document')), 
+            QIcon(UIUtils.my_svgicon('tab_document')), 
             "项目文档"
         )
 
@@ -94,7 +94,7 @@ class MainWindow(FluentWindow):
         self.achievement_interface.setObjectName("outcomeInterface")
         self.addSubInterface(
             self.achievement_interface,
-            QIcon(UIUtils.my_svgicon('outcome')), 
+            QIcon(UIUtils.my_svgicon('tab_outcome')), 
             "项目成果"
         )
 
@@ -103,7 +103,7 @@ class MainWindow(FluentWindow):
         self.activity_interface.setObjectName("activityInterface")
         self.addSubInterface(
             self.activity_interface,
-            QIcon(UIUtils.my_svgicon('activity')),
+            QIcon(UIUtils.my_svgicon('tab_activity')),
             "学术活动"
         )
         
@@ -113,7 +113,7 @@ class MainWindow(FluentWindow):
         self.budget_edit_interface.setObjectName("budgetingInterface")
         self.addSubInterface(
             self.budget_edit_interface,
-            QIcon(UIUtils.my_svgicon('budgeting_interface')),
+            QIcon(UIUtils.my_svgicon('tab_budget')),
             "预算编制"
         )
 

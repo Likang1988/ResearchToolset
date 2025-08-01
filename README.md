@@ -76,11 +76,15 @@
 ![主界面](app/assets/screenshots/主界面.png)
 *主界面*
 
-![项目管理](app/assets/screenshots/经费追踪-项目管理.png)
+![项目管理](app/assets/screenshots/项目管理.png)
 *项目管理*
 
-![支出管理](app/assets/screenshots/经费追踪-支出管理.png)
+![支出管理](app/assets/screenshots/项目经费-支出管理.png)
 *支出管理*
+
+![进度管理](app/assets/screenshots/项目进度管理-甘特图.png)
+*进度管理*
+
 
 ## 下载安装
 1.前往 Releases 下载后解压双击 ResearchToolset.exe 打开图形界面
