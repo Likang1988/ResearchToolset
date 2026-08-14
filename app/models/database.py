@@ -13,12 +13,12 @@ class BudgetCategory(Enum):
     MATERIAL = "材料费"
     OUTSOURCING = "外协费"
     FUEL = "燃动费"
-    CONFERENCE = "会议差旅"
-    PUBLICATION = "出版文献"
+    CONFERENCE = "会议差旅费"
+    PUBLICATION = "出版文献费"
     LABOR = "劳务费"
     CONSULTING = "专家咨询费"
     MISCELLANEOUS = "其他支出"
-    INDIRECT = "间接费"
+    INDIRECT = "间接费用"
 
 class Project(Base):
     """项目"""
