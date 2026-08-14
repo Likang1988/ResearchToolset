@@ -19,6 +19,9 @@ env/
 *.swp
 *.swo
 
+# ZCode CLI 本地数据
+.zcode/
+
 # Database
 *.db
 *.sqlite3

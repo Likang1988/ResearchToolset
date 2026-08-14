@@ -1,0 +1,82 @@
+# ResearchToolset Rust 版 CI：Windows + macOS 构建与测试
+# 触发：推送到 main 或 PR 涉及 rust/ 代码
+name: build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'rust/**'
+      - '.github/**'
+  pull_request:
+    paths:
+      - 'rust/**'
+      - '.github/**'
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  test:
+    name: cargo test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+      - name: Run tests
+        run: cargo test --manifest-path core/Cargo.toml
+
+  build:
+    name: build (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+            bundles: nsis
+            artifact: ResearchToolset-windows
+          - os: macos-latest
+            platform: macos
+            bundles: app,dmg
+            artifact: ResearchToolset-macos
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: rust/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build Tauri app (${{ matrix.platform }})
+        run: npm run tauri build -- --bundles ${{ matrix.bundles }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            rust/src-tauri/target/release/bundle/nsis/*.exe
+            rust/src-tauri/target/release/bundle/dmg/*.dmg
+            rust/src-tauri/target/release/bundle/macos/*.app
+          if-no-files-found: warn
