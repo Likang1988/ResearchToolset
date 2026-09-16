@@ -1,0 +1,1999 @@
+/* Fluent 风格样式（移植自 Python app/utils/ui_utils.py 的 QSS）
+   样式源唯一：ui_utils.py（透明背景 / 圆角 / hover / selected），此处为 Web 等价物。 */
+
+:root {
+  /* 字体：微软雅黑 12px（feature-checklist §10）；macOS 无雅黑则 PingFang SC 兜底 */
+  --font-family: "Microsoft YaHei", "PingFang SC", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", "Helvetica Neue", sans-serif;
+  --font-size: 12px;
+  --font-size-title: 20px;
+  --font-size-small: 11px;
+
+  /* 配色（对应 ui_utils QSS 取值） */
+  --bg: #f5f5f5;
+  --sidebar-bg: #fafafa;
+  --card-bg: transparent;
+  --header-bg: #eeeeee;
+  --border: rgba(0, 0, 0, 0.1);
+  --hover: rgba(0, 0, 0, 0.03);
+  --selected: rgba(0, 120, 212, 0.1); /* 选中项淡蓝底 */
+  --accent: #0078d4; /* Fluent 蓝 */
+  --text: #1a1a1a;
+  --text-secondary: #555555;
+  --text-muted: #888888;
+  --radius: 8px;
+  --sidebar-width: 150px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-size);
+  color: var(--text);
+  background-color: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===== 主壳：侧边栏 + 内容区 ===== */
+.app-shell {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ===== 侧边栏 ===== */
+.sidebar {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  background-color: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0;
+  user-select: none;
+  transition: width 0.2s ease;
+}
+
+/* 折叠态：仅图标，窄栏 52px */
+.sidebar.collapsed {
+  width: 52px;
+}
+
+.sidebar.collapsed .sidebar-logo {
+  justify-content: center;
+  padding: 10px 0 14px;
+}
+
+.sidebar.collapsed .sidebar-logo-text,
+.sidebar.collapsed .nav-label {
+  display: none;
+}
+
+.sidebar.collapsed .nav-item,
+.sidebar.collapsed .sidebar-collapse-btn {
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.sidebar.collapsed .nav-item.active::before {
+  left: 4px;
+  right: auto;
+}
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.sidebar-logo img {
+  width: 22px;
+  height: 22px;
+}
+
+.sidebar-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 6px;
+}
+
+.sidebar-section.bottom {
+  flex: 0;
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text);
+  transition: background-color 0.12s ease;
+  position: relative;
+}
+
+.nav-item:hover {
+  background-color: var(--hover);
+}
+
+.nav-item.active {
+  background-color: var(--selected);
+  color: var(--accent);
+}
+
+.nav-item.active::before {
+  /* Fluent 选中项左侧竖条指示器 */
+  content: "";
+  position: absolute;
+  left: -6px;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 2px;
+  background-color: var(--accent);
+}
+
+.nav-item .nav-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-item .nav-icon img,
+.nav-item .nav-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.nav-item .nav-label {
+  font-size: var(--font-size);
+  white-space: nowrap;
+}
+
+/* 折叠/展开按钮：置于侧边栏底部 */
+.sidebar-collapse-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  margin: 6px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text);
+  font-family: var(--font-family);
+  font-size: var(--font-size);
+  transition: background-color 0.12s ease;
+}
+
+.sidebar-collapse-btn:hover {
+  background-color: var(--hover);
+}
+
+.sidebar-collapse-btn svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+/* ===== 内容区 ===== */
+.content {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.content-header {
+  padding: 18px 28px 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.content-header h1 {
+  font-size: var(--font-size-title);
+  font-weight: 600;
+}
+
+.content-body {
+  padding: 8px 28px 28px;
+  flex: 1;
+  /* 允许收缩到拉伸高度：否则内容超高时被 min-height:auto 卡住，
+     整页滚动而非页面内部（表格边框容器）滚动 */
+  min-height: 0;
+}
+
+/* 主页：顶栏隐藏，内容区无内边距，header.png 背景图左右上边贴界面边缘 */
+.content-body--flush {
+  padding: 0;
+  overflow: hidden;
+}
+
+/* ===== 卡片（移植 ui_utils.set_table_style 的 QSS） ===== */
+.card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.placeholder-card {
+  background-color: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-top: 8px;
+}
+
+.placeholder-card .hint {
+  color: var(--text-muted);
+  margin-top: 8px;
+  line-height: 1.8;
+}
+
+.placeholder-card .feature-list {
+  margin-top: 12px;
+  padding-left: 0;
+  list-style: none;
+}
+
+.placeholder-card .feature-list li {
+  padding: 4px 0;
+  color: var(--text-secondary);
+  border-bottom: 1px dashed var(--border);
+}
+
+.placeholder-card .feature-list li:last-child {
+  border-bottom: none;
+}
+
+/* ===== 主页（对应 Python home_interface：header.png 背景 + 两栏概览） ===== */
+.home-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.home-header {
+  position: relative;
+  flex-shrink: 0;
+  height: 340px;
+  /* 保持 340px 高度，图片横向拉伸铺满（对齐 Python scaled IgnoreAspectRatio） */
+  background: url("/header.png") center / 100% 100% no-repeat;
+}
+
+.home-header-title {
+  position: absolute;
+  left: 24px;
+  top: 24px;
+  font-size: 28px;
+  font-weight: 700;
+  color: #111111;
+}
+
+.home-refresh-btn {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background-color: rgba(255, 255, 255, 0.85);
+  color: var(--text);
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.home-refresh-btn:hover {
+  background-color: #ffffff;
+}
+
+.home-refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.home-refresh-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.home-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 16px;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.home-col-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: var(--text-secondary);
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 40px 0;
+}
+
+/* ===== 主页概览卡片（对齐 Python home_interface 的 ElevatedCardWidget） ===== */
+.home-col {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.home-loading {
+  padding: 48px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.home-error {
+  color: #d13438;
+  padding: 12px 0;
+  font-size: 13px;
+}
+
+.home-hint {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.overview-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background-color: #ffffff;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  /* 经费/进度概览卡片统一最小高度，避免两张卡片高度不一致 */
+  min-height: 76px;
+}
+
+.overview-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-color: var(--accent);
+}
+
+.ov-financial-code {
+  min-width: 96px;
+  text-align: center;
+  /* 与进度概览卡片左列字号一致 */
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.ov-divider {
+  align-self: stretch;
+  width: 1px;
+  background-color: #ccc;
+  flex-shrink: 0;
+}
+
+.ov-metric {
+  flex: 1;
+  text-align: center;
+}
+
+.ov-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.ov-value {
+  /* 与进度概览任务行字号一致 */
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.ov-unit {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+/* 进度卡片内的任务表格
+   （对齐 Python：左列财务编号 + 竖分隔线 + 右侧「编码/名称/进度」任务表） */
+.overview-card.progress-card {
+  align-items: stretch;
+}
+
+.overview-card.progress-card .ov-financial-code {
+  /* 左列：垂直居中、固定宽度（对齐 Python 固定宽度 label） */
+  min-width: 100px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0;
+  overflow-wrap: break-word;
+}
+
+.progress-tasks {
+  flex: 1;
+  min-width: 0;
+}
+
+.progress-head,
+.progress-row {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  align-items: center;
+  text-align: center;
+}
+
+.progress-head {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.progress-row {
+  font-size: 15px;
+  font-weight: 600;
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+.progress-row:last-child {
+  border-bottom: none;
+}
+
+.pt-code,
+.pt-name,
+.pt-progress {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 表头「任务名称」居中（对齐 Python 表头水平居中） */
+.progress-head .pt-name {
+  text-align: center;
+  padding: 0;
+}
+
+/* 任务行的任务名称居中 */
+.progress-row .pt-name {
+  text-align: center;
+  padding: 0 8px;
+}
+
+/* ===== 数据表格（移植 ui_utils.set_table_style QSS） ===== */
+/* 列表页共用：表格边框容器。
+   容器填满剩余高度（圆角边框在容器上，底边距窗口底边 = content-body padding-bottom 28px）；
+   行高保持自然高度，行数不够时容器内下方留白，超出时容器内滚动。 */
+.table-frame {
+  flex: 1;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: auto;
+}
+
+.table-frame .data-table {
+  /* 边框/圆角交由容器绘制，表格仅保留列分隔线 */
+  border: none;
+  border-radius: 0;
+  border-collapse: separate;
+}
+
+/* 项目清单页：填满内容区高度（对齐项目进度页） */
+.project-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  min-height: 0;
+}
+
+.list-summary {
+  color: var(--text-secondary);
+  font-size: var(--font-size);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  border-spacing: 0;
+}
+
+.data-table thead th {
+  background-color: var(--header-bg);
+  color: var(--text-secondary);
+  font-weight: 500;
+  padding: 8px;
+  border: none;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.data-table thead th:last-child {
+  border-right: none;
+}
+
+.data-table thead th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.data-table thead th.sortable:hover {
+  color: var(--primary);
+}
+
+.data-table tbody td {
+  padding: 4px 8px;
+  height: 32px;
+  border: none;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  color: var(--text);
+}
+
+.data-table tbody tr:hover td {
+  background-color: var(--hover);
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tbody tr.selected-row {
+  background-color: var(--selected);
+}
+
+/* ===== 列表工具栏 ===== */
+.list-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.list-actions {
+  display: flex;
+  gap: 8px;
+}
+
+button {
+  font-family: inherit;
+  font-size: var(--font-size);
+  padding: 6px 14px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background-color: #fff;
+  color: var(--text);
+  cursor: pointer;
+  transition: background-color 0.12s;
+}
+
+button:hover:not(:disabled) {
+  background-color: var(--hover);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.primary-btn {
+  background-color: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+button.primary-btn:hover:not(:disabled) {
+  background-color: #005a9e; /* 深一点的蓝 */
+}
+
+button.danger-btn {
+  background-color: #d13438;
+  color: #fff;
+  border-color: #d13438;
+}
+
+button.danger-btn:hover:not(:disabled) {
+  background-color: #a4262c; /* 深一点的红 */
+}
+
+/* ===== 对话框 ===== */
+.dialog-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.dialog-container {
+  background-color: #fff;
+  border-radius: var(--radius);
+  width: 500px;
+  max-width: 90%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dialog-header h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.dialog-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.dialog-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ===== 右键菜单（复制单元格） ===== */
+/* 下拉遮罩：点击页面任意处关闭下拉菜单（层叠在下拉之下、页面内容之上） */
+.dropdown-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1095;
+}
+
+.context-menu {
+  position: fixed;
+  z-index: 1100;
+  min-width: 120px;
+  background-color: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 4px;
+}
+
+.context-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 6px 12px;
+  font-size: var(--font-size);
+  color: var(--text);
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.context-menu-item:hover {
+  background-color: var(--hover);
+}
+
+/* ===== 表单 ===== */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-group label {
+  font-size: var(--font-size);
+  color: var(--text-secondary);
+}
+
+.form-group input {
+  font-family: inherit;
+  font-size: var(--font-size);
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background-color: #fff;
+  outline: none;
+}
+
+.form-group input:focus {
+  border-color: var(--accent);
+}
+
+.form-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.file-select-btn {
+  font-family: inherit;
+  font-size: var(--font-size);
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background-color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.file-select-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.file-select-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.file-path-label {
+  font-size: var(--font-size);
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 220px;
+}
+
+/* ===== 行内凭证附件按钮 + 弹出菜单（对齐 Python attachment_utils） ===== */
+.voucher-cell {
+  position: relative;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.voucher-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background-color: #fff;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  vertical-align: middle;
+}
+
+/* 附件文件缺失（DB 有路径但磁盘文件已被程序外删除）：红色警示 */
+.voucher-btn.missing {
+  border-color: #e0a3a3;
+  color: #c62828;
+}
+.voucher-btn.missing:hover {
+  border-color: #c62828;
+  background-color: #fdecea;
+}
+
+.voucher-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.voucher-btn.has {
+  color: var(--accent);
+  border-color: rgba(26, 115, 232, 0.4);
+}
+
+.voucher-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+}
+
+.voucher-menu {
+  position: fixed;
+  transform: translateX(-50%);
+  z-index: 100;
+  min-width: 110px;
+  padding: 4px;
+  background-color: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+}
+
+.voucher-menu button {
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 4px;
+  background-color: transparent;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.voucher-menu button:hover {
+  background-color: var(--hover);
+}
+
+.voucher-menu button.danger {
+  color: #c62828;
+}
+
+.voucher-menu button.danger:hover {
+  background-color: #ffebee;
+}
+
+.voucher-menu-divider {
+  height: 1px;
+  margin: 4px 6px;
+  background-color: var(--border);
+}
+
+.form-error {
+  color: #c62828;
+  background-color: #ffebee;
+  border: 1px solid #ef9a9a;
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  font-size: var(--font-size);
+}
+
+/* 强制两列表单在窄屏时变单列 */
+@media (max-width: 600px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===== 项目经费页 ===== */
+.project-fund {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* 填满内容区高度，使预算树表格边框容器贴底（距窗口底边 28px） */
+  height: 100%;
+  min-height: 0;
+}
+
+.fund-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.fund-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.page-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.project-selector {
+  font-family: inherit;
+  font-size: var(--font-size);
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background-color: #fff;
+  color: var(--text);
+  min-width: 280px;
+  outline: none;
+  cursor: pointer;
+}
+
+.project-selector:focus {
+  border-color: var(--accent);
+}
+
+/* 树形预算表格 */
+.fund-tree td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.fund-tree td.tree-label,
+.fund-tree th:first-child {
+  text-align: left;
+  padding-left: 12px;
+}
+
+/* 父行（总预算 / 年度预算）：加粗 + 淡灰底 */
+.fund-tree tr.tree-parent td {
+  font-weight: 600;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+}
+
+/* 总预算行更突出 */
+.fund-tree tr.tree-total td {
+  background-color: #e8eef5;
+}
+
+/* 科目子项行：缩进 + 普通字重 */
+.fund-tree tr.tree-child td {
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.child-label {
+  padding-left: 32px !important;
+}
+
+/* 预算树折叠/展开箭头按钮 */
+.tree-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-right: 4px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background-color: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.tree-toggle:hover {
+  background-color: rgba(26, 115, 232, 0.1);
+  color: var(--accent);
+}
+
+/* 执行率进度条 */
+.progress-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.progress-track {
+  flex: 1;
+  height: 10px;
+  background-color: #e0e0e0;
+  border-radius: 5px;
+  overflow: hidden;
+  min-width: 90px;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.2s ease;
+}
+
+.progress-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  min-width: 50px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* 选中行高亮 */
+.fund-tree tr.row-selected td {
+  background-color: #cfe3f5 !important;
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+/* 左右分栏布局 */
+.fund-split {
+  display: flex;
+  gap: 16px;
+  /* 左表边框容器贴底：分栏填满剩余高度，子项按内容高（默认 flex-start） */
+  flex: 1;
+  min-height: 0;
+  align-items: flex-start;
+}
+
+.fund-left {
+  flex: 10;
+  min-width: 0; /* 允许表格内滚动 */
+  /* 仅左表跟随容器高度伸展，右图保持自然高度 */
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+}
+
+.fund-right {
+  flex: 7;
+  min-width: 280px;
+  align-self: stretch; /* 与左表同高，底边对齐 */
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 视图切换按钮组 */
+.pie-view-switch {
+  display: flex;
+  gap: 4px;
+}
+
+/* 分布切换图标按钮（对齐 Python ToolButton：28×28 + hover/checked 态） */
+.pie-view-switch .icon-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.pie-view-switch .icon-btn:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+.pie-view-switch .icon-btn:active {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.pie-view-switch .icon-btn.active {
+  background-color: rgba(0, 0, 0, 0.1);
+  border-color: rgba(0, 0, 0, 0.2);
+  color: var(--accent);
+}
+
+/* 饼图卡片 */
+.pie-chart-card {
+  position: relative; /* 供左上角工具栏绝对定位 */
+  background-color: transparent; /* 与页面底色融为一体 */
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius);
+  padding: 16px;
+  flex: 1; /* 撑满 fund-right 高度，底边与左表对齐 */
+  display: flex;
+  flex-direction: column;
+}
+
+/* 工具栏插槽：圆角框左上角覆盖（对齐 Python 按钮盖在 chart_view 上） */
+.pie-chart-toolbar {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+}
+
+.pie-chart-title {
+  /* 标题另起一行：顶部留出工具栏行高，居中显示（不与左上角按钮同行） */
+  padding-top: 34px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+.pie-chart-body {
+  flex: 1; /* 占据卡片剩余高度，内容垂直居中 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.pie-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.pie-svg {
+  display: block;
+}
+
+.pie-center-label {
+  font-size: 11px;
+  fill: var(--text-secondary);
+}
+
+.pie-center-value {
+  font-size: 16px;
+  font-weight: 600;
+  fill: var(--text);
+}
+
+/* 图例 */
+.pie-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pie-legend li {
+  display: grid;
+  grid-template-columns: 14px 1fr auto auto;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.legend-label {
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.legend-value {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.legend-pct {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 44px;
+  text-align: right;
+}
+
+/* ===== 年度预算表单对话框 ===== */
+.budget-form-top {
+  display: flex;
+  align-items: flex-end;
+  gap: 24px;
+  margin-bottom: 16px;
+}
+
+/* 总预算模式：左侧「总预算」实时汇总（对齐 Python update_total 联动） */
+.budget-current-total {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.budget-current-total strong {
+  font-size: 16px;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 总预算模式：项目总经费（对齐 Python total_budget_label） */
+.budget-project-total {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.budget-project-total strong {
+  font-size: 16px;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 费用类别 / 预算金额 / 结余金额 3 列表格（对齐 Python BudgetDialog 排布） */
+.budget-table {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr 1.1fr;
+  row-gap: 4px;
+  column-gap: 24px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.budget-table-header {
+  display: contents;
+}
+.budget-table-header span {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.budget-table-row {
+  display: contents;
+}
+
+.budget-table-cat {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.budget-table-input {
+  width: 100%;
+  text-align: right;
+}
+
+.budget-table-balance {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 总计行（对齐 Python total_layout） */
+.budget-table-total span {
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.budget-table-amount {
+  font-size: 14px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.budget-items-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 24px;
+}
+
+.budget-item label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.budget-item input {
+  width: 100%;
+}
+
+/* 子项结余（对齐 Python balance_labels 列） */
+.budget-item-balance {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+input.disabled-input {
+  background-color: #f5f5f5;
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
+.form-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.form-info {
+  padding: 8px 12px;
+  background-color: #f0f6ff;
+  color: var(--text);
+  border-radius: var(--radius);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+/* ===== 预算树行内「支出管理」图标按钮（列内居中） ===== */
+.fund-ops-cell {
+  text-align: center;
+}
+.fund-ops-btn {
+  background: none;
+  border: none;
+  padding: 4px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  opacity: 0.75;
+}
+.fund-ops-btn:hover {
+  background-color: var(--bg-hover);
+  opacity: 1;
+}
+.fund-ops-btn img {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+/* ===== 支出管理页 ===== */
+.expense-mgmt {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* 填满内容区高度，使表格边框容器贴底（距窗口底边 28px） */
+  height: 100%;
+  min-height: 0;
+  /* 整页不滚动：主表在边框容器内滚动，统计表固定在界面底部始终可见（对齐 Python QSplitter 下区） */
+  overflow: hidden;
+}
+
+.expense-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.expense-toolbar .page-title {
+  margin-right: auto;
+}
+.expense-toolbar .back-btn {
+  padding: 6px 12px;
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.expense-toolbar .back-btn:hover {
+  background-color: var(--bg-hover);
+}
+
+.expense-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 13px;
+}
+.expense-filter label {
+  color: var(--text-secondary);
+}
+.expense-filter select,
+.expense-filter input[type="number"],
+.expense-filter input[type="date"],
+.expense-filter input[type="text"] {
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.expense-filter button {
+  padding: 4px 10px;
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+/* 筛选行右侧导出按钮组（右对齐，与筛选控件同紧凑风格） */
+.expense-filter .filter-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+.expense-filter .filter-actions button {
+  padding: 4px 12px;
+}
+
+.expense-table {
+  table-layout: auto;
+}
+
+/* 底部统计表：10 类 + 合计列，列宽收紧 */
+.expense-stats {
+  /* 不参与伸缩：锚定界面底部，始终可见（对齐 Python 底部统计区） */
+  flex: 0 0 auto;
+  table-layout: fixed;
+  font-size: 12px;
+  /* 圆角边框：collapse 模式下 border-radius 不生效，改 separate 并裁四角 */
+  border-collapse: separate;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.expense-stats thead th:first-child {
+  border-top-left-radius: calc(var(--radius) - 1px);
+}
+.expense-stats thead th:last-child {
+  border-top-right-radius: calc(var(--radius) - 1px);
+}
+.expense-stats tbody tr:last-child td:first-child {
+  border-bottom-left-radius: calc(var(--radius) - 1px);
+}
+.expense-stats tbody tr:last-child td:last-child {
+  border-bottom-right-radius: calc(var(--radius) - 1px);
+}
+.expense-stats th,
+.expense-stats td {
+  padding: 4px 6px;
+  text-align: right;
+  white-space: nowrap;
+}
+.expense-stats th:first-child,
+.expense-stats td:first-child {
+  text-align: left;
+  font-weight: 600;
+}
+.expense-stats tbody tr:nth-child(odd) {
+  background-color: var(--bg-hover);
+}
+
+/* ===== 预算编制页（三级可编辑树） ===== */
+.bt-tree {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: auto;
+  background-color: #fff;
+}
+
+/* 行：6 列 flex 布局 */
+.bt-row {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--border);
+  cursor: default;
+}
+.bt-row:last-child {
+  border-bottom: none;
+}
+.bt-row:hover {
+  background-color: var(--bg-hover);
+}
+.bt-row.selected {
+  background-color: #cfe3f5 !important;
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.bt-header {
+  background-color: #f5f5f5;
+  font-weight: 600;
+  color: var(--text-secondary);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.bt-header:hover {
+  background-color: #f5f5f5;
+}
+
+.bt-cell {
+  padding: 4px 8px;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+.bt-name {
+  flex: 3;
+  min-width: 180px;
+}
+.bt-spec {
+  flex: 2;
+  min-width: 120px;
+}
+.bt-num {
+  flex: 1;
+  min-width: 90px;
+  justify-content: flex-end;
+  text-align: right;
+}
+.bt-note {
+  flex: 2;
+  min-width: 120px;
+}
+
+/* 输入框：无边框填充单元格 */
+.bt-input {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text);
+  background-color: transparent;
+  outline: none;
+}
+.bt-input:hover {
+  border-color: var(--border);
+  background-color: #fff;
+}
+.bt-input:focus {
+  border-color: var(--accent);
+  background-color: #fff;
+}
+.bt-num-input {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 金额只读显示 */
+.bt-amount-read {
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+/* 展开/折叠箭头 */
+.bt-expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-right: 2px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background-color: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.bt-expand:hover {
+  background-color: rgba(26, 115, 232, 0.1);
+  color: var(--accent);
+}
+.bt-expand-spacer {
+  display: inline-block;
+  width: 22px;
+  height: 20px;
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+
+/* 工具栏分隔线 */
+.bt-btn-sep {
+  width: 1px;
+  height: 20px;
+  background-color: var(--border);
+  margin: 0 2px;
+}
+
+.bt-empty {
+  padding: 20px;
+  text-align: center;
+}
+
+/* ===== 预算导出配置对话框 ===== */
+.export-section-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.export-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  margin-right: 14px;
+  cursor: pointer;
+  user-select: none;
+}
+.export-check input {
+  cursor: pointer;
+}
+.export-sub-opts {
+  margin-top: 8px;
+  margin-left: 18px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex-direction: row;
+}
+.export-spin {
+  width: 56px;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 13px;
+  text-align: right;
+}
+.export-spin:disabled {
+  background-color: var(--bg-hover);
+  color: var(--text-secondary);
+}
+.export-proportions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+.export-proportion-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.export-units {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* ===== 小工具（ToolsPage / 间接经费计算器 / 树形列表工具） ===== */
+.tools-home {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.tools-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.tools-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background-color: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.tools-card:hover {
+  border-color: var(--accent);
+}
+.tools-card-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.tools-card-icon {
+  width: 32px;
+  height: 32px;
+}
+.tools-card-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+.tools-author {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+  padding: 8px 0;
+}
+
+/* 间接经费计算器 */
+.calc-form {
+  background-color: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.calc-form-title {
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.calc-result {
+  background-color: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  min-height: 80px;
+}
+.calc-result h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.calc-result p {
+  font-size: 13px;
+}
+
+/* 树形列表工具 */
+.tl-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tl-tree {
+  background-color: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: auto;
+}
+.tl-header {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  background-color: #f3f3f3;
+  color: #333333;
+  font-weight: 500;
+}
+.tl-row {
+  display: flex;
+  align-items: center;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-right: 10px;
+  cursor: pointer;
+}
+.tl-row:hover {
+  background-color: var(--hover);
+}
+.tl-row.selected {
+  background-color: var(--selected);
+}
+.tl-expand {
+  width: 22px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: 11px;
+  flex-shrink: 0;
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+.tl-expand:hover {
+  color: var(--accent);
+}
+.tl-expand-spacer {
+  display: inline-block;
+  width: 22px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.tl-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: var(--font-size);
+  padding: 4px 6px;
+  border-radius: 3px;
+  outline: none;
+  color: var(--text);
+}
+.tl-input:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+.tl-input:focus {
+  background-color: rgba(0, 120, 212, 0.08);
+}
+.tl-empty {
+  padding: 16px;
+  text-align: center;
+}
+.tl-multi-input {
+  width: 100%;
+  font-family: inherit;
+  font-size: var(--font-size);
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  resize: vertical;
+  outline: none;
+}
+.tl-multi-input:focus {
+  border-color: var(--accent);
+}
+.tl-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1001;
+}
+.tl-menu {
+  position: fixed;
+  z-index: 1002;
+  background-color: #fff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+  padding: 4px;
+  min-width: 100px;
+}
+.tl-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 6px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.tl-menu button:hover {
+  background-color: var(--hover);
+}
+
+/* ===== 帮助页 ===== */
+.help-page {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.help-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 960px;
+}
+
+.help-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background-color: #fff;
+  overflow: hidden;
+}
+
+.help-card-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.help-card-header:hover {
+  background-color: var(--hover);
+}
+
+.help-card-arrow {
+  color: var(--text-secondary);
+  transition: transform 0.15s ease;
+}
+
+.help-card--open .help-card-arrow {
+  transform: rotate(180deg);
+}
+
+.help-card-body {
+  padding: 0 16px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.help-section {
+  margin-top: 14px;
+}
+
+.help-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+
+.help-text {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.help-log-status {
+  padding: 12px 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.help-log-wrap {
+  margin-top: 12px;
+  max-height: 480px;
+  overflow: auto;
+}
+
+.help-log-wrap .data-table tbody td {
+  vertical-align: top;
+}
+
+.help-log-cell-nowrap {
+  white-space: nowrap;
+}
+
+.help-log-cell-diff {
+  min-width: 120px;
+  max-width: 260px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-size: 12px;
+  color: var(--text-secondary);
+}

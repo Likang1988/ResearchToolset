@@ -1,0 +1,729 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta http-equiv="X-UA-Compatible" content="IE=9; IE=8; IE=7; IE=EDGE"/>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <title>项目进度 - 甘特图</title>
+
+  <link rel="stylesheet" href="platform.css" type="text/css">
+  <link rel="stylesheet" href="libs/jquery/dateField/jquery.dateField.css" type="text/css">
+  <link rel="stylesheet" href="gantt.css" type="text/css">
+  <link rel="stylesheet" href="libs/jquery/valueSlider/mb.slider.css" type="text/css">
+
+  <script src="libs/jquery/jquery.min.js"></script>
+  <script src="libs/jquery/jquery-ui.min.js"></script>
+  <script src="libs/jquery/jquery.livequery.1.1.1.min.js"></script>
+  <script src="libs/jquery/jquery.timers.js"></script>
+
+  <script src="libs/utilities.js"></script>
+  <script src="libs/forms.js"></script>
+  <script src="libs/date.js"></script>
+  <script src="libs/dialogs.js"></script>
+  <script src="libs/layout.js"></script>
+  <script src="libs/i18nJs.js"></script>
+  <script src="libs/jquery/dateField/jquery.dateField.js"></script>
+  <script src="libs/jquery/JST/jquery.JST.js"></script>
+  <script src="libs/jquery/valueSlider/jquery.mb.slider.js"></script>
+
+  <script type="text/javascript" src="libs/jquery/svg/jquery.svg.min.js"></script>
+  <script type="text/javascript" src="libs/jquery/svg/jquery.svgdom.1.8.js"></script>
+
+  <script src="ganttUtilities.js"></script>
+  <script src="ganttTask.js"></script>
+  <script src="ganttDrawerSVG.js"></script>
+  <script src="ganttZoom.js"></script>
+  <script src="ganttGridEditor.js"></script>
+  <script src="ganttMaster.js"></script>
+</head>
+<body style="background-color: #fff;">
+
+<div id="workSpace"
+     style="padding:0px; overflow-y:auto; overflow-x:hidden;position:relative"></div>
+
+<style>
+  body { overflow: hidden; }
+  .ganttButtonBar h1 { color:#000; font-weight:bold; font-size:28px; margin-left:10px; }
+
+  /* 保存/导入/导出 图标按钮内的 SVG 图标垂直居中 */
+  .ganttButtonBar .buttons .button.textual.icon svg {
+    display: inline-block;
+    vertical-align: middle;
+  }
+
+  /* 保存/导入/导出 按钮：黑色，悬停变浅 */
+  .ganttButtonBar .buttons .button.file-btn {
+    color: #000;
+    transition: color .15s ease;
+  }
+  .ganttButtonBar .buttons .button.file-btn:hover {
+    color: #6b6b6b;
+  }
+</style>
+
+<!-- jQueryGantt 模板容器（与 Python 版 gantt.html 完全一致）：
+     按钮栏/表头/任务行/任务条/状态/编辑器等均由这些 JST 模板渲染，
+     缺失会导致工具栏按钮与网格无法显示。 -->
+<div id="gantEditorTemplates" style="display:none;">
+<div class="__template__" type="GANTBUTTONS">
+  <!--
+  <div class="ganttButtonBar noprint">
+    <div class="buttons">
+      <span class="ganttButtonSeparator"></span>
+      <button onclick="$('#workSpace').trigger('undo.gantt');return false;" class="button textual icon requireCanWrite" title="撤销"><span class="teamworkIcon">'</span></button>
+      <button onclick="$('#workSpace').trigger('redo.gantt');return false;" class="button textual icon requireCanWrite" title="重做"><span class="teamworkIcon">&middot;</span></button>
+      <span class="ganttButtonSeparator requireCanWrite requireCanAdd"></span>
+      <button onclick="$('#workSpace').trigger('addAboveCurrentTask.gantt');return false;" class="button textual icon requireCanWrite requireCanAdd" title="在上方插入"><span class="teamworkIcon">l</span></button>
+      <button onclick="$('#workSpace').trigger('addBelowCurrentTask.gantt');return false;" class="button textual icon requireCanWrite requireCanAdd" title="在下方插入"><span class="teamworkIcon">X</span></button>
+      <span class="ganttButtonSeparator requireCanWrite requireCanInOutdent"></span>
+      <button onclick="$('#workSpace').trigger('outdentCurrentTask.gantt');return false;" class="button textual icon requireCanWrite requireCanInOutdent" title="升级"><span class="teamworkIcon">.</span></button>
+      <button onclick="$('#workSpace').trigger('indentCurrentTask.gantt');return false;" class="button textual icon requireCanWrite requireCanInOutdent" title="降级"><span class="teamworkIcon">:</span></button>
+      <span class="ganttButtonSeparator requireCanWrite requireCanMoveUpDown"></span>
+      <button onclick="$('#workSpace').trigger('moveUpCurrentTask.gantt');return false;" class="button textual icon requireCanWrite requireCanMoveUpDown" title="上移"><span class="teamworkIcon">k</span></button>
+      <button onclick="$('#workSpace').trigger('moveDownCurrentTask.gantt');return false;" class="button textual icon requireCanWrite requireCanMoveUpDown" title="下移"><span class="teamworkIcon">j</span></button>
+      <span class="ganttButtonSeparator"></span>
+      <button onclick="$('#workSpace').trigger('expandAll.gantt');return false;" class="button textual icon " title="全部展开"><span class="teamworkIcon">6</span></button>
+      <button onclick="$('#workSpace').trigger('collapseAll.gantt'); return false;" class="button textual icon " title="全部折叠"><span class="teamworkIcon">5</span></button>
+
+    <span class="ganttButtonSeparator"></span>
+      <button onclick="$('#workSpace').trigger('zoomMinus.gantt'); return false;" class="button textual icon " title="缩小"><span class="teamworkIcon">)</span></button>
+      <button onclick="$('#workSpace').trigger('zoomPlus.gantt');return false;" class="button textual icon " title="放大"><span class="teamworkIcon">(</span></button>
+
+    <span class="ganttButtonSeparator"></span>
+    
+      <button onclick="ge.splitter.resize(.1);return false;" class="button textual icon" title="右侧最大化"><span class="teamworkIcon">F</span></button>
+      <button onclick="ge.splitter.resize(50);return false;" class="button textual icon" title="平均显示"><span class="teamworkIcon">O</span></button>
+      <button onclick="ge.splitter.resize(100);return false;" class="button textual icon" title="左侧最大化"><span class="teamworkIcon">R</span></button>
+      <span class="ganttButtonSeparator"></span>
+
+      <button onclick="actionImportGantt();return false;" class="button textual icon file-btn" title="导入甘特图数据（JSON）"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+      <button onclick="actionExportGantt();return false;" class="button textual icon file-btn" title="导出甘特图数据（XLSX / JSON / CSV / TXT）"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button>
+      <span class="ganttButtonSeparator"></span>
+
+      <button onclick="saveGanttData();return false;" class="button textual icon file-btn" title="保存甘特图数据到数据库"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></button>
+      <span class="ganttButtonSeparator"></span>
+    </div>
+
+    <div>
+
+    </div>
+  </div>
+  -->
+</div>
+
+<div class="__template__" type="TASKSEDITHEAD"><!--
+  <table class="gdfTable" cellspacing="0" cellpadding="0">
+    <thead>
+    <tr style="height:40px">
+      <th class="gdfColHeader" style="width:35px; border-right: none"></th>
+      <th class="gdfColHeader" style="width:25px;"></th>
+      <th class="gdfColHeader gdfResizable" style="width:75px;">任务编码</th>
+      <th class="gdfColHeader gdfResizable" style="width:300px;">任务名称</th>
+      <th class="gdfColHeader"  align="center" style="width:17px;" title="开始日期是里程碑。"><span class="teamworkIcon" style="font-size: 8px;">^</span></th>
+      <th class="gdfColHeader gdfResizable" style="width:80px;">开始日期</th>
+      <th class="gdfColHeader"  align="center" style="width:17px;" title="结束日期是里程碑。"><span class="teamworkIcon" style="font-size: 8px;">^</span></th>
+      <th class="gdfColHeader gdfResizable" style="width:80px;">结束日期</th>
+      <th class="gdfColHeader gdfResizable" style="width:60px;">工期(天)</th>
+      <th class="gdfColHeader gdfResizable" style="width:60px;">进度(%)</th>
+      <th class="gdfColHeader gdfResizable requireCanSeeDep" style="width:50px;">依赖项</th>
+      <th class="gdfColHeader gdfResizable" style="width:80px;">负责人</th>
+      <th class="gdfColHeader gdfResizable" style="width:500px;">描述</th>      
+    </tr>
+    </thead>
+  </table>
+  --></div>
+
+<div class="__template__" type="TASKROW"><!--
+  <tr id="tid_(#=obj.id#)" taskId="(#=obj.id#)" class="taskEditRow (#=obj.isParent()?'isParent':''#) (#=obj.collapsed?'collapsed':''#)" level="(#=level#)">
+    <th class="gdfCell edit" align="right" style="cursor:pointer;"><span class="taskRowIndex">(#=obj.getRow()+1#)</span> <span class="teamworkIcon" style="font-size:12px;" >e</span></th>
+    <td class="gdfCell noClip" align="center"><div class="taskStatus cvcColorSquare" status="(#=obj.status#)"></div></td>
+    <td class="gdfCell"><input type="text" name="code" value="(#=obj.code?obj.code:''#)" placeholder=""></td>
+    <td class="gdfCell indentCell" style="padding-left:(#=obj.level*10+18#)px;">
+      <div class="exp-controller" align="center"></div>
+      <input type="text" name="name" value="(#=obj.name#)" placeholder="任务名称">
+    </td>
+    <td class="gdfCell" align="center"><input type="checkbox" name="startIsMilestone"></td>
+    <td class="gdfCell" style="text-align: center;"><input type="text" name="start"  value="" class="date"></td>
+    <td class="gdfCell" align="center"><input type="checkbox" name="endIsMilestone"></td>
+    <td class="gdfCell" style="text-align: center;"><input type="text" name="end" value="" class="date"></td>
+    <td class="gdfCell" style="text-align: center;"><input type="text" name="duration" autocomplete="off" value="(#=obj.duration#)"></td>
+    <td class="gdfCell" style="text-align: right;"><input type="text" name="progress" class="validated" entrytype="PERCENTILE" autocomplete="off" value="(#=obj.progress?obj.progress:''#)" (#=obj.progressByWorklog?"readOnly":""#)></td>
+    <td class="gdfCell requireCanSeeDep" style="text-align: center;"><input type="text" name="depends" autocomplete="off" value="(#=obj.depends#)" (#=obj.hasExternalDep?"readonly":""#)></td>
+    <td class="gdfCell" style="text-align: center;"><input type="text" name="responsible" value="(#=obj.responsible?obj.responsible:''#)" placeholder=""></td>
+    <td class="gdfCell"><input type="text" name="description" value="(#=obj.description?obj.description:''#)" placeholder=""></td>
+    <td class="gdfCell taskAssigs">(#=obj.getAssigsString()#)</td>
+  </tr>
+  --></div>
+
+<div class="__template__" type="TASKEMPTYROW"><!--
+  <tr class="taskEditRow emptyRow" >
+    <th class="gdfCell" align="right"></th>
+    <td class="gdfCell noClip" align="center"></td>
+    <td class="gdfCell"></td>
+    <td class="gdfCell"></td>
+    <td class="gdfCell"></td>
+    <td class="gdfCell"></td>
+    <td class="gdfCell"></td>
+    <td class="gdfCell"></td>
+    <td class="gdfCell"></td>
+    <td class="gdfCell"></td>
+    <td class="gdfCell requireCanSeeDep"></td>
+    <td class="gdfCell"></td>
+  </tr>
+  --></div>
+
+<div class="__template__" type="TASKBAR"><!--
+  <div class="taskBox taskBoxDiv" taskId="(#=obj.id#)" >
+    <div class="layout (#=obj.hasExternalDep?'extDep':''#)">
+      <div class="taskStatus" status="(#=obj.status#)"></div>
+      <div class="taskProgress" style="width:(#=obj.progress>100?100:obj.progress#)%; background-color:(#=obj.progress>100?'red':'rgb(153,255,51);'#);"></div>
+      <div class="milestone (#=obj.startIsMilestone?'active':''#)" ></div>
+
+      <div class="taskLabel"></div>
+      <div class="milestone end (#=obj.endIsMilestone?'active':''#)" ></div>
+    </div>
+  </div>
+  --></div>
+
+
+<div class="__template__" type="CHANGE_STATUS"><!--
+    <div class="taskStatusBox">
+    <div class="taskStatus cvcColorSquare" status="STATUS_ACTIVE" title="进行中"></div>
+    <div class="taskStatus cvcColorSquare" status="STATUS_WAITING" title="等待中"></div>
+    <div class="taskStatus cvcColorSquare" status="STATUS_SUSPENDED" title="已暂停"></div>
+    <div class="taskStatus cvcColorSquare" status="STATUS_DONE" title="已完成"></div>
+    <div class="taskStatus cvcColorSquare" status="STATUS_FAILED" title="已失败"></div>     
+    <div class="taskStatus cvcColorSquare" status="STATUS_UNDEFINED" title="未定义"></div>
+    </div>
+  --></div>
+
+
+
+
+<div class="__template__" type="TASK_EDITOR"><!--
+  <div class="ganttTaskEditor">
+    <h2 class="taskData">任务编辑器</h2>
+    <table  cellspacing="1" cellpadding="5" width="100%" class="taskData table" border="0">
+          <tr>
+        <td width="200" style="height: 80px"  valign="top">
+          <label for="code">任务编码</label><br>
+          <input type="text" name="code" id="code" value="" size=15 class="formElements" autocomplete='off' maxlength=255 style='width:100%' oldvalue="1">
+        </td>
+        <td colspan="3" valign="top"><label for="name" class="required">任务名称</label><br><input type="text" name="name" id="name"class="formElements" autocomplete='off' maxlength=255 style='width:100%' value="" required="true" oldvalue="1"></td>
+          </tr>
+
+
+      <tr class="dateRow">
+        <td nowrap="">
+          <div style="position:relative">
+            <label for="start">开始日期</label>&nbsp;&nbsp;&nbsp;&nbsp;
+            <input type="checkbox" id="startIsMilestone" name="startIsMilestone" value="yes"> &nbsp;<label for="startIsMilestone">里程碑</label>&nbsp;
+            <br><input type="text" name="start" id="start" size="8" class="formElements dateField validated date" autocomplete="off" maxlength="255" value="" oldvalue="1" entrytype="DATE">
+            <span title="日历" id="starts_inputDate" class="teamworkIcon openCalendar" onclick="$(this).dateField({inputField:$(this).prevAll(':input:first'),isSearchField:false});">m</span>          </div>
+        </td>
+        <td nowrap="">
+          <label for="end">结束日期</label>&nbsp;&nbsp;&nbsp;&nbsp;
+          <input type="checkbox" id="endIsMilestone" name="endIsMilestone" value="yes"> &nbsp;<label for="endIsMilestone">里程碑</label>&nbsp;
+          <br><input type="text" name="end" id="end" size="8" class="formElements dateField validated date" autocomplete="off" maxlength="255" value="" oldvalue="1" entrytype="DATE">
+          <span title="日历" id="ends_inputDate" class="teamworkIcon openCalendar" onclick="$(this).dateField({inputField:$(this).prevAll(':input:first'),isSearchField:false});">m</span>
+        </td>
+        <td nowrap="" >
+          <label for="duration" class=" ">工期(天)</label><br>
+          <input type="text" name="duration" id="duration" size="4" class="formElements validated durationdays" title="工期以工作日计算。" autocomplete="off" maxlength="255" value="" oldvalue="1" entrytype="DURATIONDAYS">&nbsp;
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          <label for="status" class=" ">状态</label><br>
+          <select id="status" name="status" class="taskStatus" status="(#=obj.status#)"  onchange="$(this).attr('STATUS',$(this).val());">
+            <option value="STATUS_ACTIVE" class="taskStatus" status="STATUS_ACTIVE" >进行中</option>
+            <option value="STATUS_WAITING" class="taskStatus" status="STATUS_WAITING" >等待中</option>
+            <option value="STATUS_SUSPENDED" class="taskStatus" status="STATUS_SUSPENDED" >已暂停</option>
+            <option value="STATUS_DONE" class="taskStatus" status="STATUS_DONE" >已完成</option>
+            <option value="STATUS_FAILED" class="taskStatus" status="STATUS_FAILED" >已失败</option>
+            <option value="STATUS_UNDEFINED" class="taskStatus" status="STATUS_UNDEFINED" >未定义</option>
+          </select>
+        </td>
+        
+        <td nowrap="">
+          <label>进度(%)</label><br>
+          <input type="text" name="progress" id="progress" size="7" class="formElements validated percentile" autocomplete="off" maxlength="255" value="" oldvalue="1" entrytype="PERCENTILE">
+        </td>
+        <td nowrap="">
+          <label for="responsible">负责人</label><br>
+          <input type="text" name="responsible" id="responsible" size="15" class="formElements" value="" oldvalue="1">
+        </td>
+
+        
+      </tr>
+
+          </tr>
+          <tr>
+            <td colspan="4">
+              <label for="description">描述</label><br>
+              <textarea rows="3" cols="30" id="description" name="description" class="formElements" style="width:100%"></textarea>
+            </td>
+          </tr>
+        </table>
+
+   
+
+  <div style="text-align: right; padding-top: 20px">
+    <span id="saveButton" class="button first" onClick="$(this).trigger('saveFullEditor.gantt');">保存</span>
+  </div>
+
+  </div>
+  --></div>
+
+
+
+<div class="__template__" type="ASSIGNMENT_ROW"><!--
+  <tr taskId="(#=obj.task.id#)" assId="(#=obj.assig.id#)" class="assigEditRow" >
+    <td ><select name="resourceId"  class="formElements" (#=obj.assig.id.indexOf("tmp_")==0?"":"disabled"#) ></select></td>
+    <td ><select type="select" name="roleId"  class="formElements"></select></td>
+    <td ><input type="text" name="effort" value="(#=getMillisInHoursMinutes(obj.assig.effort)#)" size="5" class="formElements"></td>
+    <td align="center"><span class="teamworkIcon delAssig del" style="cursor: pointer">d</span></td>
+  </tr>
+  --></div>
+
+
+
+<div class="__template__" type="RESOURCE_EDITOR"><!--
+  <div class="resourceEditor" style="padding: 5px;">
+
+    <h2>项目团队</h2>
+    <table  cellspacing="1" cellpadding="0" width="100%" id="resourcesTable">
+      <tr>
+        <th style="width:100px;">名称</th>
+        <th style="width:30px;" id="addResource"><span class="teamworkIcon" style="cursor: pointer">+</span></th>
+      </tr>
+    </table>
+
+    <div style="text-align: right; padding-top: 20px"><button id="resSaveButton" class="button big">保存</button></div>
+  </div>
+  --></div>
+
+
+
+<div class="__template__" type="RESOURCE_ROW"><!--
+  <tr resId="(#=obj.id#)" class="resRow" >
+    <td ><input type="text" name="name" value="(#=obj.name#)" style="width:100%;" class="formElements"></td>
+    <td align="center"><span class="teamworkIcon delRes del" style="cursor: pointer">d</span></td>
+  </tr>
+  --></div>
+
+
+</div>
+<script type="text/javascript">
+  $.JST.loadDecorator("RESOURCE_ROW", function(resTr, res){
+    resTr.find(".delRes").click(function(){$(this).closest("tr").remove()});
+  });
+
+  $.JST.loadDecorator("ASSIGNMENT_ROW", function(assigTr, taskAssig){
+    var resEl = assigTr.find("[name=resourceId]");
+    var opt = $("<option>");
+    resEl.append(opt);
+    for(var i=0; i< taskAssig.task.master.resources.length;i++){
+      var res = taskAssig.task.master.resources[i];
+      opt = $("<option>");
+      opt.val(res.id).html(res.name);
+      if(taskAssig.assig.resourceId == res.id)
+        opt.attr("selected", "true");
+      resEl.append(opt);
+    }
+    var roleEl = assigTr.find("[name=roleId]");
+    for(var i=0; i< taskAssig.task.master.roles.length;i++){
+      var role = taskAssig.task.master.roles[i];
+      var optr = $("<option>");
+      optr.val(role.id).html(role.name);
+      if(taskAssig.assig.roleId == role.id)
+        optr.attr("selected", "true");
+      roleEl.append(optr);
+    }
+
+    if(taskAssig.task.master.permissions.canWrite && taskAssig.task.canWrite){
+      assigTr.find(".delAssig").click(function(){
+        var tr = $(this).closest("[assId]").fadeOut(200, function(){$(this).remove()});
+      });
+    }
+
+  });
+
+
+  function loadI18n(){
+    GanttMaster.messages = {
+      "CANNOT_WRITE":"无权限修改以下任务：",
+      "CHANGE_OUT_OF_SCOPE":"无法更新项目，因为您没有更新父项目的权限。",
+      "START_IS_MILESTONE":"开始日期是里程碑。",
+      "END_IS_MILESTONE":"结束日期是里程碑。",
+      "TASK_HAS_CONSTRAINTS":"任务存在约束。",
+      "GANTT_ERROR_DEPENDS_ON_OPEN_TASK":"错误：存在对未关闭任务的依赖。",
+      "GANTT_ERROR_DESCENDANT_OF_CLOSED_TASK":"错误：存在已关闭任务的子任务。",
+      "TASK_HAS_EXTERNAL_DEPS":"此任务存在外部依赖。",
+      "GANNT_ERROR_LOADING_DATA_TASK_REMOVED":"加载数据时出错。任务已被删除。",
+      "CIRCULAR_REFERENCE":"循环引用。",
+      "CANNOT_DEPENDS_ON_ANCESTORS":"不能依赖于父任务。",
+      "INVALID_DATE_FORMAT":"输入的数据格式无效。",
+      "GANTT_ERROR_LOADING_DATA_TASK_REMOVED":"加载数据时出错。任务已被删除。",
+      "CANNOT_CLOSE_TASK_IF_OPEN_ISSUE":"无法关闭存在未解决问题的任务。",
+      "TASK_MOVE_INCONSISTENT_LEVEL":"无法交换不同层级的任务。",
+      "CANNOT_MOVE_TASK":"无法移动任务",
+      "PLEASE_SAVE_PROJECT":"请保存项目",
+      "GANTT_SEMESTER":"半年",
+      "GANTT_SEMESTER_SHORT":"半年",
+      "GANTT_QUARTER":"季度",
+      "GANTT_QUARTER_SHORT":"季",
+      "GANTT_WEEK":"周",
+      "GANTT_WEEK_SHORT":"周"
+    };
+  }
+
+</script>
+
+<script type="text/javascript">
+// Tauri 版甘特桥：通过 postMessage 与父页面（React iframe 容器）通信。
+// 父页面负责调用 Tauri IPC（load_gantt_data / save_gantt_data）并把结果回传，
+// 本页负责渲染/编辑（复用 jQueryGantt）。
+
+var ge;
+var hasLoaded = false;
+
+function notifyReady() {
+  if (window.parent && window.parent !== window) {
+    window.parent.postMessage({ type: "gantt_tauri_ready", source: "gantt" }, "*");
+  }
+}
+
+function saveGanttData() {
+  console.log("[gantt-tauri] Attempting to save...");
+  if (typeof ge === "undefined" || !ge) {
+    alert("错误：甘特图未初始化！");
+    return;
+  }
+  var prj;
+  try {
+    prj = ge.saveProject();
+    if (!prj || !prj.tasks) {
+      alert("错误：无法获取甘特图数据进行保存！");
+      return;
+    }
+  } catch (e) {
+    console.error(e);
+    alert("错误：调用 ge.saveProject() 时出错！");
+    return;
+  }
+  var prjString;
+  try {
+    prjString = JSON.stringify(prj);
+  } catch (e) {
+    console.error(e);
+    alert("错误：无法序列化甘特图数据！");
+    return;
+  }
+  console.log("[gantt-tauri] Sending data to parent:", prjString);
+  if (window.parent && window.parent !== window) {
+    window.parent.postMessage({
+      type: "gantt_tauri_save",
+      source: "gantt",
+      payload: prjString
+    }, "*");
+  }
+}
+
+// ===== 右侧操作按钮：新建 / 编辑 / 删除任务 =====
+// 修正"新建"操作的选中逻辑（原库调用未实现的 selectTask，导致新建后无选中状态）
+(function () {
+  if (typeof GanttMaster === "undefined") return;
+  GanttMaster.prototype.addNewRootTask = function () {
+    if (!this.permissions.canAdd) {
+      console.warn("No permission to add new tasks.");
+      return;
+    }
+    this.beginTransaction();
+    var factory = new TaskFactory();
+    var newTask = factory.build("tmp_" + new Date().getTime(), "任务名称", "", 0, new Date().getTime(), 1);
+    var task = this.addTask(newTask);
+    this.endTransaction();
+    if (task && task.rowElement) {
+      this.currentTask = task;
+      this.gantt.synchHighlight();
+      task.rowElement.addClass("rowSelected");
+      task.rowElement.find("[name=name]").focus();
+    }
+  };
+})();
+
+function getCurrentTask() {
+  return (typeof ge !== "undefined" && ge) ? ge.currentTask : null;
+}
+
+// 把任务选中状态通知父页面（新建/编辑/删除按钮已移到父页面工具栏）
+function notifyActionState() {
+  var hasTask = !!getCurrentTask();
+  if (window.parent && window.parent !== window) {
+    window.parent.postMessage({
+      type: "gantt_action_state",
+      source: "gantt",
+      data: { canEdit: hasTask, canDelete: hasTask }
+    }, "*");
+  }
+}
+
+function updateActionButtons() {
+  var hasTask = !!getCurrentTask();
+  var editBtn = document.getElementById("ganttEditTaskBtn");
+  var delBtn = document.getElementById("ganttDeleteTaskBtn");
+  if (editBtn) editBtn.disabled = !hasTask;
+  if (delBtn) delBtn.disabled = !hasTask;
+  notifyActionState();
+}
+
+function actionNewTask() {
+  if (!ge) return;
+  ge.addNewRootTask();
+  updateActionButtons();
+  // 不自动保存：新建后停留在行内编辑状态，由用户显式点"保存"按钮落库
+}
+
+function actionEditTask() {
+  var task = getCurrentTask();
+  if (!ge || !task) return;
+  ge.editor.openFullEditor(task, false);
+}
+
+// WKWebView 不支持 window.confirm（总是返回 false），这里用自绘模态框替代
+function confirmDialog(message) {
+  var overlay = document.getElementById("ganttConfirmOverlay");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "ganttConfirmOverlay";
+    overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:9999;display:none;align-items:center;justify-content:center;";
+    overlay.innerHTML =
+      '<div style="background:#fff;border-radius:6px;padding:18px 22px;min-width:260px;max-width:420px;box-shadow:0 6px 24px rgba(0,0,0,.25);font-family:\'Segoe UI\',\'Microsoft YaHei\',sans-serif;font-size:13px;">' +
+      '<div id="ganttConfirmMsg" style="margin-bottom:16px;line-height:1.5;color:#333;"></div>' +
+      '<div style="text-align:right;">' +
+      '<button id="ganttConfirmOk" style="background:#d13438;color:#fff;border:none;border-radius:4px;padding:5px 16px;cursor:pointer;margin-right:8px;">确定</button>' +
+      '<button id="ganttConfirmCancel" style="background:#f0f0f0;color:#333;border:none;border-radius:4px;padding:5px 12px;cursor:pointer;">取消</button>' +
+      '</div></div>';
+    document.body.appendChild(overlay);
+  }
+  document.getElementById("ganttConfirmMsg").textContent = message;
+  overlay.style.display = "flex";
+  return new Promise(function (resolve) {
+    function done(val) {
+      overlay.style.display = "none";
+      overlay.removeEventListener("click", onClick);
+      document.removeEventListener("keydown", onKey);
+      resolve(val);
+    }
+    function onClick(e) {
+      if (e.target.id === "ganttConfirmOk") done(true);
+      else if (e.target.id === "ganttConfirmCancel") done(false);
+    }
+    function onKey(e) {
+      if (e.key === "Enter") done(true);
+      else if (e.key === "Escape") done(false);
+    }
+    overlay.addEventListener("click", onClick);
+    document.addEventListener("keydown", onKey);
+  });
+}
+
+function actionDeleteTask() {
+  var task = getCurrentTask();
+  if (!ge || !task) return;
+  var msg = "确定要删除选中的任务吗？";
+  var isRoot = task.getRow() === 0;
+  if (isRoot) {
+    msg = "确定要删除根任务及其所有子任务吗？";
+  }
+
+  confirmDialog(msg).then(function (ok) {
+    if (!ok) return;
+    if (isRoot && !ge.isMultiRoot && !task.isNew()) {
+      // 唯一的根任务：ge.deleteCurrentTask() 会因防误删保护而拒绝(row>0才删)，
+      // 这里显式执行整棵根任务删除（deleteTask 会递归清理子任务与 DOM）
+      ge.beginTransaction();
+      task.deleteTask();
+      ge.updateDependsStrings();
+      ge.taskIsChanged();
+      ge.endTransaction();
+      ge.generateTaskCodes();
+    } else {
+      ge.deleteCurrentTask();
+    }
+    updateActionButtons();
+    // 不自动保存：删除结果由用户显式点"保存"按钮落库
+  });
+}
+
+// 导出：把当前甘特图数据发给父页面，由父页面弹"另存为"对话框并调用
+// Tauri 命令 export_gantt（按扩展名输出 XLSX / JSON / CSV / TXT）
+function actionExportGantt() {
+  if (!ge) return;
+  var prj;
+  try {
+    prj = ge.saveProject();
+    if (!prj || !prj.tasks) {
+      alert("错误：无法获取甘特图数据进行导出！");
+      return;
+    }
+  } catch (e) {
+    console.error(e);
+    alert("错误：导出准备数据时出错：\n" + e.message);
+    return;
+  }
+  console.log("[gantt-tauri] Sending export request to parent (tasks=" + prj.tasks.length + ")");
+  if (window.parent && window.parent !== window) {
+    window.parent.postMessage({
+      type: "gantt_tauri_export",
+      source: "gantt",
+      payload: JSON.stringify(prj)
+    }, "*");
+  }
+}
+
+// 导入：请求父页面打开文件对话框读取 JSON，整体替换当前甘特图数据
+function actionImportGantt() {
+  if (!ge) return;
+  console.log("[gantt-tauri] Sending import request to parent");
+  if (window.parent && window.parent !== window) {
+    window.parent.postMessage({
+      type: "gantt_tauri_import",
+      source: "gantt"
+    }, "*");
+  }
+}
+
+// 任务行是动态渲染的，用事件委托同步编辑/删除按钮的可用状态
+$(document).on("click", ".taskEditRow", function () {
+  updateActionButtons();
+});
+
+// 任务编辑器保存后自动保存到数据库（saveFullEditor.gantt 事件冒泡到 document）
+$(document).on("saveFullEditor.gantt", function (e) {
+  if ($(e.target).is("#saveButton")) {
+    setTimeout(function () { saveGanttData(); }, 30);
+  }
+});
+
+function applyIdMap(idMap) {
+  if (!idMap || Object.keys(idMap).length === 0) return;
+  console.log("[gantt-tauri] Applying id_map:", idMap);
+  for (var tempId in idMap) {
+    if (!idMap.hasOwnProperty(tempId)) continue;
+    var persistentId = idMap[tempId];
+    var task = ge.getTask(tempId);
+    if (!task) continue;
+    task.id = persistentId;
+    delete ge.tasks.map[tempId];
+    ge.tasks.map[persistentId] = task;
+
+    var taskRow = ge.element.find("#tid_" + tempId);
+    if (taskRow.length > 0) {
+      taskRow.attr("id", "tid_" + persistentId);
+      taskRow.attr("taskId", persistentId);
+    }
+    var taskBar = ge.element.find(".taskBox[taskId='" + tempId + "']");
+    if (taskBar.length > 0) {
+      taskBar.attr("taskId", persistentId);
+    }
+  }
+
+  for (var i = 0; i < ge.tasks.length; i++) {
+    var taskToUpdate = ge.tasks[i];
+    if (taskToUpdate && taskToUpdate.depends &&
+        typeof taskToUpdate.depends === "string" && taskToUpdate.depends.length > 0) {
+      var newDepends = taskToUpdate.depends;
+      for (var tempIdDep in idMap) {
+        if (!idMap.hasOwnProperty(tempIdDep)) continue;
+        var persistentIdDep = idMap[tempIdDep];
+        var regex = new RegExp("\\b" + tempIdDep.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&") + "\\b", "g");
+        newDepends = newDepends.replace(regex, persistentIdDep);
+      }
+      if (newDepends !== taskToUpdate.depends) {
+        taskToUpdate.depends = newDepends;
+        var rowDep = ge.element.find("#tid_" + taskToUpdate.id);
+        if (rowDep.length > 0) {
+          var dependsInput = rowDep.find("input[name='depends']");
+          if (dependsInput.length > 0) dependsInput.val(newDepends);
+        }
+      }
+    }
+  }
+  ge.redraw();
+}
+
+function loadProjectData(projectData) {
+  try {
+    ge.loadProject(projectData);
+    ge.checkpoint();
+    hasLoaded = true;
+    updateActionButtons();
+    console.log("[gantt-tauri] Project loaded (tasks=" + projectData.tasks.length + ")");
+    notifyReady();
+  } catch (e) {
+    console.error("[gantt-tauri] loadProject error:", e);
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: "gantt_tauri_load_error", source: "gantt", message: String(e) }, "*");
+    }
+  }
+}
+
+window.addEventListener("message", function (evt) {
+  var msg = evt.data;
+  if (!msg || msg.source !== "gantt_parent") return;
+
+  switch (msg.type) {
+    case "load_project":
+      loadProjectData(msg.data);
+      break;
+    case "task_action":
+      // 父页面工具栏按钮：新建/编辑/删除任务（action 在 msg.data 中）
+      var action = msg.data ? msg.data.action : null;
+      if (action === "new") actionNewTask();
+      else if (action === "edit") actionEditTask();
+      else if (action === "delete") actionDeleteTask();
+      break;
+    case "save_result":
+      if (msg.data && msg.data.error) {
+        alert("保存失败：" + msg.data.error);
+      } else {
+        applyIdMap(msg.data && msg.data.id_map ? msg.data.id_map : {});
+        ge.checkpoint();
+        alert("保存成功");
+      }
+      break;
+    case "export_result":
+      if (msg.data && msg.data.error) {
+        alert("导出失败：" + msg.data.error);
+      } else {
+        alert((msg.data && msg.data.message) ? msg.data.message : "导出成功");
+      }
+      break;
+    case "import_result":
+      if (msg.data && msg.data.error) {
+        alert("导入失败：" + msg.data.error);
+      } else {
+        alert((msg.data && msg.data.message) ? msg.data.message : "导入成功");
+      }
+      break;
+    default:
+      break;
+  }
+});
+
+$(function () {
+  ge = new GanttMaster();
+  ge.set100OnClose = true;
+  ge.shrinkParent = true;
+  ge.init($("#workSpace"));
+  loadI18n();
+  delete ge.gantt.zoom;
+
+  console.log("[gantt-tauri] Gantt initialized. Waiting for parent load request...");
+  notifyReady();
+});
+</script>
+</body>
+</html>
