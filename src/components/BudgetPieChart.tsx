@@ -89,8 +89,9 @@ export default function BudgetPieChart({ title, entries, toolbar }: Props) {
                 const end = (acc / total) * 360;
                 const color = COLORS[i % COLORS.length];
                 const path = describeSlice(cx, cy, r, start, end);
+                // 扇区描边取页面底色（--bg），随深浅主题切换
                 return (
-                  <path key={s.label} d={path} fill={color} stroke="#fff" strokeWidth={1.5}>
+                  <path key={s.label} d={path} fill={color} strokeWidth={1.5}>
                     <title>
                       {s.label}: {s.value.toFixed(2)} 万元 (
                       {((s.value / total) * 100).toFixed(1)}%)
@@ -99,8 +100,8 @@ export default function BudgetPieChart({ title, entries, toolbar }: Props) {
                 );
               });
             })()}
-            {/* 中心白圈做成环形图 */}
-            <circle cx={cx} cy={cy} r={r * 0.55} fill="#fff" />
+            {/* 中心圈做成环形图，填充色随主题（浅色近白 / 深色同底色） */}
+            <circle className="pie-center" cx={cx} cy={cy} r={r * 0.55} />
             <text x={cx} y={cy - 6} textAnchor="middle" className="pie-center-label">
               合计
             </text>

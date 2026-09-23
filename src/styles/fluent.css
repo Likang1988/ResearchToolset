@@ -1142,17 +1142,17 @@ button.danger-btn:hover:not(:disabled) {
 }
 
 .pie-view-switch .icon-btn:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-  border-color: rgba(0, 0, 0, 0.1);
+  background-color: var(--hover);
+  border-color: var(--border);
 }
 
 .pie-view-switch .icon-btn:active {
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: var(--selected);
 }
 
 .pie-view-switch .icon-btn.active {
-  background-color: rgba(0, 0, 0, 0.1);
-  border-color: rgba(0, 0, 0, 0.2);
+  background-color: var(--selected);
+  border-color: var(--border);
   color: var(--accent);
 }
 
@@ -1160,7 +1160,7 @@ button.danger-btn:hover:not(:disabled) {
 .pie-chart-card {
   position: relative; /* 供左上角工具栏绝对定位 */
   background-color: transparent; /* 与页面底色融为一体 */
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 16px;
   flex: 1; /* 撑满 fund-right 高度，底边与左表对齐 */
@@ -1207,6 +1207,16 @@ button.danger-btn:hover:not(:disabled) {
 
 .pie-svg {
   display: block;
+}
+
+/* 扇区描边取页面底色：浅色近白缝隙，深色不再刺眼白线 */
+.pie-svg path {
+  stroke: var(--bg);
+}
+
+/* 环形图中心圆：与页面底色一致，避免深色下白底吞掉合计文字 */
+.pie-center {
+  fill: var(--bg);
 }
 
 .pie-center-label {
