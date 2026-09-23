@@ -112,3 +112,24 @@ html[data-theme="dark"] .ganttAddResource {
   border-color: #555;
 }
 html[data-theme="dark"] .resourceRowContainer span.avatar span { border-color: #26282b; }
+html[data-theme="dark"] .confirmBox {
+  background: #2c2e31;
+  color: #ddd;
+}
+
+/* 表单控件兜底：platform.css 有全局 input{background:white} 元素规则，
+   任何漏网的输入框（如左表序号列）统一上深色 */
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
+  background-color: #2c2e31;
+  color: #e6e6e6;
+  border-color: #4a4d52;
+}
+/* 任务行内输入框保持随行的透明底（含序号列） */
+html[data-theme="dark"] .taskEditRow input {
+  background-color: transparent;
+}
+html[data-theme="dark"] .taskEditRow input[readonly] {
+  color: #9ca0a6;
+}
