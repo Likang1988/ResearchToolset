@@ -7,7 +7,7 @@ export interface NavItem {
   key: string;
   /** 中文标签 */
   label: string;
-  /** 图标：以 /icons/ 开头为静态 SVG 资源；home/tools/help 为内置图标标识 */
+  /** 图标：内置 SVG 标识（home/tools/settings 与 tab_* 系列） */
   icon: string;
   position: NavPosition;
   /** 该页对应的功能要点摘要 */
@@ -25,49 +25,49 @@ export const NAV_ITEMS: NavItem[] = [
   {
     key: "project-list",
     label: "项目清单",
-    icon: "/icons/tab_project.svg",
+    icon: "tab_project",
     position: "top",
     summary: "8 列表格 CRUD、右键复制行、JSON 导入导出、级联删除（预算/支出/甘特/文档/成果）+ 清理附件目录",
   },
   {
     key: "project-fund",
     label: "项目经费",
-    icon: "/icons/tab_fund.svg",
+    icon: "tab_fund",
     position: "top",
     summary: "三级预算树 + 执行率进度条列 + ECharts 饼图（类别/时间分布两种视图）+ 从预算编制导入",
   },
   {
     key: "project-progress",
     label: "项目进度",
-    icon: "/icons/tab_progress.svg",
+    icon: "tab_progress",
     position: "top",
     summary: "jQueryGantt 复用，Tauri IPC 桥；任务增删改/拖拽/里程碑/依赖/导出 XLSX/JSON/CSV",
   },
   {
     key: "project-document",
     label: "项目文档",
-    icon: "/icons/tab_document.svg",
+    icon: "tab_document",
     position: "top",
     summary: "7 列表格 + 关键词/类型筛选 + 附件管理（上传/查看/下载/删除）+ Excel 导出 + CRUD 对话框",
   },
   {
     key: "project-outcome",
     label: "项目成果",
-    icon: "/icons/tab_outcome.svg",
+    icon: "tab_outcome",
     position: "top",
     summary: "9 列表格（名称/类型/状态/作者/提交/发表/期刊/备注/附件）+ 筛选 + 附件 + Excel 导出",
   },
   {
     key: "activity",
     label: "学术活动",
-    icon: "/icons/tab_activity.svg",
+    icon: "tab_activity",
     position: "top",
     summary: "9 列表格 + 关键词/类型/状态/日期筛选 + 附件 + Excel 导出 + ActivityDialog",
   },
   {
     key: "budgeting",
     label: "预算编制",
-    icon: "/icons/tab_budget.svg",
+    icon: "tab_budget",
     position: "top",
     summary: "三级可编辑树、单价×数量联动、父项递归汇总、明细/汇总/分年度比例导出",
   },

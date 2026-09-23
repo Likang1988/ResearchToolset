@@ -2,6 +2,9 @@
 // - 选择持久化在 localStorage("rt-theme-mode")，默认"浅色"
 // - 生效方式：<html data-theme="light|dark"> + fluent.css 文末 [data-theme="dark"] 变量覆盖
 // - "跟随系统"模式下监听 prefers-color-scheme 变化即时切换
+// - 同步设置原生窗口标题栏深浅色（Tauri setTheme，需要 core:window:allow-set-theme 权限）
+
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 export type ThemeMode = "light" | "dark" | "system";
 
@@ -11,10 +14,14 @@ function systemIsDark(): boolean {
   return window.matchMedia("(prefers-color-scheme: dark)").matches;
 }
 
-/** 把模式解析为实际深浅色并写到 <html data-theme> */
+/** 把模式解析为实际深浅色并写到 <html data-theme>，同步原生标题栏 */
 export function applyTheme(mode: ThemeMode): void {
   const dark = mode === "dark" || (mode === "system" && systemIsDark());
   document.documentElement.dataset.theme = dark ? "dark" : "light";
+  // 非 Tauri 环境（纯浏览器预览）或旧系统不支持时静默跳过
+  getCurrentWindow()
+    .setTheme(dark ? "dark" : "light")
+    .catch(() => {});
 }
 
 export function getThemeMode(): ThemeMode {
