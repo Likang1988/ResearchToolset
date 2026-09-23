@@ -1,15 +1,14 @@
-/* Fluent 风格样式（移植自 Python app/utils/ui_utils.py 的 QSS）
-   样式源唯一：ui_utils.py（透明背景 / 圆角 / hover / selected），此处为 Web 等价物。 */
+/* Fluent 风格样式（透明背景 / 圆角 / hover / selected） */
 
 :root {
-  /* 字体：微软雅黑 12px（feature-checklist §10）；macOS 无雅黑则 PingFang SC 兜底 */
+  /* 字体：微软雅黑 12px；macOS 无雅黑则 PingFang SC 兜底 */
   --font-family: "Microsoft YaHei", "PingFang SC", -apple-system, BlinkMacSystemFont,
     "Segoe UI", "Helvetica Neue", sans-serif;
   --font-size: 12px;
   --font-size-title: 20px;
   --font-size-small: 11px;
 
-  /* 配色（对应 ui_utils QSS 取值） */
+  /* 配色 */
   --bg: #f5f5f5;
   --sidebar-bg: #fafafa;
   --card-bg: transparent;
@@ -237,7 +236,7 @@ body {
   overflow: hidden;
 }
 
-/* ===== 卡片（移植 ui_utils.set_table_style 的 QSS） ===== */
+/* ===== 卡片 ===== */
 .card {
   background-color: var(--card-bg);
   border: 1px solid var(--border);
@@ -275,7 +274,7 @@ body {
   border-bottom: none;
 }
 
-/* ===== 主页（对应 Python home_interface：header.png 背景 + 两栏概览） ===== */
+/* ===== 主页：header.png 背景 + 两栏概览 ===== */
 .home-page {
   display: flex;
   flex-direction: column;
@@ -286,7 +285,7 @@ body {
   position: relative;
   flex-shrink: 0;
   height: 340px;
-  /* 保持 340px 高度，图片横向拉伸铺满（对齐 Python scaled IgnoreAspectRatio） */
+  /* 保持 340px 高度，图片横向拉伸铺满 */
   background: url("/header.png") center / 100% 100% no-repeat;
 }
 
@@ -353,7 +352,7 @@ body {
   padding: 40px 0;
 }
 
-/* ===== 主页概览卡片（对齐 Python home_interface 的 ElevatedCardWidget） ===== */
+/* ===== 主页概览卡片 ===== */
 .home-col {
   display: flex;
   flex-direction: column;
@@ -440,14 +439,13 @@ body {
   color: var(--text-secondary);
 }
 
-/* 进度卡片内的任务表格
-   （对齐 Python：左列财务编号 + 竖分隔线 + 右侧「编码/名称/进度」任务表） */
+/* 进度卡片内的任务表格：左列财务编号 + 竖分隔线 + 右侧「编码/名称/进度」任务表 */
 .overview-card.progress-card {
   align-items: stretch;
 }
 
 .overview-card.progress-card .ov-financial-code {
-  /* 左列：垂直居中、固定宽度（对齐 Python 固定宽度 label） */
+  /* 左列：垂直居中、固定宽度 */
   min-width: 100px;
   text-align: center;
   font-size: 16px;
@@ -496,7 +494,7 @@ body {
   white-space: nowrap;
 }
 
-/* 表头「任务名称」居中（对齐 Python 表头水平居中） */
+/* 表头「任务名称」居中 */
 .progress-head .pt-name {
   text-align: center;
   padding: 0;
@@ -508,7 +506,7 @@ body {
   padding: 0 8px;
 }
 
-/* ===== 数据表格（移植 ui_utils.set_table_style QSS） ===== */
+/* ===== 数据表格 ===== */
 /* 列表页共用：表格边框容器。
    容器填满剩余高度（圆角边框在容器上，底边距窗口底边 = content-body padding-bottom 28px）；
    行高保持自然高度，行数不够时容器内下方留白，超出时容器内滚动。 */
@@ -813,7 +811,7 @@ button.danger-btn:hover:not(:disabled) {
   max-width: 220px;
 }
 
-/* ===== 行内凭证附件按钮 + 弹出菜单（对齐 Python attachment_utils） ===== */
+/* ===== 行内凭证附件按钮 + 弹出菜单 ===== */
 .voucher-cell {
   position: relative;
   text-align: center;
@@ -1099,7 +1097,7 @@ button.danger-btn:hover:not(:disabled) {
   gap: 4px;
 }
 
-/* 分布切换图标按钮（对齐 Python ToolButton：28×28 + hover/checked 态） */
+/* 分布切换图标按钮：28×28 + hover/checked 态 */
 .pie-view-switch .icon-btn {
   width: 28px;
   height: 28px;
@@ -1141,7 +1139,7 @@ button.danger-btn:hover:not(:disabled) {
   flex-direction: column;
 }
 
-/* 工具栏插槽：圆角框左上角覆盖（对齐 Python 按钮盖在 chart_view 上） */
+/* 工具栏插槽：圆角框左上角覆盖 */
 .pie-chart-toolbar {
   position: absolute;
   top: 8px;
@@ -1246,7 +1244,7 @@ button.danger-btn:hover:not(:disabled) {
   margin-bottom: 16px;
 }
 
-/* 总预算模式：左侧「总预算」实时汇总（对齐 Python update_total 联动） */
+/* 总预算模式：左侧「总预算」实时汇总（随录入联动） */
 .budget-current-total {
   display: flex;
   align-items: baseline;
@@ -1260,7 +1258,7 @@ button.danger-btn:hover:not(:disabled) {
   font-variant-numeric: tabular-nums;
 }
 
-/* 总预算模式：项目总经费（对齐 Python total_budget_label） */
+/* 总预算模式：项目总经费 */
 .budget-project-total {
   display: flex;
   align-items: baseline;
@@ -1275,7 +1273,7 @@ button.danger-btn:hover:not(:disabled) {
   font-variant-numeric: tabular-nums;
 }
 
-/* 费用类别 / 预算金额 / 结余金额 3 列表格（对齐 Python BudgetDialog 排布） */
+/* 费用类别 / 预算金额 / 结余金额 3 列表格 */
 .budget-table {
   display: grid;
   grid-template-columns: 1.1fr 1fr 1.1fr;
@@ -1316,7 +1314,7 @@ button.danger-btn:hover:not(:disabled) {
   font-variant-numeric: tabular-nums;
 }
 
-/* 总计行（对齐 Python total_layout） */
+/* 总计行 */
 .budget-table-total span {
   border-top: 1px solid var(--border);
   padding-top: 6px;
@@ -1344,7 +1342,7 @@ button.danger-btn:hover:not(:disabled) {
   width: 100%;
 }
 
-/* 子项结余（对齐 Python balance_labels 列） */
+/* 子项结余列 */
 .budget-item-balance {
   font-size: 11px;
   color: var(--text-secondary);
@@ -1407,7 +1405,7 @@ input.disabled-input {
   /* 填满内容区高度，使表格边框容器贴底（距窗口底边 28px） */
   height: 100%;
   min-height: 0;
-  /* 整页不滚动：主表在边框容器内滚动，统计表固定在界面底部始终可见（对齐 Python QSplitter 下区） */
+  /* 整页不滚动：主表在边框容器内滚动，统计表固定在界面底部始终可见 */
   overflow: hidden;
 }
 
@@ -1477,7 +1475,7 @@ input.disabled-input {
 
 /* 底部统计表：10 类 + 合计列，列宽收紧 */
 .expense-stats {
-  /* 不参与伸缩：锚定界面底部，始终可见（对齐 Python 底部统计区） */
+  /* 不参与伸缩：锚定界面底部，始终可见 */
   flex: 0 0 auto;
   table-layout: fixed;
   font-size: 12px;

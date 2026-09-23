@@ -1,18 +1,18 @@
-//! 操作日志（对应 Python 各视图内联的 Actionlog 写入逻辑）
+//! 操作日志（actionlogs 表的统一写入与查询）
 //!
 //! `log_action` 写入 actionlogs 表（type/action/description/operator/
 //! old_data/new_data/category/amount/related_info/related ids），时间戳由
-//! SQLite 本地时区生成，与 Python `datetime.now()` 语义一致。
+//! SQLite 本地时区生成。
 
 use rusqlite::{params, Connection};
 
 use crate::DbError;
 
-/// 写入一条操作日志（对应 Python `session.add(Actionlog(...))`）。
+/// 写入一条操作日志。
 ///
 /// `type_`/`action` 取值：如 ("项目", "新增") / ("支出", "添加") / ("支出", "批量导入")。
 /// 关联 id 参数（project_id 等）无用则传 `None`。
-/// `category`/`amount`/`related_info` 为 Python Actionlog 的扩展字段，
+/// `category`/`amount`/`related_info` 为 actionlogs 的扩展字段，
 /// 主要用于支出类日志（类别、金额、"项目: X, 预算: Y"），无用则传 `None`。
 #[allow(clippy::too_many_arguments)]
 pub fn log_action(
@@ -63,8 +63,6 @@ pub fn log_action(
 
 /// 查询最近的操作日志（按时间倒序，最多 `limit` 条）。
 ///
-/// 对应 Python `help_interface.load_actionlogs` 的
-/// `order_by(Actionlog.timestamp.desc()).limit(100)`。
 /// 时间戳为 `datetime('now','localtime')` 字符串（秒级），可字典序比较；
 /// 同秒追加 `id DESC` 兜底保证稳定排序。
 pub fn list_actionlogs(

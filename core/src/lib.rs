@@ -1,11 +1,9 @@
-//! 科研工具集核心库（Rust 迁移）
+//! 科研工具集核心库
 //!
-//! 与 UI 完全解耦的数据层与业务逻辑，对应 Python 版：
-//! - `app/models/database.py`（schema / 迁移 / 模型）
-//! - `app/utils/`（附件、筛选等工具）
-//! - `app/tools/IndirectCostCalculator.py`（业务算法）
-//!
-//! 验收依据见 `docs/migration/feature-checklist.md`。
+//! 与 UI 完全解耦的数据层与业务逻辑：
+//! - `db`：连接、建表与列级迁移
+//! - `models` / `services`：数据模型与业务逻辑（含间接经费算法）
+//! - `attachments` / `excel` / `logging`：附件、导入导出与操作日志
 
 pub mod attachments;
 pub mod db;

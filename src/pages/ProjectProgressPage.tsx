@@ -1,4 +1,4 @@
-// 项目进度页：jQueryGantt 甘特图（复用 Python 版静态资源）
+// 项目进度页：jQueryGantt 甘特图
 // 桥接方式：iframe 加载 /gantt/gantt-tauri.html（postMessage 协议），
 // 本组件负责调用后端 load_gantt_data / save_gantt_data 命令。
 import { useCallback, useEffect, useRef, useState } from "react";

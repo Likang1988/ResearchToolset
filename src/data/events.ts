@@ -1,8 +1,7 @@
-// 跨页面数据变更事件（对齐 Python MainWindow 的 project_updated / budget_or_expense_updated
-// 与 ProjectProgressWidget 的 progress_updated 信号）
+// 跨页面数据变更事件
 // - project_updated：项目清单变更（新增/编辑/删除项目）
 // - budget_or_expense_updated：预算/支出变更
-// - progress_updated：甘特任务/进度变更（对齐 Python progress_updated 信号）
+// - progress_updated：甘特任务/进度变更
 // 主页订阅这些事件在可见时自动刷新；业务页在操作成功后调用 emit。
 
 type Listener = () => void;

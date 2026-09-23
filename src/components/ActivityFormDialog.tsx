@@ -1,8 +1,7 @@
 // 活动对话框：新增 / 编辑共用
-// 对应 Python app/views/activity_interface.py::ActivityDialog
-// 校验与 Python accept 一致：仅活动名称必填。
+// 校验规则：仅活动名称必填。
 // 与文档/成果对话框不同：活动对话框自带附件字段
-// （Python ActivityDialog 含「选择文件」/「移除附件」按钮，编辑时也可改附件），
+// （含「选择文件」/「移除附件」按钮，编辑时也可改附件），
 // 附件状态由 attachment 字段返回 to 页面层处理（add/replace/delete/none）。
 
 import { useEffect, useState } from "react";
@@ -21,7 +20,7 @@ export const ACTIVITY_TYPES = [
 ];
 export const ACTIVITY_STATUSES = ["未开始", "进行中", "已结束", "已取消"];
 
-// 附件处理状态（对齐 Python ActivityDialog.get_attachment_state）：
+// 附件处理状态：
 // - add     新增附件（old 无）
 // - replace 替换附件（拷新 + 删旧）
 // - delete  移除已有附件（删文件 + 置空）
@@ -61,7 +60,7 @@ interface AcademicActivity {
   attachment_path: string | null;
 }
 
-// 本地时区今天的 YYYY-MM-DD（对齐 Python DateEdit 默认今天）
+// 本地时区今天的 YYYY-MM-DD（日期字段默认今天）
 const todayLocal = () => {
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -87,7 +86,7 @@ export default function ActivityFormDialog({ editingId, onSubmit, onClose }: Pro
   const [participants, setParticipants] = useState("");
   const [description, setDescription] = useState("");
 
-  // 附件状态（对齐 Python：current_attachment_path / new_attachment_path / attachment_removed）
+  // 附件状态（原附件路径 / 新选文件 / 已移除标记）
   const [currentAttachment, setCurrentAttachment] = useState<string | null>(null);
   const [newFile, setNewFile] = useState<string | null>(null);
   const [removed, setRemoved] = useState(false);
@@ -95,7 +94,7 @@ export default function ActivityFormDialog({ editingId, onSubmit, onClose }: Pro
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 编辑模式：调后端 get_activity 回填（对齐 Python load_activity_data）
+  // 编辑模式：调后端 get_activity 回填
   useEffect(() => {
     if (!isEdit || editingId === undefined) return;
     (async () => {
@@ -125,7 +124,7 @@ export default function ActivityFormDialog({ editingId, onSubmit, onClose }: Pro
     })();
   }, [isEdit, editingId]);
 
-  // 选择附件文件（对齐 Python ActivityDialog._select_file）
+  // 选择附件文件
   const selectFile = async () => {
     try {
       const file = await open({
@@ -142,7 +141,7 @@ export default function ActivityFormDialog({ editingId, onSubmit, onClose }: Pro
     }
   };
 
-  // 移除附件（对齐 Python ActivityDialog._remove_selected_attachment）
+  // 移除附件
   const removeAttachment = () => {
     if (newFile) {
       // 正在移除刚选的新文件
@@ -169,7 +168,7 @@ export default function ActivityFormDialog({ editingId, onSubmit, onClose }: Pro
 
   // 移除按钮可用：有待移除的新文件或已有附件
   const canRemove = !!newFile || !!currentAttachment;
-  // 选择按钮文案（对齐 Python：已有附件时点选表示「替换」）
+  // 选择按钮文案（已有附件时点选表示「替换」）
   const selectBtnText = currentAttachment || newFile ? "重新选择/替换" : "选择文件";
 
   const computeAttachmentState = (): ActivityAttachmentState => {
@@ -191,7 +190,7 @@ export default function ActivityFormDialog({ editingId, onSubmit, onClose }: Pro
     e.preventDefault();
     setError(null);
 
-    // 对齐 Python accept 校验：仅名称必填
+    // 校验：仅名称必填
     if (!name.trim()) {
       setError("活动名称不能为空");
       return;
@@ -352,7 +351,7 @@ export default function ActivityFormDialog({ editingId, onSubmit, onClose }: Pro
             />
           </div>
 
-          {/* 活动附件：选择 / 移除（Python ActivityDialog 自带，编辑也可改） */}
+          {/* 活动附件：选择 / 移除（编辑时也可改附件） */}
           <div className="form-group">
             <label>活动附件</label>
             <div className="form-row">

@@ -1,7 +1,7 @@
-//! 树形列表工具（对应 `app/tools/TreeList.py::TreeListApp` 的导入/导出逻辑）
+//! 树形列表工具：树形数据的导入/导出（JSON/CSV/Excel）
 //!
-//! 树为纯内存结构（不落库），与 Python 版一致：
-//! - JSON 导出：`{"columns": [""], "children": [...]}` 递归结构（顶层为 invisibleRootItem，
+//! 树为纯内存结构（不落库）：
+//! - JSON 导出：`{"columns": [""], "children": [...]}` 递归结构（顶层为不可见根节点，
 //!   其文本为空串，导入时只取 `children`）
 //! - CSV 导出：动态表头「层级1..层级N」，仅叶子节点各输出一行（每层级一列，短路径补空）
 //! - Excel 导出：层级列 + 同层级合并单元格 + B8CCE4 填充 + 细边框 + 列宽 15
@@ -36,7 +36,7 @@ pub fn export_tree_list(
     }
 }
 
-// —— JSON（对齐 Python `_get_tree_data`：顶层 columns 为根文本，空串） ——
+// —— JSON（顶层 columns 为根文本，空串） ——
 
 fn to_json_node(n: &TreeListNode) -> serde_json::Value {
     serde_json::json!({
@@ -55,9 +55,9 @@ fn export_json(path: &Path, roots: &[TreeListNode]) -> Result<(), DbError> {
     Ok(())
 }
 
-// —— CSV（对齐 Python `_export_csv` + `_flatten_tree` + `_get_max_depth`） ——
+// —— CSV（叶子路径逐行展平导出） ——
 
-/// 子树深度（叶子 = 1；Python `get_depth`）
+/// 子树深度（叶子 = 1）
 fn subtree_depth(n: &TreeListNode) -> usize {
     if n.children.is_empty() {
         1
@@ -66,7 +66,7 @@ fn subtree_depth(n: &TreeListNode) -> usize {
     }
 }
 
-/// 收集所有叶子路径（每条为自根起的完整名称链条；Python `_flatten_tree`）
+/// 收集所有叶子路径（每条为自根起的完整名称链条）
 fn flatten_leaves(n: &TreeListNode, chain: &mut Vec<String>, out: &mut Vec<Vec<String>>) {
     chain.push(n.name.clone());
     if n.children.is_empty() {
@@ -78,7 +78,7 @@ fn flatten_leaves(n: &TreeListNode, chain: &mut Vec<String>, out: &mut Vec<Vec<S
     chain.pop();
 }
 
-/// CSV 字段转义（Python csv.writer 默认 QUOTE_MINIMAL：含逗号/引号/换行时加引号）
+/// CSV 字段转义：含逗号/引号/换行时加引号，内部引号翻倍
 fn csv_escape(s: &str) -> String {
     if s.contains(',') || s.contains('"') || s.contains('\n') || s.contains('\r') {
         format!("\"{}\"", s.replace('"', "\"\""))
@@ -111,15 +111,15 @@ fn export_csv(path: &Path, roots: &[TreeListNode]) -> Result<(), DbError> {
     Ok(())
 }
 
-// —— Excel（对齐 Python `_export_excel`：层级合并单元格导出） ——
+// —— Excel（按层级合并单元格导出） ——
 
-/// 层级树（同名节点合并 children，保持插入序；对齐 Python dict 语义）
+/// 层级树（同名节点合并 children，保持插入序）
 struct HierarchyNode {
     name: String,
     children: Vec<HierarchyNode>,
 }
 
-/// 由叶子路径构建层级树（Python `_build_hierarchy_data`；空名层级跳过）
+/// 由叶子路径构建层级树（空名层级跳过）
 fn build_hierarchy(leaves: &[Vec<String>], max_depth: usize) -> Vec<HierarchyNode> {
     let mut roots: Vec<HierarchyNode> = Vec::new();
     for leaf in leaves {
@@ -147,7 +147,7 @@ fn build_hierarchy(leaves: &[Vec<String>], max_depth: usize) -> Vec<HierarchyNod
     roots
 }
 
-/// 节点及其子树占用的行数（叶子 = 1；Python `_count_rows`）
+/// 节点及其子树占用的行数（叶子 = 1）
 fn count_rows(n: &HierarchyNode) -> usize {
     if n.children.is_empty() {
         1
@@ -156,7 +156,7 @@ fn count_rows(n: &HierarchyNode) -> usize {
     }
 }
 
-/// 递归填充数据并合并同层级单元格（Python `_fill_excel_data`）
+/// 递归填充数据并合并同层级单元格
 fn fill_excel(
     ws: &mut rust_xlsxwriter::Worksheet,
     nodes: &[HierarchyNode],
@@ -217,7 +217,7 @@ fn export_excel(path: &Path, roots: &[TreeListNode]) -> Result<(), DbError> {
         sheet
             .write_with_format(0, col, format!("层级{}", col + 1), &cell_fmt)
             .map_err(|e| DbError::Other(e.to_string()))?;
-        // 列宽 15（Python 每列统一 15）
+        // 列宽统一 15
         sheet
             .set_column_width(col, 15.0)
             .map_err(|e| DbError::Other(e.to_string()))?;
@@ -234,8 +234,8 @@ fn export_excel(path: &Path, roots: &[TreeListNode]) -> Result<(), DbError> {
 
 // ─────────────────────────── 导入 ───────────────────────────
 
-/// 解析树形列表 JSON（Python `import_data` + `_build_tree_from_data`：
-/// 只取顶层 `children` 递归构建，节点名取 `columns[0]`）。
+/// 解析树形列表 JSON：
+/// 只取顶层 `children` 递归构建，节点名取 `columns[0]`。
 pub fn parse_tree_list_json(path: &Path) -> Result<Vec<TreeListNode>, DbError> {
     let raw = std::fs::read_to_string(path)?;
     let v: serde_json::Value = serde_json::from_str(&raw)?;
@@ -289,7 +289,7 @@ mod tests {
     }
 
     #[test]
-    fn subtree_depth_matches_python() {
+    fn subtree_depth_matches_expected() {
         // A: 子子树深度 max(A1=1, A2=2)+1 = 3；B = 1 → 整体 max = 3
         let d = sample_tree()
             .iter()
@@ -326,7 +326,7 @@ mod tests {
 
         let text = std::fs::read_to_string(&p).unwrap();
         let v: serde_json::Value = serde_json::from_str(&text).unwrap();
-        // 顶层 children = 2 根；顶层 columns 为空串（Python invisibleRootItem 文本）
+        // 顶层 children = 2 根；顶层 columns 为空串（不可见根节点文本）
         assert_eq!(v["columns"][0], "");
         assert_eq!(v["children"].as_array().unwrap().len(), 2);
 

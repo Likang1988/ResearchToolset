@@ -1,5 +1,4 @@
-//! 预算服务：预算使用统计、项目创建（对应 database.py 的
-//! `get_budget_usage` / `add_project_to_db`）
+//! 预算服务：预算使用统计、项目预算树、预算增删改与项目创建
 
 use rusqlite::{params, Connection, OptionalExtension};
 
@@ -15,7 +14,7 @@ pub struct CategorySpend {
     pub spent: f64,
 }
 
-/// 预算使用情况（对应 Python `get_budget_usage` 返回值）
+/// 预算使用情况
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct BudgetUsage {
     pub total_budget: f64,
@@ -27,7 +26,6 @@ pub struct BudgetUsage {
 
 /// get_budget_usage 等价物：统计项目预算使用情况
 ///
-/// 语义与 Python 版一致：
 /// - 无总预算记录时返回全 0 结构
 /// - total_spent = 该项目全部支出之和（与预算无关）
 /// - category_spent 按 BudgetCategory 的 10 类逐一查询
@@ -65,7 +63,7 @@ pub fn get_budget_usage(conn: &Connection, project_id: i64) -> Result<BudgetUsag
         |r| r.get(0),
     )?;
 
-    // 各科目支出（10 类逐一查询，与 Python 一致）
+    // 各科目支出（10 类逐一查询）
     // DB 存储的是英文 KEY（EQUIPMENT/...），WHERE 条件用 storage_key；
     // 返回结构体用中文 label 给前端展示
     let mut category_spent = Vec::with_capacity(10);
@@ -89,7 +87,7 @@ pub fn get_budget_usage(conn: &Connection, project_id: i64) -> Result<BudgetUsag
     })
 }
 
-// ===== 项目经费页：三级预算树（对应 project_fund.py::load_budgets） =====
+// ===== 项目经费页：三级预算树 =====
 
 /// 单个预算科目节点（树叶子）
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -107,7 +105,7 @@ pub struct BudgetNode {
     pub year: Option<i64>,
     pub total_amount: f64,
     /// 支出额。总预算节点填「所有年度预算 spent_amount 之和」，
-    /// 年度预算节点填自身 spent_amount（与 Python load_budgets 一致）。
+    /// 年度预算节点填自身 spent_amount。
     pub spent_amount: f64,
     pub items: Vec<BudgetItemNode>,
 }
@@ -119,7 +117,7 @@ pub struct BudgetTree {
     pub annual_budgets: Vec<BudgetNode>,
 }
 
-/// 列出项目的预算树（三级结构），对齐 Python `load_budgets` 的查询与汇总语义：
+/// 列出项目的预算树（三级结构），查询与汇总语义：
 ///
 /// - 总预算节点的 spent_amount = 所有年度预算 spent_amount 之和
 /// - 总预算每个科目子项的 spent_amount = 该科目在所有年度预算中的 spent_amount 之和
@@ -138,7 +136,7 @@ pub fn list_project_budgets(conn: &Connection, project_id: i64) -> Result<Budget
 
     let total_budget = match total_row {
         Some((tb_id, tb_amount)) => {
-            // 所有年度预算 spent_amount 之和（对应 Python total_spent）
+            // 所有年度预算 spent_amount 之和
             let total_spent: f64 = conn.query_row(
                 "SELECT COALESCE(SUM(spent_amount), 0) FROM budgets \
                  WHERE project_id = ?1 AND year IS NOT NULL",
@@ -203,7 +201,7 @@ pub fn list_project_budgets(conn: &Connection, project_id: i64) -> Result<Budget
         None => None,
     };
 
-    // ---- 年度预算（按 id 升序，与 Python ORDER BY id ASC 一致）----
+    // ---- 年度预算（按 id 升序）----
     let mut stmt = conn.prepare(
         "SELECT id, year, total_amount, spent_amount FROM budgets \
          WHERE project_id = ?1 AND year IS NOT NULL ORDER BY id ASC",
@@ -262,7 +260,7 @@ pub fn list_project_budgets(conn: &Connection, project_id: i64) -> Result<Budget
     })
 }
 
-// ===== 新增年度预算（对应 project_fund.py::add_budget 的数据库部分） =====
+// ===== 新增年度预算 =====
 
 /// 单个科目金额输入
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -282,14 +280,14 @@ pub struct AnnualBudgetInput {
 
 /// 新增年度预算：创建 budgets 记录 + 10 个 budget_items 子项
 ///
-/// 对齐 Python `add_budget` 的数据库写入部分：
+/// 写入流程：
 /// - 查重：若 (project_id, year) 已存在，返回错误
 /// - 事务内创建 budgets（spent_amount=0）+ 10 个 budget_items（spent_amount=0）
 /// - 写"新增"操作日志（type=预算, action=新增，关联 budget_id）；
-///   预算编辑/删除同样写日志（对齐 Python project_fund.py 各处 Actionlog）
+///   预算编辑/删除同样写日志
 ///
-/// 注：Python 在写入前还有「总预算是否设置」「超出剩余金额」等校验，
-/// 这些放在前端对话框层处理；此处只做核心查重与写入。
+/// 注：写入前的「总预算是否设置」「超出剩余金额」等校验
+/// 放在前端对话框层处理；此处只做核心查重与写入。
 pub fn add_annual_budget(conn: &Connection, input: AnnualBudgetInput) -> Result<i64, DbError> {
     crate::db::begin_tx(conn)?;
     let result = add_annual_budget_inner(conn, input);
@@ -341,7 +339,7 @@ fn add_annual_budget_inner(conn: &Connection, input: AnnualBudgetInput) -> Resul
         )?;
     }
 
-    // 写"新增"操作日志（对齐 Python add_budget 的 Actionlog）
+    // 写"新增"操作日志
     crate::logging::log_action(
         conn,
         Some(input.project_id),
@@ -427,7 +425,7 @@ pub fn get_annual_budget_by_id(
 
 /// 更新年度预算：改 budgets.total_amount，并按类别覆盖 10 个 budget_items.amount
 ///
-/// 对齐 Python BudgetDialog：
+/// 更新规则：
 /// - 年度字段不可改（避免破坏与已有支出/甘特等的关联）
 /// - 子项 spent_amount 不变（保留已有支出数据）
 /// - 事务：先 UPDATE budgets，再逐类别 UPSERT budget_items（存在则改金额，不存在则补一条）
@@ -469,7 +467,7 @@ fn update_annual_budget_inner(
         )));
     }
 
-    // 提取旧值用于"编辑"操作日志（对齐 Python update_budget 的 old_data/new_data）
+    // 提取旧值用于"编辑"操作日志的 old_data/new_data
     let (project_id, year, old_amount) = conn.query_row(
         "SELECT project_id, year, total_amount FROM budgets WHERE id = ?1",
         [id],
@@ -516,7 +514,7 @@ fn update_annual_budget_inner(
         )?;
     }
 
-    // 写"编辑"操作日志（对齐 Python 编辑年度预算的 Actionlog）
+    // 写"编辑"操作日志
     crate::logging::log_action(
         conn,
         Some(project_id),
@@ -603,7 +601,7 @@ pub fn get_total_budget_by_id(
 
 /// 更新总预算：改 budgets.total_amount + 10 科目 amount（保留 spent_amount）
 ///
-/// 对齐 Python `TotalBudgetDialog.get_data`：
+/// 更新规则：
 /// - 校验 id 确为总预算（year IS NULL）
 /// - 事务：先 UPDATE budgets，再 DELETE+INSERT 10 个 budget_items
 ///   （保留旧 spent_amount，模式同 update_annual_budget_inner）
@@ -645,7 +643,7 @@ fn update_total_budget_inner(
         )));
     }
 
-    // 提取旧值用于"编辑"操作日志（对齐 Python 编辑总预算的 old_data/new_data）
+    // 提取旧值用于"编辑"操作日志的 old_data/new_data
     let (project_id, old_amount) = conn.query_row(
         "SELECT project_id, total_amount FROM budgets WHERE id = ?1",
         [id],
@@ -682,7 +680,7 @@ fn update_total_budget_inner(
         )?;
     }
 
-    // 写"编辑"操作日志（对齐 Python 编辑总预算的 Actionlog）
+    // 写"编辑"操作日志
     crate::logging::log_action(
         conn,
         Some(project_id),
@@ -704,11 +702,11 @@ fn update_total_budget_inner(
     Ok(())
 }
 
-// ===== 删除预算（对应 project_fund.py::delete_budget 的数据库部分） =====
+// ===== 删除预算 =====
 
-/// 删除年度预算：级联删除其子项与关联支出（对齐 Python 年度预算分支）。
+/// 删除年度预算：级联删除其子项与关联支出。
 ///
-/// 操作顺序与 Python 一致：先 expenses，再 budget_items，最后 budgets。
+/// 删除顺序：先 expenses，再 budget_items，最后 budgets。
 pub fn delete_annual_budget(conn: &Connection, id: i64) -> Result<(), DbError> {
     crate::db::begin_tx(conn)?;
     let result = (|| -> Result<(), DbError> {
@@ -723,7 +721,7 @@ pub fn delete_annual_budget(conn: &Connection, id: i64) -> Result<(), DbError> {
                 "年度预算 id={id} 不存在或不是年度预算"
             )));
         }
-        // 删除前取 project_id/year 写"删除"日志（对齐 Python 年度预算分支：log 在删库前写入）
+        // 删除前取 project_id/year 写"删除"日志（日志在删库前写入）
         let (project_id, year): (i64, i64) = conn.query_row(
             "SELECT project_id, year FROM budgets WHERE id = ?1",
             [id],
@@ -765,11 +763,11 @@ pub fn delete_annual_budget(conn: &Connection, id: i64) -> Result<(), DbError> {
 }
 
 /// 删除项目总预算：级联删除该项目全部预算、子项与关联支出
-/// （对齐 Python 总预算分支：删除整个项目的 budgets / budget_items / expenses）。
+/// （即删除整个项目的 budgets / budget_items / expenses）。
 pub fn delete_total_budget(conn: &Connection, project_id: i64) -> Result<(), DbError> {
     crate::db::begin_tx(conn)?;
     let result = (|| -> Result<(), DbError> {
-        // 写"删除"日志（对齐 Python 总预算分支：log 在删库前写入，仅关联 project_id）
+        // 写"删除"日志（日志在删库前写入，仅关联 project_id）
         crate::logging::log_action(
             conn,
             Some(project_id),
@@ -863,7 +861,7 @@ mod tests {
     use crate::models::BudgetItem;
     use rusqlite::Connection;
 
-    /// 与应用行为一致：外键关闭（rusqlite 默认开启，Python/SQLAlchemy 默认关闭）
+    /// 与应用行为一致：外键关闭
     fn test_conn() -> Connection {
         let conn = Connection::open_in_memory().unwrap();
         conn.execute_batch("PRAGMA foreign_keys = OFF").unwrap();
@@ -929,8 +927,8 @@ mod tests {
                 |r| r.get(0),
             )
             .unwrap();
-        // 注意：add_project_to_db 创建的总预算金额为 0（与 Python 一致，
-        // 项目 total_budget 字段与 budgets.total_amount 相互独立）。
+        // 注意：add_project_to_db 创建的总预算金额为 0，
+        // 项目 total_budget 字段与 budgets.total_amount 相互独立。
         // 这里模拟 UI 编辑总预算后写入的金额
         conn.execute(
             "UPDATE budgets SET total_amount = 1000.0 WHERE id = ?1",

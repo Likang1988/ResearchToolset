@@ -1,6 +1,5 @@
 // 预算执行饼图：纯 SVG 环形图，展示按类别 / 时间维度聚合的支出分布
-// 对应 Python app/components/budget_chart_widget.py：调用方负责聚合，
-// 此组件只负责渲染（标题 + 环形图 + 图例：标签/金额/百分比）
+// 调用方负责聚合，此组件只负责渲染（标题 + 环形图 + 图例：标签/金额/百分比）
 
 import { useMemo, type ReactNode } from "react";
 
@@ -17,7 +16,7 @@ interface Props {
   toolbar?: ReactNode;
 }
 
-// 配色（对齐 Python BudgetChartBase.colors）
+// 配色
 const COLORS = [
   "#FF9999",
   "#66B2FF",
@@ -74,7 +73,7 @@ export default function BudgetPieChart({ title, entries, toolbar }: Props) {
 
   return (
     <div className="pie-chart-card">
-      {/* 工具插槽：绝对定位于圆角框左上角（对齐 Python 按钮盖在 chart_view 上） */}
+      {/* 工具插槽：绝对定位于圆角框左上角 */}
       {toolbar && <div className="pie-chart-toolbar">{toolbar}</div>}
       <div className="pie-chart-title">{title}</div>
       {total <= 0 ? (

@@ -1,6 +1,6 @@
 # 科研工具集 ResearchToolset
 
-科研项目全生命周期管理桌面应用，由 Python/PyQt 迁移至 **Rust/Tauri** 架构。覆盖课题申报、预算编制、进度管控、成果归档等核心场景。
+科研项目全生命周期管理桌面应用，基于 **Rust / Tauri 2 + React** 构建。覆盖课题申报、预算编制、进度管控、成果归档等核心场景。
 
 ## 功能特性
 
@@ -140,9 +140,6 @@ npm run preview
 
 ```bash
 cd core
-
-# 运行示例：迁移校验
-cargo run --example migrate_check
 
 # 运行示例：导出项目预算
 cargo run --example dump_project2_budget

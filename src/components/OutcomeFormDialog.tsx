@@ -1,8 +1,7 @@
 // 成果对话框：新增 / 编辑共用
-// 对应 Python app/views/projecting_interface/project_outcome.py::OutcomeDialog
-// 校验与 Python accept 一致：仅成果名称必填。
-// 注意：Python OutcomeDialog 不含附件字段（附件通过列表行内按钮创建后单独管理），
-// 因此本对话框无文件选择器，attachment_path 由页面层以 null 提交。
+// 校验规则：仅成果名称必填。
+// 注意：本对话框不含附件字段（附件通过列表行内按钮创建后单独管理），
+// 因此无文件选择器，attachment_path 由页面层以 null 提交。
 
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
@@ -39,7 +38,7 @@ interface ProjectOutcome {
   attachment_path: string | null;
 }
 
-// 本地时区今天的 YYYY-MM-DD（对齐 Python DateEdit 默认今天）
+// 本地时区今天的 YYYY-MM-DD（日期字段默认今天）
 const todayLocal = () => {
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -70,7 +69,7 @@ export default function OutcomeFormDialog({
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 编辑模式：调后端 get_outcome 回填（对齐 Python load_outcome_data）
+  // 编辑模式：调后端 get_outcome 回填
   useEffect(() => {
     if (!isEdit || editingId === undefined) return;
     (async () => {
@@ -102,7 +101,7 @@ export default function OutcomeFormDialog({
     e.preventDefault();
     setError(null);
 
-    // 对齐 Python accept 校验：仅名称必填
+    // 校验：仅名称必填
     if (!name.trim()) {
       setError("成果名称不能为空");
       return;

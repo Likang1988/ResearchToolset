@@ -1,5 +1,4 @@
-// 项目文档页：对应 Python app/views/projecting_interface/project_document.py
-// 7 列表格（文档名称/类型/版本/关键词/上传时间/描述/文档附件）+ 关键词/类型筛选
+// 项目文档页：7 列表格（文档名称/类型/版本/关键词/上传时间/描述/文档附件）+ 关键词/类型筛选
 // + 新增/编辑/删除（DocumentFormDialog）+ 附件 5 个操作（查看/下载/替换/路径/删除）
 // + Excel 导出（export_documents_excel）+ 附件打包导出
 
@@ -40,11 +39,10 @@ interface DocAttachmentContext {
   base_folder: string | null;
 }
 
-// Python 表头："文档名称/类型/版本/关键词/上传时间/描述/文档附件"
-const UPLOAD_TIME_LEN = 16; // "YYYY-MM-DD HH:MM"（对齐 Python strftime("%Y-%m-%d %H:%M")）
+const UPLOAD_TIME_LEN = 16; // "YYYY-MM-DD HH:MM"
 
 export default function ProjectDocumentPage() {
-  // 项目下拉（"" = 全部文档，对齐 Python "全部文档" 选项）
+  // 项目下拉（"" = 全部文档）
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectChoice, setProjectChoice] = useState<string>("");
 
@@ -126,7 +124,7 @@ export default function ProjectDocumentPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectChoice]);
 
-  // 本地筛选（对齐 Python apply_filters：keyword 匹配 name/description/keywords，doc_type 相等）
+  // 本地筛选：keyword 匹配 name/description/keywords，doc_type 相等
   const filteredDocs = useMemo(() => {
     const kw = keyword.trim().toLowerCase();
     return allDocs.filter((d) => {
@@ -162,7 +160,7 @@ export default function ProjectDocumentPage() {
     });
   };
 
-  // 新增文档：拷贝源文件到规则路径 → add_document（对齐 Python add_document）
+  // 新增文档：拷贝源文件到规则路径 → add_document
   const addDocument = async (data: DocumentFormData) => {
     if (!selectedProject) throw new Error("请先选择一个项目");
     if (!data.file_path) throw new Error("请选择要上传的文件");
@@ -253,7 +251,7 @@ export default function ProjectDocumentPage() {
     }
   };
 
-  // 导出附件（对齐 Python export_document_attachments：拷贝到 文档附件_{financial_code} 目录）
+  // 导出附件：拷贝到 文档附件_{financial_code} 目录
   const handleExportAttachments = async () => {
     if (!selectedProject) {
       alert("请先选择一个项目（「全部文档」模式不支持导出附件）");
@@ -281,7 +279,7 @@ export default function ProjectDocumentPage() {
           continue;
         }
         const filename = p.split(/[\\/]/).pop() ?? "attachment";
-        // 避免文件名冲突（对齐 Python：base_1.ext 递增）
+        // 避免文件名冲突（base_1.ext 递增）
         let dest = `${projectDir}/${filename}`;
         let counter = 1;
         while (true) {
@@ -309,7 +307,7 @@ export default function ProjectDocumentPage() {
     }
   };
 
-  // 行内附件操作（对齐 Python attachment_utils 菜单动作：查看/下载/路径/替换/删除/上传）
+  // 行内附件操作：查看/下载/路径/替换/删除/上传
   const handleAttachmentAction = async (doc: ProjectDocument, action: string) => {
     setAttachmentMenuFor(null);
     const path = doc.file_path;
@@ -377,7 +375,7 @@ export default function ProjectDocumentPage() {
         title: "选择文档文件",
       });
       if (typeof file !== "string") return; // 用户取消
-      // 用该文档所属项目的 financial_code 生成路径（对齐 generate_attachment_path context）
+      // 用该文档所属项目的 financial_code 生成附件存储路径
       const owner = projects.find((p) => p.id === doc.project_id) ?? selectedProject;
       const context: DocAttachmentContext = {
         financial_code: owner?.financial_code ?? null,
@@ -424,7 +422,7 @@ export default function ProjectDocumentPage() {
     }
   };
 
-  // 上传时间显示：截断到分钟（对齐 Python strftime("%Y-%m-%d %H:%M")）
+  // 上传时间显示：截断到分钟
   const fmtUploadTime = (t: string | null) =>
     t ? t.slice(0, UPLOAD_TIME_LEN) : "";
 
@@ -510,7 +508,7 @@ export default function ProjectDocumentPage() {
         </div>
       )}
 
-      {/* 筛选 + 导出（对齐 Python 搜索栏布局） */}
+      {/* 筛选 + 导出 */}
       <div className="expense-filter">
         <label>关键词:</label>
         <input

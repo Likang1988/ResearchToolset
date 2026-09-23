@@ -1,5 +1,4 @@
-// 预算编制页：对应 Python app/views/budgeting_interface.py
-// 6 列可编辑三级树（课题/预算名称 | 型号规格|简要内容 | 单价(元) | 数量 | 经费数额(元) | 备注）
+// 预算编制页：6 列可编辑三级树（课题/预算名称 | 型号规格|简要内容 | 单价(元) | 数量 | 经费数额(元) | 备注）
 // + 单价×数量自动联动金额、父项递归汇总、顶层清空单价/数量
 // + 按钮：添加预算 / 增加同级 / 增加子级(最多三级) / 删除该级 / 保存数据 / 导出数据
 // + 导出走 BudgetExportDialog 配置后 invoke export_budget_data（Rust 已实现）
@@ -11,7 +10,7 @@ import { save } from "@tauri-apps/plugin-dialog";
 import BudgetExportDialog, { type BudgetExportConfig } from "../components/BudgetExportDialog";
 import { emitBudgetOrExpenseUpdated } from "../data/events";
 
-// 10 个预算类别中文 label（与后端 BUDGET_CATEGORY_LABELS / Python BudgetCategory 顺序一致）
+// 10 个预算类别中文 label（与后端 BUDGET_CATEGORY_LABELS 顺序一致）
 const BUDGET_CATEGORY_LABELS = [
   "设备费",
   "材料费",
@@ -151,7 +150,7 @@ export default function BudgetingPage() {
   // 导出配置对话框开关
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
 
-  // 加载全部预算计划（对齐 Python load_budget_plans）
+  // 加载全部预算计划
   const refresh = async () => {
     setLoading(true);
     setError(null);
@@ -226,7 +225,7 @@ export default function BudgetingPage() {
     setPlans((prev) => prev.map((p, i) => (i === pi ? { ...p, ...patch } : p)));
   };
 
-  // 编辑单价/数量：金额 = 单价×数量（对齐 Python on_item_changed）
+  // 编辑单价/数量：金额 = 单价×数量
   const onPriceQty = (sel: Selection, field: "unitPrice" | "quantity", v: string) => {
     const src = sel.ci !== undefined && sel.ii !== undefined ? getItem(sel) : null;
     if (!src) return;
@@ -243,7 +242,7 @@ export default function BudgetingPage() {
     return p.categories[sel.ci]?.items[sel.ii] ?? null;
   };
 
-  // —— 按钮动作（对齐 Python） ——
+  // —— 按钮动作 ——
   const addBudget = () => {
     setPlans((prev) => [...prev, emptyPlan()]);
   };
@@ -291,7 +290,7 @@ export default function BudgetingPage() {
       alert("请选择要删除的预算项！");
       return;
     }
-    // 标准预算类别（第二级）不可删除（对齐 Python）
+    // 标准预算类别（第二级）不可删除
     if (selected.kind === "category") {
       const label = plans[selected.pi].categories[selected.ci ?? -1]?.label;
       if (label && BUDGET_CATEGORY_LABELS.includes(label)) {
@@ -309,13 +308,13 @@ export default function BudgetingPage() {
     const { kind, pi, ci, ii } = sel;
     try {
       if (kind === "plan") {
-        // 顶层：删除整个计划（按 name，对齐 Python 顶层分支）
+        // 顶层：删除整个计划（按 name）
         await invoke("delete_budget_plan", { name: plans[pi].name });
       } else if (kind === "item" && ci !== undefined && ii !== undefined) {
         const topName = plans[pi].name;
         const catLabel = plans[pi].categories[ci].label;
         const itemName = plans[pi].categories[ci].items[ii].name;
-        // 非标准类别行不入库（Python `if category:` 跳过），只删 UI
+        // 非标准类别行不入库，只删 UI
         if (BUDGET_CATEGORY_LABELS.includes(catLabel)) {
           await invoke("delete_budget_plan_item", {
             planName: topName,
@@ -326,7 +325,7 @@ export default function BudgetingPage() {
       }
     } catch (e) {
       setError(String(e));
-      return; // 入库失败则不删 UI（对齐 Python：异常不执行 UI 删除）
+      return; // 入库失败则不删 UI
     }
     // 移除 UI 节点
     setPlans((prev) => {
@@ -343,7 +342,7 @@ export default function BudgetingPage() {
     setSelected(null);
   };
 
-  // 保存数据（对齐 Python save_data：整树一次提交）
+  // 保存数据：整树一次提交
   const handleSave = async () => {
     try {
       const payload = plans.map((p) => ({
@@ -372,7 +371,7 @@ export default function BudgetingPage() {
     }
   };
 
-  // 导出数据（对齐 Python export_data：取选中项所属顶层计划）
+  // 导出数据：取选中项所属顶层计划
   const requestExport = () => {
     if (!selected || selected.kind !== "plan") {
       // 选中条目/类别时上溯到顶层；未选中提示
@@ -567,7 +566,7 @@ export default function BudgetingPage() {
         </div>
       ) : (
         <div className="bt-tree">
-          {/* 表头（对齐 Python 6 列） */}
+          {/* 表头 */}
           <div className="bt-row bt-header">
             <div className="bt-cell bt-name">课题/预算名称</div>
             <div className="bt-cell bt-spec">型号规格|简要内容</div>

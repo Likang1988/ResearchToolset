@@ -1,7 +1,6 @@
 //! 甘特图服务：gantt_tasks / gantt_dependencies 的加载与保存
 //!
-//! 对应 Python `app/views/projecting_interface/project_progress.py` 中
-//! `GanttBridge.load_gantt_data` 与 `GanttBridge.save_gantt_data` 的核心逻辑：
+//! 行为说明：
 //! - 加载：按 order 排序取任务；依赖按 successor 聚合为 "pred1,pred2" 字符串
 //! - 保存：整单事务——处理删除（先删依赖再删任务）、
 //!   新增（tmp_ 前缀 → 持久化 gantt_id 映射）、更新、依赖全量重建、
@@ -76,8 +75,7 @@ fn db_time_to_millis(s: &str) -> Option<i64> {
     // 去掉可能存在的 'T' 分隔与毫秒尾
     let normalized = normalized.replace('T', " ");
     let dt = normalized.split('.').next().unwrap_or(&normalized);
-    // 解析 "YYYY-MM-DD HH:MM:SS"（无时区则按 UTC 处理，与 Python
-    // `replace(tzinfo=timezone.utc).timestamp()*1000` 一致）
+    // 解析 "YYYY-MM-DD HH:MM:SS"（无时区则按 UTC 处理）
     let dt = chrono::NaiveDateTime::parse_from_str(dt, "%Y-%m-%d %H:%M:%S")
         .ok()?
         .and_utc();
@@ -92,9 +90,9 @@ fn millis_to_db_time(ms: i64) -> String {
     dt.format("%Y-%m-%d %H:%M:%S").to_string()
 }
 
-/// 任务操作日志 JSON（对齐 Python save_gantt_data 的字段集）：
+/// 任务操作日志 JSON，字段集：
 /// id/name/code/level/status/start_date/duration/end_date/progress/responsible。
-/// 日期取 "YYYY-MM-DD"（Python `str(date)` 语义）。
+/// 日期取 "YYYY-MM-DD"。
 fn task_log_json(
     id: &str,
     name: &str,
@@ -123,8 +121,8 @@ fn task_log_json(
     .to_string()
 }
 
-/// 判定现有任务与传入任务数据是否有差异（对齐 Python `data_changed` 判定：
-/// 逐字段比较 task_obj_data 与 existing_task 属性；无变化不写编辑日志）。
+/// 判定现有任务与传入任务数据是否有差异：
+/// 逐字段比较各属性；无变化不写编辑日志。
 fn task_data_changed(
     old: &GanttTask,
     name: &str,
@@ -162,7 +160,7 @@ fn task_data_changed(
         || old.order.unwrap_or(0) != order
 }
 
-/// 加载某项目的甘特图数据（对应 Python load_gantt_data）
+/// 加载某项目的甘特图数据
 pub fn load_gantt_data(
     conn: &Connection,
     project_id: i64,
@@ -238,7 +236,7 @@ pub fn load_gantt_data(
     })
 }
 
-// ---- 保存（对应 Python save_gantt_data，事务内） ----
+// ---- 保存（事务内） ----
 
 /// 保存后的任务进度重算：从最深层向浅层按 duration 加权
 /// 返回 (任务 id, 名称, 更新后进度) 列表，便于前端提示/日志
@@ -297,7 +295,7 @@ fn recalc_parent_progress(
 
 /// 保存甘特图数据（整单事务）。返回新任务临时id→持久化gantt_id映射。
 ///
-/// 对应 Python save_gantt_data：
+/// 保存步骤：
 /// 1. 删除 deletedTaskIds（先删依赖，含作为前驱的，再删任务）
 /// 2. 更新/新增 tasks（tmp_ 前缀为新任务，追加映射；已有 id 更新并记变更）
 /// 3. 清空该项目的旧依赖，按当前的任务 depends 全量重建（引用新映射）
@@ -316,7 +314,7 @@ pub fn save_gantt_data(
     }
     let tx = conn.transaction()?;
 
-    // 项目财务编号（任务日志 related_info="项目: {financial_code}"，对齐 Python）
+    // 项目财务编号（任务日志 related_info="项目: {financial_code}"）
     let financial_code: Option<String> = tx
         .query_row(
             "SELECT financial_code FROM projects WHERE id = ?1",
@@ -461,7 +459,7 @@ pub fn save_gantt_data(
             final_gantt_id = persistent_id.clone();
             processed.insert(final_gantt_id.clone());
 
-            // 新增任务日志（对齐 Python：type="任务"、action="新增"、new_data、
+            // 新增任务日志（type="任务"、action="新增"、new_data，
             // gantt_task_id 关联 DB id）
             let new_data = task_log_json(
                 &final_gantt_id,
@@ -494,8 +492,8 @@ pub fn save_gantt_data(
                 Some(&related_info("")),
             )?;
         } else if let Some(existing_task) = existing_map.get(&task.id) {
-            // 现有任务：先比对旧数据判定是否有变更（对齐 Python：
-            // 无变化不写编辑日志），有变更才 UPDATE + 写"编辑"日志
+            // 现有任务：先比对旧数据判定是否有变更（无变化不写编辑日志），
+            // 有变更才 UPDATE + 写"编辑"日志
             let old_data = task_log_json(
                 &existing_task.gantt_id,
                 &existing_task.name,
@@ -555,7 +553,7 @@ pub fn save_gantt_data(
                         task.id
                     ],
                 )?;
-                // 编辑任务日志（对齐 Python：old_data + new_data，gantt_task_id 关联 DB id）
+                // 编辑任务日志（old_data + new_data，gantt_task_id 关联 DB id）
                 let new_data = task_log_json(
                     &task.id,
                     &task.name,
@@ -622,7 +620,7 @@ pub fn save_gantt_data(
             final_gantt_id = task.id.clone();
             processed.insert(final_gantt_id.clone());
 
-            // 持久化 id 但 DB 中不存在，按新任务插入并写"新增"日志（对齐 Python）
+            // 持久化 id 但 DB 中不存在，按新任务插入并写"新增"日志
             let new_data = task_log_json(
                 &final_gantt_id,
                 &task.name,
@@ -690,8 +688,7 @@ pub fn save_gantt_data(
 }
 
 /// 清理某项目下全部甘特数据（删除项目级联用；若无则 no-op）
-/// 对应 Python 项目删除时的级联（gantt_tasks/dependencies 随外键 ON DELETE CASCADE）
-/// 提供显式实现以保证确定性，且不依赖外键是否开启。
+/// 显式实现级联删除，不依赖外键是否开启，以保证确定性。
 pub fn clear_project_gantt(conn: &Connection, project_id: i64) -> Result<(), DbError> {
     conn.execute(
         "DELETE FROM gantt_dependencies WHERE project_id = ?1",
@@ -704,9 +701,9 @@ pub fn clear_project_gantt(conn: &Connection, project_id: i64) -> Result<(), DbE
     Ok(())
 }
 
-// ---- 导出（对应 Python GanttBridge.export_gantt_data） ----
+// ---- 导出 ----
 
-/// 毫秒时间戳 → "YYYY-MM-DD"（本地时区，与 Python `datetime.fromtimestamp` 一致）
+/// 毫秒时间戳 → "YYYY-MM-DD"（本地时区）
 fn ms_to_date(ms: Option<i64>) -> Option<String> {
     let ms = ms?;
     chrono::Local
@@ -715,8 +712,8 @@ fn ms_to_date(ms: Option<i64>) -> Option<String> {
         .map(|dt| dt.format("%Y-%m-%d").to_string())
 }
 
-/// 导出甘特数据到文件。按文件扩展名选择格式（与 Python 版一致）：
-/// - .xlsx → Excel（列序同 Python XLSX 导出）
+/// 导出甘特数据到文件。按文件扩展名选择格式：
+/// - .xlsx → Excel
 /// - .json → 原样 JSON（indent=2 便于阅读）
 /// - .csv  → CSV（utf-8-sig，Excel 直接打开不乱码）
 /// - .txt  → 缩进文本
@@ -740,7 +737,7 @@ fn export_gantt_json(path: &Path, data: &GanttProjectData) -> Result<(), DbError
 }
 
 fn export_gantt_csv(path: &Path, data: &GanttProjectData) -> Result<(), DbError> {
-    // 与 Python CSV 列一致；Python 用 QUOTE_ALL（每个字段都加引号）
+    // 固定列集；每个字段统一加引号
     let header = ["ID", "名称", "层级", "开始日期", "结束日期", "工期(天)", "进度(%)", "依赖项", "状态", "描述"];
     let mut out = String::new();
     out.push_str(&header.join(","));
@@ -811,7 +808,7 @@ fn export_gantt_xlsx(path: &Path, data: &GanttProjectData) -> Result<(), DbError
         .set_name("甘特图")
         .map_err(|e| DbError::Other(e.to_string()))?;
 
-    // 与 Python XLSX 导出列一致：名称按层级加 2 空格缩进
+    // 固定列集：名称按层级加 2 空格缩进
     let headers: [&str; 9] = [
         "ID",
         "名称",
@@ -877,13 +874,13 @@ mod tests {
 
     fn connect() -> Connection {
         let mut conn = Connection::open_in_memory().unwrap();
-        // 与 db::open 一致：关闭外键强制（rusqlite 默认开启，Python/SQLAlchemy 默认关闭）
+        // 与 db::open 一致：关闭外键强制（rusqlite 默认开启）
         conn.execute_batch("PRAGMA foreign_keys = OFF").unwrap();
         db::init_db(&mut conn).unwrap();
         conn
     }
 
-    /// 建项目 + 插入一条总预算（对应 add_project_to_db 的最小集）
+    /// 建项目 + 插入一条总预算（种子数据最小集）
     fn seed_project(conn: &Connection, id: i64, name: &str) {
         conn.execute(
             "INSERT INTO projects (id, name, total_budget, start_date, end_date) \
@@ -1332,7 +1329,7 @@ mod tests {
 
         let dir = tempfile::tempdir().unwrap();
 
-        // 导出日期使用本地时区，与 Python `datetime.fromtimestamp` 一致，
+        // 导出日期使用本地时区，
         // 故用同样的换算生成期望值（保证任何时区下断言都正确）
         let expect_start = ms_to_date(Some(ms(2026, 1, 1))).unwrap();
 

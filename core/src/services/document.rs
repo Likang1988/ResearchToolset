@@ -1,9 +1,9 @@
-//! 项目文档服务：对应 Python `app/views/projecting_interface/project_document.py`
+//! 项目文档服务
 //!
 //! 业务核心：
-//! - `doc_type` 在库中以 SQLAlchemy Enum 的枚举名存储（如 `APPLICATION`），
+//! - `doc_type` 在库中以英文枚举名（KEY）存储（如 `APPLICATION`），
 //!   对外统一为中文 label（如「申请材料」），读写时双向转换。
-//! - 新增/编辑/删除均写入 actionlogs（type="文档"），对齐 Python 行为。
+//! - 新增/编辑/删除均写入 actionlogs（type="文档"）。
 //! - 附件文件操作（拷贝/删除）由 attachments 模块完成，本服务只负责路径落库。
 //! - `file_path` 为可选；删除文档后由调用方（command 层）清理磁盘文件。
 
@@ -26,7 +26,7 @@ pub const DOCUMENT_TYPES: [&str; 10] = [
     "其他",
 ];
 
-/// 中文 label → 存储 KEY（SQLAlchemy Enum 名称，如 APPLICATION）。
+/// 中文 label → 存储 KEY（英文枚举名，如 APPLICATION）。
 /// 未识别返回原值（兜底，应不会发生）。
 fn to_storage_key(label: &str) -> String {
     match label {
@@ -65,7 +65,7 @@ fn to_label(key: &str) -> String {
 /// 新增/编辑文档输入。
 ///
 /// `doc_type` 从前端传入中文 label（如「申请材料」），service 内转存储 KEY 入库。
-/// `file_path` 仅新增时使用（编辑不改附件路径，与 Python 一致）。
+/// `file_path` 仅新增时使用（编辑不改附件路径）。
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DocumentInput {
     pub project_id: i64,
@@ -97,7 +97,7 @@ fn row_to_document(row: &rusqlite::Row) -> rusqlite::Result<ProjectDocument> {
     })
 }
 
-/// 列出某项目下全部文档（按 upload_time DESC，与 Python `load_documents` 一致）。
+/// 列出某项目下全部文档（按 upload_time DESC）。
 pub fn list_documents_by_project(
     conn: &Connection,
     project_id: i64,
@@ -139,7 +139,7 @@ pub fn get_document_by_id(conn: &Connection, id: i64) -> Result<Option<ProjectDo
     Ok(row)
 }
 
-/// 写入操作日志（对齐 Python 内联 Actionlog 写法；operator 暂记「当前用户」）。
+/// 写入操作日志（operator 暂记「当前用户」）。
 #[allow(clippy::too_many_arguments)]
 fn log_document_action(
     conn: &Connection,
@@ -207,7 +207,7 @@ fn add_document_inner(conn: &Connection, input: DocumentInput) -> Result<i64, Db
 }
 
 /// 更新文档（事务）：改 name/doc_type/version/description/keywords（不改 file_path），
-/// 写「编辑」日志。对齐 Python `edit_document`。
+/// 写「编辑」日志。
 pub fn update_document(conn: &Connection, id: i64, input: DocumentInput) -> Result<(), DbError> {
     crate::db::begin_tx(conn)?;
     let result = update_document_inner(conn, id, input);
@@ -253,7 +253,7 @@ fn update_document_inner(conn: &Connection, id: i64, input: DocumentInput) -> Re
 }
 
 /// 批量删除文档（事务）。返回被删除文档的磁盘文件路径列表，
-/// 由调用方在事务提交后执行文件清理（对齐 Python：文件删除失败不致命）。
+/// 由调用方在事务提交后执行文件清理（文件删除失败不致命，仅记录）。
 pub fn delete_documents(conn: &Connection, ids: &[i64]) -> Result<Vec<Option<String>>, DbError> {
     if ids.is_empty() {
         return Ok(Vec::new());
@@ -278,7 +278,7 @@ fn delete_documents_inner(
 ) -> Result<Vec<Option<String>>, DbError> {
     let mut paths = Vec::new();
     for id in ids {
-        // 取记录用于日志与文件清理；不存在则跳过（对齐 Python query.first() 判空）
+        // 取记录用于日志与文件清理；不存在则跳过
         let row: Option<(i64, String, String, Option<String>)> = conn
             .query_row(
                 "SELECT project_id, name, doc_type, file_path FROM project_documents WHERE id = ?1",
@@ -304,7 +304,7 @@ fn delete_documents_inner(
             )
             .optional()?;
         conn.execute("DELETE FROM project_documents WHERE id = ?1", [id])?;
-        // 删除日志不填 project_document_id（对齐 Python：先删文档再记日志）
+        // 删除日志不填 project_document_id（先删文档再记日志）
         log_document_action(
             conn,
             project_id,

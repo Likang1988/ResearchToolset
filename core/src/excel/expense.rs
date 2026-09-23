@@ -1,14 +1,8 @@
 //! Excel 读写（支出相关）
 //!
-//! 对应 Python：
-//! - `app/tools/generate_expense_template.py`（模板生成，BatchImportDialog.download_template）
-//! - `app/components/batch_import_dialog.py::import_data`（批量导入解析与校验）
-//! - `project_expense.py::export_expense_excel`（支出导出）
-//!
 //! 读：calamine（xlsx/xls）+ csv crate（csv，calamine 0.36 无 CSV 支持）；
 //! 写：rust_xlsxwriter。
-//! 按 feature-checklist §4：模板与导出均含 DataValidation 下拉校验（Python 模板原实现
-//! 未加校验，此处按验收清单补上，属改进项）。
+//! 模板与导出均含 DataValidation 类别下拉校验。
 
 use std::path::Path;
 
@@ -31,7 +25,7 @@ pub struct ImportedExpense {
     pub remarks: Option<String>,
 }
 
-/// 支出导出行（7 列，与 Python export_expense_excel 一致）
+/// 支出导出行（7 列）
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ExportExpenseRow {
     pub category: String,
@@ -74,7 +68,7 @@ pub fn generate_import_template(path: &Path) -> Result<(), String> {
         .map_err(|e| format!("命名工作表失败: {e}"))?;
     write_headers(&mut data_sheet, 0)?;
 
-    // 示例数据两行（对应 Python example_data）
+    // 示例数据两行
     let example: [(&str, &str, &str, &str, f64, &str, &str); 2] = [
         ("设备费", "设备A采购", "型号X", "供应商A", 10000.0, "2025-01-01", "示例数据1"),
         ("材料费", "材料B采购", "型号Y", "供应商B", 5000.0, "2025-01-02", "示例数据2"),
@@ -147,9 +141,8 @@ pub fn generate_import_template(path: &Path) -> Result<(), String> {
 
 /// 解析批量导入文件（xlsx/xls/csv），返回记录列表。
 ///
-/// 校验与 Python 一致（缺失必要列 / 必填空值 / 类别非法 / 金额格式 / 金额<=0 /
-/// 日期格式），错误时返回带行号的中文提示（比 Python 更细粒度：逐行报错，
-/// 符合 checklist §4「逐行报错提示」）。
+/// 校验项：缺失必要列 / 必填空值 / 类别非法 / 金额格式 / 金额<=0 / 日期格式。
+/// 逐行报错，错误信息带行号。
 pub fn parse_import_file(path: &Path) -> Result<Vec<ImportedExpense>, String> {
     let ext = path
         .extension()
@@ -241,7 +234,7 @@ fn parse_rows(rows: Vec<Vec<String>>) -> Result<Vec<ImportedExpense>, String> {
 
     let col = |name: &str| header.iter().position(|h| h == name);
 
-    // 必要列检查（Python：缺失必要列直接报错）
+    // 必要列检查（缺失必要列直接报错）
     let required = ["费用类别", "开支内容", "报账金额"];
     let missing: Vec<&str> = required.iter().filter(|c| col(c).is_none()).copied().collect();
     if !missing.is_empty() {
@@ -350,7 +343,7 @@ fn cell_at<'a>(row: &'a [String], col: Option<usize>) -> Option<&'a String> {
     col.and_then(|c| row.get(c))
 }
 
-/// 导出支出信息到 Excel（含类别下拉校验与说明区，对应 export_expense_excel）。
+/// 导出支出信息到 Excel（含类别下拉校验与说明区）。
 pub fn export_expenses(path: &Path, rows: &[ExportExpenseRow]) -> Result<(), String> {
     let mut workbook = Workbook::new();
     let mut sheet = workbook.add_worksheet();
@@ -376,7 +369,7 @@ pub fn export_expenses(path: &Path, rows: &[ExportExpenseRow]) -> Result<(), Str
     let dv = category_validation()?;
     sheet.add_data_validation(1, 0, last, 0, &dv).map_err(xe)?;
 
-    // 说明区（数据下方空一行，对应 Python instructions 的 start_row = len(df)+3（1-based））
+    // 说明区（数据下方空一行后写入）
     let start_row = last + 2;
     let instructions = [
         "说明:",
@@ -403,7 +396,7 @@ pub fn export_expenses(path: &Path, rows: &[ExportExpenseRow]) -> Result<(), Str
     Ok(())
 }
 
-/// 类别下拉校验（允许空，带提示文案，对应 Python DataValidation）
+/// 类别下拉校验（允许空，带提示文案）
 fn category_validation() -> Result<DataValidation, String> {
     let categories: Vec<&str> = BudgetCategory::ALL.iter().map(|c| c.as_str()).collect();
     DataValidation::new()
@@ -451,7 +444,7 @@ fn format_number(v: f64) -> String {
     }
 }
 
-/// 文本日期解析，覆盖 pandas to_datetime 的常见格式
+/// 文本日期解析，覆盖常见日期格式
 fn parse_date_text(s: &str) -> Option<String> {
     let s = s.trim();
     if s.is_empty() {

@@ -1,17 +1,16 @@
-//! 学术活动服务：对应 Python `app/views/activity_interface.py`
+//! 学术活动服务
 //!
 //! 业务核心：
-//! - `type` / `status` 在库中以 SQLAlchemy Enum 的枚举名存储（如 `CONFERENCE` / `PLANNED`），
+//! - `type` / `status` 在库中以英文枚举名（KEY）存储（如 `CONFERENCE` / `PLANNED`），
 //!   对外统一为中文 label（如「学术会议」/「未开始」），读写时双向转换。
-//! - 与 Python 一致：活动的新增/编辑/删除 **不写 actionlogs**（actionlogs 表无活动外键，
-//!   Python `ActivityInterface` 也未记录活动日志）。
+//! - 活动的新增/编辑/删除 **不写 actionlogs**（actionlogs 表无活动外键）。
 //! - 表 `academic_activities` 为全局表（无 project_id），不做项目维度筛选。
 //! - 附件文件操作（拷贝/删除）由 attachments 模块完成，本服务只负责附件路径落库；
 //!   新附件路径由调用方先通过 `save_attachment(kind="activity")` 生成并拷贝，再随
-//!   新增/编辑一并写入（Python ActivityDialog 的 add/replace/delete 均会修改 attachment_path）。
+//!   新增/编辑一并写入（附件的 add/replace/delete 操作均会修改 attachment_path）。
 //! - 删除活动后由调用方（command 层）清理磁盘附件。
 //!
-//! 排序：`ORDER BY start_date DESC`（Python `load_activities` 一致）。
+//! 排序：`ORDER BY start_date DESC`。
 
 use rusqlite::{params, Connection, OptionalExtension};
 
@@ -32,7 +31,7 @@ pub const ACTIVITY_TYPES: [&str; 7] = [
 /// 全部活动状态的中文 label（与 `ActivityStatus` 枚举顺序一致，前端下拉框用）。
 pub const ACTIVITY_STATUSES: [&str; 4] = ["未开始", "进行中", "已结束", "已取消"];
 
-/// 中文类型 label → 存储 KEY（SQLAlchemy Enum 名称）。未识别返回原值（兜底）。
+/// 中文类型 label → 存储 KEY（英文枚举名）。未识别返回原值（兜底）。
 fn to_storage_key(label: &str) -> String {
     match label {
         "学术会议" => "CONFERENCE",
@@ -129,8 +128,7 @@ fn row_to_activity(row: &rusqlite::Row) -> rusqlite::Result<AcademicActivity> {
     })
 }
 
-/// 列出全部活动（按 start_date DESC，NULL 在 SQLite DESC 排序下自然落末，
-/// 与 Python `load_activities` 一致）。
+/// 列出全部活动（按 start_date DESC，NULL 在 SQLite DESC 排序下自然落末）。
 pub fn list_activities(conn: &Connection) -> Result<Vec<AcademicActivity>, DbError> {
     let mut stmt = conn.prepare(&format!(
         "SELECT {SELECT_COLS} FROM academic_activities ORDER BY start_date DESC"
@@ -155,8 +153,7 @@ pub fn get_activity_by_id(conn: &Connection, id: i64) -> Result<Option<AcademicA
     Ok(row)
 }
 
-/// 新增活动。返回新活动 id。
-/// 对齐 Python `add_activity`：不写 actionlogs。
+/// 新增活动。返回新活动 id。不写 actionlogs。
 pub fn add_activity(conn: &Connection, input: ActivityInput) -> Result<i64, DbError> {
     let type_key = to_storage_key(&input.r#type);
     let status_key = input.status.as_deref().map(to_status_key);
@@ -183,8 +180,8 @@ pub fn add_activity(conn: &Connection, input: ActivityInput) -> Result<i64, DbEr
 
 /// 更新活动：改全部字段（含 attachment_path）。
 ///
-/// 与成果不同，Python `edit_activity` 会通过 ActivityDialog 的附件状态
-/// （add/replace/delete）改写 attachment_path，故这里必须支持写附件路径；
+/// 与成果不同，编辑时对话框的附件状态（add/replace/delete）会改写 attachment_path，
+/// 故这里必须支持写附件路径；
 /// 附件文件拷贝/删除由调用方先完成，`None` 表示移除附件。
 pub fn update_activity(conn: &Connection, id: i64, input: ActivityInput) -> Result<(), DbError> {
     let type_key = to_storage_key(&input.r#type);
@@ -215,8 +212,7 @@ pub fn update_activity(conn: &Connection, id: i64, input: ActivityInput) -> Resu
 }
 
 /// 批量删除活动。返回被删除活动的磁盘附件路径列表，
-/// 由调用方在删除后执行文件清理（对齐 Python：文件删除失败不致命）。
-/// 对齐 Python `delete_activity`：不写 actionlogs。不存在的 id 跳过。
+/// 由调用方在删除后执行文件清理（文件删除失败不致命，仅记录）。不写 actionlogs；不存在的 id 跳过。
 pub fn delete_activities(conn: &Connection, ids: &[i64]) -> Result<Vec<Option<String>>, DbError> {
     if ids.is_empty() {
         return Ok(Vec::new());
@@ -293,7 +289,7 @@ mod tests {
         assert_eq!(activity.name, "某学术会议");
         assert_eq!(activity.organizer.as_deref(), Some("某大学"));
 
-        // 活动不写 actionlogs（对齐 Python）
+        // 活动不写 actionlogs
         let n: i64 = conn
             .query_row("SELECT COUNT(*) FROM actionlogs", [], |r| r.get(0))
             .unwrap();

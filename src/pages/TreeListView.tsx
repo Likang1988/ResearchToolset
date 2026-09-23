@@ -1,4 +1,3 @@
-// 树形列表工具：对应 Python app/tools/TreeList.py
 // 单列可编辑树（内存态，不落库）+ 按钮：创建项目/增加同级/增加子级/多个子级/删除该级
 // + 导入(JSON) / 导出(Excel/CSV/JSON，Excel 为层级合并单元格导出)
 // 数据模型与 Rust services::tree_list::TreeListNode 对齐（name/children）
@@ -24,7 +23,7 @@ export default function TreeListView({ onBack }: Props) {
   const [roots, setRoots] = useState<TreeNode[]>([]);
   // 选中节点路径：[] 表示未选中（空数组会与根路径 [0] 混淆，改用 null）
   const [selected, setSelected] = useState<Path | null>(null);
-  // 折叠节点 key 集合（Python 默认展开，add 子级后自动展开）
+  // 折叠节点 key 集合（默认展开，增加子级后自动展开）
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   // 多个子级对话框开关
   const [multiOpen, setMultiOpen] = useState(false);
@@ -74,7 +73,7 @@ export default function TreeListView({ onBack }: Props) {
     });
   };
 
-  /** 给指定路径节点追加子节点（Python add_child 同时展开父节点） */
+  /** 给指定路径节点追加子节点（同时展开父节点） */
   const appendChildren = (path: Path, children: TreeNode[]) => {
     if (path.length === 1) {
       setRoots((prev) =>
@@ -89,7 +88,7 @@ export default function TreeListView({ onBack }: Props) {
     });
   };
 
-  // ── 按钮动作（对齐 Python） ──
+  // ── 按钮动作 ──
 
   const createRoot = () => {
     setRoots((prev) => [...prev, { name: "请输入项目名称", children: [] }]);
@@ -141,7 +140,7 @@ export default function TreeListView({ onBack }: Props) {
   const deleteSelected = () => {
     if (!selected) return;
     if (selected.length === 1) {
-      // 根节点：仅当 >1 个根时可删（Python：root.removeChild）
+      // 根节点：仅当 >1 个根时可删
       if (roots.length <= 1) return;
       setRoots((prev) => prev.filter((_, i) => i !== selected[0]));
     } else {
@@ -164,7 +163,7 @@ export default function TreeListView({ onBack }: Props) {
     }
   };
 
-  // ── 导入 / 导出（对齐 Python import_data / export_data） ──
+  // ── 导入 / 导出 ──
 
   const importData = async () => {
     const file = await open({
@@ -194,7 +193,7 @@ export default function TreeListView({ onBack }: Props) {
       ],
     });
     if (!savePath) return;
-    // Python 用 selectedFilter 判定格式；Tauri 仅返回路径，按扩展名判定，无扩展名默认 Excel
+    // 按扩展名判定导出格式，无扩展名默认 Excel
     const ext = (savePath.split(".").pop() ?? "").toLowerCase();
     const format = ext === "json" ? "json" : ext === "csv" ? "csv" : "xlsx";
     try {
@@ -262,7 +261,7 @@ export default function TreeListView({ onBack }: Props) {
     );
   };
 
-  // 按钮启用状态（对齐 Python update_buttons_state）
+  // 按钮启用状态
   const canSibling = selected !== null && selected.length > 1;
   const canChild = selected !== null;
   const canDelete = selected !== null && (selected.length > 1 || roots.length > 1);

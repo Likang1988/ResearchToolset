@@ -1,4 +1,4 @@
-// 通用占位页：未迁移的业务页统一用此组件展示标题 + 阶段徽标 + 计划功能要点
+// 通用占位页：导航兜底；未实现的页面统一用此组件展示标题 + 功能要点（来自 nav 配置）
 
 import { NavItem } from "../data/nav";
 
@@ -18,7 +18,7 @@ export default function PlaceholderPage({ item }: PlaceholderPageProps) {
         <span style={{ fontSize: 16, fontWeight: 600 }}>{item.label}</span>
       </div>
       <p className="hint">
-        该模块尚未迁移，当前为占位页。按计划将实现以下功能（对照 feature-checklist）：
+        该功能尚未实现，以下为该页面的功能要点：
       </p>
       <ul className="feature-list">
         {features.map((f, i) => (

@@ -1,10 +1,9 @@
-// 页面间数据变更事件总线（对应 Python 的信号机制：
-// expense_updated / budget_updated / project_updated 等）
+// 页面间数据变更事件总线
 // 数据变更后 emit；需要刷新的页面 listen 后重新加载。
 
 import { emit, listen, type UnlistenFn } from "@tauri-apps/api/event";
 
-/** 变更范围：与 Python 各页面信号一一对应 */
+/** 变更范围（数据类别） */
 export type DataScope = "project" | "budget" | "expense" | "budgetPlan";
 
 const CHANNEL = "data-changed";

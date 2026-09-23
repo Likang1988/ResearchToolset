@@ -1,8 +1,7 @@
 //! 主页服务：项目经费概览 + 项目进度概览
 //!
-//! 对应 Python `app/views/home_interface.py`：
-//! - load_funds：每项目经费卡片（财务编号 / 总预算 / 总支出 / 执行率）
-//! - load_tasks：每项目一级（level==0）甘特任务的进度卡片
+//! - 每项目经费卡片（财务编号 / 总预算 / 总支出 / 执行率）
+//! - 每项目一级（level==0）甘特任务的进度卡片
 //! 合并为单次 DB 访问输出，避免前端 N+1 查询。
 
 use rusqlite::Connection;
@@ -44,11 +43,9 @@ pub struct HomeOverview {
 
 /// 加载主页全部概览数据。
 ///
-/// 对齐 Python：
 /// - total_spent = 该项目全部支出之和（与预算无关）
 /// - 无总预算记录时 total_budget=0、相关字段为 0
-/// - 执行率 = total_spent / (total_budget*10000)（Python 中 total_budget 存万元）
-///   此处 total_budget 以元计，因此执行率 = total_spent / total_budget
+/// - 执行率 = total_spent / total_budget（total_budget 库中存万元，已换算为元）
 /// - progress 取每项目 level==0 的甘特任务，按 order 排序
 pub fn home_overview(conn: &Connection) -> Result<HomeOverview, DbError> {
     let funds = build_fund_overview(conn)?;

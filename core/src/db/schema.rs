@@ -1,14 +1,14 @@
-//! 建表 DDL：与现有数据库逐字一致（golden 文件 `rust/tests/golden/schema.sql`）
+//! 建表 DDL：与现有数据库逐字一致（golden 文件 `tests/golden/schema.sql`）
 //!
 //! 来源：`sqlite3 database/database.db .schema`（v1.5.0），勿手改。
-//! 若 Python 版模型变更，需重新导出 golden 文件并同步此文件。
+//! 若数据模型变更，需重新导出 golden 文件并同步此文件。
 
 use rusqlite::Connection;
 use std::collections::HashSet;
 
 use crate::DbError;
 
-/// 全部建表/索引语句，与 SQLAlchemy `Base.metadata.create_all` 生成的 DDL 一致。
+/// 全部建表/索引语句，与目标数据库现有结构逐字一致（由 golden 导出）。
 /// 元素：(对象类型, 对象名, DDL)
 pub const SCHEMA_OBJECTS: &[(&str, &str, &str)] = &[
     // projects
@@ -163,7 +163,7 @@ pub const SCHEMA_OBJECTS: &[(&str, &str, &str)] = &[
         FOREIGN KEY(project_id) REFERENCES projects (id)
     )",
     ),
-    // project_outcome（单数表名，Python 版即如此）
+    // project_outcome（单数表名，既有结构即如此）
     (
         "table",
         "project_outcome",
@@ -252,9 +252,9 @@ pub const SCHEMA_OBJECTS: &[(&str, &str, &str)] = &[
     ),
 ];
 
-/// `Base.metadata.create_all` 等价物：补建缺失的表/索引（已存在的不动）。
+/// 补建缺失的表/索引（已存在的不动）。
 pub fn create_all(conn: &mut Connection) -> Result<(), DbError> {
-    // 查询已存在的对象名（SQLAlchemy 同款检查）
+    // 查询 sqlite_master 中已存在的对象名
     let existing: HashSet<String> = {
         let mut stmt = conn.prepare(
             "SELECT name FROM sqlite_master WHERE type IN ('table', 'index')",
@@ -267,7 +267,7 @@ pub fn create_all(conn: &mut Connection) -> Result<(), DbError> {
 
     for (kind, name, ddl) in SCHEMA_OBJECTS {
         if existing.contains(*name) {
-            continue; // 已存在，跳过（与 SQLAlchemy create_all 语义一致）
+            continue; // 已存在，跳过
         }
         let _ = kind;
         conn.execute_batch(ddl)?;
@@ -318,7 +318,7 @@ mod tests {
 
     #[test]
     fn created_schema_matches_golden_file() {
-        // golden 文件路径：rust/tests/golden/schema.sql（core crate 的上级目录）
+        // golden 文件路径：仓库根 tests/golden/schema.sql（core crate 的上级目录）
         let golden_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .parent()
             .unwrap()

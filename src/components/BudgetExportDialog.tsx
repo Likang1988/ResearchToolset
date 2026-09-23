@@ -1,4 +1,4 @@
-// 预算导出配置对话框：对应 Python app/components/budget_export_dialog.py
+// 预算导出配置对话框
 // 导出形式（预算明细/预算汇总）→ 汇总子选项（细分年度 1~10 年默认 3、
 // 设置比例 30-40-30 或比例留空平均分配）→ 单位（元/万元，默认元）。
 
@@ -21,7 +21,7 @@ interface BudgetExportDialogProps {
 }
 
 export default function BudgetExportDialog({ onClose, onConfirm }: BudgetExportDialogProps) {
-  // 默认值对齐 Python：明细/汇总不勾选、细分年度不勾选、比例留空、单位元
+  // 默认值：明细/汇总不勾选、细分年度不勾选、比例留空、单位元
   const [exportDetail, setExportDetail] = useState(false);
   const [exportSummary, setExportSummary] = useState(false);
   const [yearDetail, setYearDetail] = useState(false);
@@ -30,11 +30,11 @@ export default function BudgetExportDialog({ onClose, onConfirm }: BudgetExportD
   const [proportions, setProportions] = useState<number[]>([30, 40, 30]);
   const [unitWan, setUnitWan] = useState(false);
 
-  // 汇总未勾选时其下子选项全部失效（Python on_summary_state_changed）
+  // 汇总未勾选时其下子选项全部失效
   const summaryOn = exportSummary;
   const yearOn = summaryOn && yearDetail;
 
-  // 年数变化：增删比例输入框（对齐 Python on_year_count_changed，新增默认 30-40-30）
+  // 年数变化：增删比例输入框（新增默认 30-40-30）
   const handleYearCount = (y: number) => {
     const clamped = Math.min(10, Math.max(1, Math.round(y) || 1));
     setYearCount(clamped);

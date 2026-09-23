@@ -1,7 +1,6 @@
 // 年度预算对话框：新增 / 编辑共用
 // 新增：年度可编辑、科目金额默认空、总金额实时联动
 // 编辑：年度禁用不可改、回填原有 10 科目金额、更新时保留 spent_amount
-// 对应 Python app/components/budget_dialog.py::BudgetDialog
 
 import { useEffect, useState } from "react";
 
@@ -58,12 +57,12 @@ interface Props {
   editingId?: number;
   /// 编辑模式：annual=年度预算，total=总预算。仅当 editingId 存在时有效
   editingMode?: "annual" | "total";
-  /// 当前总预算的总结余（万元）：∑(总预算各类金额 - 各类别年度预算累计支出)，
-  /// 对齐 Python update_balance_amounts；null = 尚未设置总预算（仅年度模式展示）
+  /// 当前总预算的总结余（万元）：∑(总预算各类金额 - 各类别年度预算累计支出)；
+  /// null = 尚未设置总预算（仅年度模式展示）
   totalBalance?: number | null;
-  /// 各科目结余（万元）：科目 → 结余，对齐 Python balance_labels；null = 尚未设置总预算
+  /// 各科目结余（万元）：科目 → 结余；null = 尚未设置总预算
   categoryBalances?: Record<string, number> | null;
-  /// 新增模式预填金额（万元）：科目 → 金额。对齐 Python import_budget_plan
+  /// 新增模式预填金额（万元）：科目 → 金额
   /// （计划类别金额 `item.amount / 10000` 填入）；仅新增模式生效，编辑靠后端回填
   initialAmounts?: Record<string, number>;
   /// 项目总经费（万元，来源项目清单）；总预算模式用于校验预算总计与总经费一致
@@ -301,7 +300,7 @@ export default function BudgetFormDialog({
                 )}
               </div>
             )}
-            {/* 总预算模式：左侧总预算（随录入实时汇总），右侧项目总经费（对齐 Python total_budget_label） */}
+            {/* 总预算模式：左侧总预算（随录入实时汇总），右侧项目总经费 */}
             {isTotal && (
               <>
                 <div className="budget-current-total">
@@ -321,7 +320,7 @@ export default function BudgetFormDialog({
             )}
           </div>
 
-          {/* 年度预算：费用类别 / 预算金额 / 结余金额 3 列表格（对齐 Python BudgetDialog 排布） */}
+          {/* 年度预算：费用类别 / 预算金额 / 结余金额 3 列表格 */}
           {!isTotal && (
             <div className="budget-table">
               <div className="budget-table-header">
@@ -356,7 +355,7 @@ export default function BudgetFormDialog({
                   </div>
                 );
               })}
-              {/* 总计行（对齐 Python total_layout：总计 / 预算总额 / 总结余） */}
+              {/* 总计行：总计 / 预算总额 / 总结余 */}
               <div className="budget-table-row budget-table-total">
                 <span className="budget-table-cat">总计</span>
                 <span className="budget-table-amount">

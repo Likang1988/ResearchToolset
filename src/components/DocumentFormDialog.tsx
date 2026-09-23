@@ -1,6 +1,5 @@
 // 文档对话框：新增 / 编辑共用
-// 对应 Python app/views/projecting_interface/project_document.py::DocumentDialog
-// 校验与 Python accept 一致：名称必填；新增时必选要上传的文件。
+// 校验规则：名称必填；新增时必选要上传的文件。
 // 新增时选中的文件（源路径）经 onSubmit 交回页面层做附件拷贝 + 入库。
 
 import { useEffect, useState } from "react";
@@ -67,7 +66,7 @@ export default function DocumentFormDialog({
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 编辑模式：调后端 get_document 回填（对齐 Python load_document_data）
+  // 编辑模式：调后端 get_document 回填
   useEffect(() => {
     if (!isEdit || editingId === undefined) return;
     (async () => {
@@ -93,7 +92,7 @@ export default function DocumentFormDialog({
     })();
   }, [isEdit, editingId]);
 
-  // 选择要上传的文件（对齐 Python DocumentDialog.select_file）
+  // 选择要上传的文件
   const selectFile = async () => {
     try {
       const file = await open({
@@ -113,7 +112,7 @@ export default function DocumentFormDialog({
     e.preventDefault();
     setError(null);
 
-    // 对齐 Python accept 校验
+    // 校验：名称必填；新增时必选文件
     if (!name.trim()) {
       setError("文档名称不能为空");
       return;

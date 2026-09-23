@@ -1,9 +1,9 @@
-// 主页：项目经费概览 + 项目进度概览（对应 Python app/views/home_interface.py）
-// - 顶部 header.png 背景图 + 「科研工具集」标题（对齐 setup_background：高 340、标题 28px）
+// 主页：项目经费概览 + 项目进度概览
+// - 顶部 header.png 背景图 + 「科研工具集」标题（高 340、标题 28px）
 // - 经费卡片：财务编号 / 总预算 / 总支出 / 执行率
 // - 进度卡片：每项目一级（level==0）甘特任务（任务编码 / 任务名称 / 任务进度）
 // - 点击卡片跳转到对应「项目经费」/「项目进度」页并预选该项目
-// - 订阅事件总线：项目/预算/支出/甘特变更后自动刷新（对齐 Python showEvent 连接信号）
+// - 订阅事件总线：项目/预算/支出/甘特变更后自动刷新
 
 import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
@@ -36,7 +36,7 @@ interface HomeOverview {
   progress: ProgressOverviewGroup[];
 }
 
-// 金额：元 → "x.xx 万元"（对齐 Python f"{x:.2f} 万元"）
+// 金额：元 → "x.xx 万元"
 function fmtWan(yuan: number): string {
   return `${(yuan / 10000).toFixed(2)} 万元`;
 }

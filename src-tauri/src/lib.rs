@@ -1,9 +1,8 @@
 // ResearchToolset Rust 版入口
-// 迁移自 Python (PySide6 + QFluentWidgets)，见 ../../docs/feature-checklist.md
 //
 // 当前：注册 list_projects, add_project, update_project, delete_project 命令，
 // 启动时打开/初始化/迁移 database/database.db，
-// 通过 Mutex<Connection> 在命令间共享（同步，对应 Python 的同步 session 用法）。
+// 通过 Mutex<Connection> 在命令间同步共享。
 
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -43,10 +42,10 @@ pub struct DbState {
 
 /// 解析 database.db 路径。
 ///
-/// - 调试模式：源码项目根 `database/database.db`（与 Python 版共用数据文件）
+/// - 调试模式：源码项目根 `database/database.db`
 /// - 发布（打包/便携）模式：可执行文件旁 `database/database.db`
 fn resolve_db_path() -> PathBuf {
-    // 调试模式：源码项目根（与 Python 版共用同一数据库文件）
+    // 调试模式：源码项目根
     if cfg!(debug_assertions) {
         return PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("..")
@@ -61,8 +60,7 @@ fn resolve_db_path() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("database").join("database.db"))
 }
 
-/// 项目根目录（对应 Python `delete_selected_project` 中的 root_dir：
-/// documents/ 与 vouchers/ 等附件目录的父级）。
+/// 项目根目录（documents/ 与 vouchers/ 等附件目录的父级）。
 /// 与 `resolve_db_path` 同源——database.db 在 `<root>/database/` 下。
 fn root_dir() -> PathBuf {
     resolve_db_path()
@@ -156,7 +154,7 @@ fn reset_database(state: State<'_, DbState>) -> Result<(), String> {
     open_database(state, path.display().to_string())
 }
 
-/// 列出全部项目（按 id 升序），对应 Python refresh_project_table 的查询
+/// 列出全部项目（按 id 升序）
 #[tauri::command]
 fn list_projects(state: State<'_, DbState>) -> Result<Vec<Project>, String> {
     let conn = state.conn.lock().map_err(|e| format!("数据库锁失败: {e}"))?;
@@ -164,7 +162,6 @@ fn list_projects(state: State<'_, DbState>) -> Result<Vec<Project>, String> {
 }
 
 /// 主页概览：项目经费 + 项目进度（一次性返回，避免 N+1 查询）
-/// 对应 Python `home_interface.py` 的 load_funds + load_tasks
 #[tauri::command]
 fn home_overview(state: State<'_, DbState>) -> Result<home::HomeOverview, String> {
     let conn = state.conn.lock().map_err(|e| format!("数据库锁失败: {e}"))?;
@@ -185,9 +182,8 @@ fn update_project(state: State<'_, DbState>, id: i64, data: ProjectNew) -> Resul
     project::update_project(&conn, id, data).map_err(|e| format!("更新项目失败: {e}"))
 }
 
-/// 删除项目：级联删除关联记录 + 清理 documents/vouchers 附件目录
-/// （对应 Python `delete_selected_project`）。附件清理失败不回滚数据库
-/// （与 Python 一致：数据库已提交，文件错误仅记录）。
+/// 删除项目：级联删除关联记录 + 清理 documents/vouchers 附件目录。
+/// 附件清理失败不回滚数据库：数据库已提交，文件错误仅记录。
 #[tauri::command]
 fn delete_project(state: State<'_, DbState>, id: i64) -> Result<(), String> {
     // 1. 数据库级联删除（在事务内）
@@ -200,7 +196,7 @@ fn delete_project(state: State<'_, DbState>, id: i64) -> Result<(), String> {
     Ok(())
 }
 
-/// 导出项目数据为 JSON 文件（对齐 Python `export_project_data`）
+/// 导出项目数据为 JSON 文件
 #[tauri::command]
 fn export_project_data(
     state: State<'_, DbState>,
@@ -213,7 +209,7 @@ fn export_project_data(
     std::fs::write(&path, json).map_err(|e| format!("写入导出文件失败: {e}"))
 }
 
-/// 导入项目数据（对齐 Python `import_project_data`）。
+/// 导入项目数据。
 /// `overwrite=false` 且财务编号重复时返回错误"DUPLICATE_FINANCIAL_CODE"，
 /// 前端捕获后弹覆盖确认，再以 `overwrite=true` 重试。
 #[tauri::command]
@@ -227,7 +223,7 @@ fn import_project_data(
         .map_err(|e| format!("导入项目数据失败: {e}"))
 }
 
-/// 生成附件保存路径（对应 `attachment_utils.generate_attachment_path`）。
+/// 生成附件保存路径。
 /// `kind` 取值：`expense` / `activity` / `default`（serde snake_case）。
 /// 返回完整目标路径字符串；目标目录会被创建。
 #[tauri::command]
@@ -243,7 +239,6 @@ fn generate_attachment_path(
 
 /// 上传/替换附件：把 `source_file` 拷贝到按规则生成的目标路径，
 /// 若 `old_path`（数据库中的旧附件）存在且不同于新路径则删除旧文件。
-/// 对应 `attachment_utils.execute_attachment_action` 的 replace 分支。
 /// 返回新附件的完整路径（调用方应保存到数据库）。
 #[tauri::command]
 fn save_attachment(
@@ -264,7 +259,7 @@ fn save_attachment(
     .map_err(|e| format!("保存附件失败: {e}"))
 }
 
-/// 删除附件文件（对应 `attachment_utils.execute_attachment_action` 的 delete 分支的文件操作）。
+/// 删除附件文件。
 /// 文件不存在时视为成功（空操作）。数据库中的路径置空由调用方负责。
 #[tauri::command]
 fn delete_attachment(path: String) -> Result<(), String> {
@@ -279,7 +274,6 @@ fn check_attachments(paths: Vec<String>) -> Result<Vec<bool>, String> {
 }
 
 /// 列出项目预算树（三级：总预算 + 年度预算 + 各 10 科目子项）
-/// 对应 Python `project_fund.py::load_budgets` 的查询与汇总
 #[tauri::command]
 fn list_project_budgets(
     state: State<'_, DbState>,
@@ -291,7 +285,6 @@ fn list_project_budgets(
 }
 
 /// 新增年度预算
-/// 对应 Python `project_fund.py::add_budget` 的数据库写入
 #[tauri::command]
 fn add_annual_budget(
     state: State<'_, DbState>,
@@ -349,7 +342,7 @@ fn update_total_budget(
         .map_err(|e| format!("更新总预算失败: {e}"))
 }
 
-/// 删除年度预算：级联删除子项与关联支出（对齐 Python delete_budget 年度分支）
+/// 删除年度预算：级联删除子项与关联支出
 #[tauri::command]
 fn delete_annual_budget(state: State<'_, DbState>, id: i64) -> Result<(), String> {
     let conn = state.conn.lock().map_err(|e| format!("数据库锁失败: {e}"))?;
@@ -357,7 +350,6 @@ fn delete_annual_budget(state: State<'_, DbState>, id: i64) -> Result<(), String
 }
 
 /// 删除项目总预算：级联删除该项目全部预算、子项与关联支出
-/// （对齐 Python delete_budget 总预算分支）
 #[tauri::command]
 fn delete_total_budget(state: State<'_, DbState>, project_id: i64) -> Result<(), String> {
     let conn = state.conn.lock().map_err(|e| format!("数据库锁失败: {e}"))?;
@@ -413,8 +405,7 @@ fn update_expense_voucher(
 }
 
 /// 复制附件到目标位置（下载凭证副本/导出文档附件用）。
-/// 与 Python `download_attachment` 的 `shutil.copy2` 一致；
-/// 若目标父目录不存在则自动创建（与 Python `os.makedirs(exist_ok=True)` 对齐）。
+/// 若目标父目录不存在则自动创建。
 #[tauri::command]
 fn copy_attachment_file(source: String, dest: String) -> Result<(), String> {
     let dest_path = std::path::Path::new(&dest);
@@ -448,8 +439,7 @@ fn export_expenses_excel(
         .map_err(|e| format!("导出 Excel 失败: {e}"))
 }
 
-/// 生成支出批量导入模板（对应 `batch_import_dialog.download_template`：
-/// 支出信息示例数据 + 费用类别 + 使用说明三个 sheet）。
+/// 生成支出批量导入模板（支出信息示例数据 + 费用类别 + 使用说明三个 sheet）。
 #[tauri::command]
 fn download_expense_import_template(save_path: String) -> Result<(), String> {
     let today = chrono::Local::now().format("%Y-%m-%d").to_string();
@@ -461,7 +451,7 @@ fn download_expense_import_template(save_path: String) -> Result<(), String> {
         .map_err(|e| format!("生成导入模板失败: {e}"))
 }
 
-/// 解析并校验支出批量导入文件（对应 `batch_import_dialog.import_data`）。
+/// 解析并校验支出批量导入文件。
 /// 返回结构化支出列表，类别为中文 label、日期为 YYYY-MM-DD。
 /// 任一校验失败即返回错误（首个错误信息）。
 #[tauri::command]
@@ -485,8 +475,7 @@ fn batch_add_expenses(
         .map_err(|e| format!("批量导入支出失败: {e}"))
 }
 
-/// 导出预算数据到 xlsx（对应 `budgeting_interface.export_data`）：
-/// 预算明细 + 预算汇总（支持分年度比例/平均分配、万元换算）。
+/// 导出预算数据到 xlsx：预算明细 + 预算汇总（支持分年度比例/平均分配、万元换算）。
 #[tauri::command]
 fn export_budget_data(
     save_path: String,
@@ -499,8 +488,7 @@ fn export_budget_data(
 
 // ─────────────────────────── 预算编制 ───────────────────────────
 
-/// 列出全部预算计划树（对应 Python `load_budget_plans`：
-/// 计划 → 10 个类别占位节点 → 条目叶子；类别为中文 label）。
+/// 列出全部预算计划树（计划 → 10 个类别占位节点 → 条目叶子；类别为中文 label）。
 #[tauri::command]
 fn list_budget_plans(
     state: State<'_, DbState>,
@@ -509,8 +497,8 @@ fn list_budget_plans(
     budget_plan::list_budget_plans(&conn).map_err(|e| format!("加载预算编制失败: {e}"))
 }
 
-/// 保存全部顶层预算计划（对应 Python `save_data`：按 name 查找或创建计划，
-/// 类别占位行 upsert + 删除旧子项 + 重插新子项，单事务；不写 actionlogs）。
+/// 保存全部顶层预算计划：按 name 查找或创建计划，
+/// 类别占位行 upsert + 删除旧子项 + 重插新子项，单事务；不写 actionlogs。
 #[tauri::command]
 fn save_budget_plans(
     state: State<'_, DbState>,
@@ -521,7 +509,7 @@ fn save_budget_plans(
         .map_err(|e| format!("保存预算编制失败: {e}"))
 }
 
-/// 删除整个预算计划（对应 Python `delete_item` 顶层分支，按 name 级联删除）。
+/// 删除整个预算计划（按 name 级联删除）。
 #[tauri::command]
 fn delete_budget_plan(state: State<'_, DbState>, name: String) -> Result<(), String> {
     let mut conn = state.conn.lock().map_err(|e| format!("数据库锁失败: {e}"))?;
@@ -529,8 +517,7 @@ fn delete_budget_plan(state: State<'_, DbState>, name: String) -> Result<(), Str
         .map_err(|e| format!("删除预算计划失败: {e}"))
 }
 
-/// 删除一条预算条目（对应 Python `delete_item` 条目分支，
-/// 按 计划名 + 类别(中文) + 条目名 精确匹配删除）。
+/// 删除一条预算条目（按 计划名 + 类别(中文) + 条目名 精确匹配删除）。
 #[tauri::command]
 fn delete_budget_plan_item(
     state: State<'_, DbState>,
@@ -543,7 +530,7 @@ fn delete_budget_plan_item(
         .map_err(|e| format!("删除预算条目失败: {e}"))
 }
 
-/// 加载某项目的甘特图数据（对应 Python `GanttBridge.load_gantt_data`）
+/// 加载某项目的甘特图数据
 #[tauri::command]
 fn load_gantt_data(
     state: State<'_, DbState>,
@@ -553,7 +540,7 @@ fn load_gantt_data(
     gantt::load_gantt_data(&conn, project_id).map_err(|e| format!("加载甘特图失败: {e}"))
 }
 
-/// 保存甘特图数据（整单事务，对应 Python `GanttBridge.save_gantt_data`）
+/// 保存甘特图数据（整单事务）
 /// 返回新任务临时 id → 持久化 gantt_id 的映射
 #[tauri::command]
 fn save_gantt_data(
@@ -574,7 +561,7 @@ fn clear_project_gantt(state: State<'_, DbState>, project_id: i64) -> Result<(),
         .map_err(|e| format!("清理甘特图失败: {e}"))
 }
 
-/// 导出甘特图数据为文件（对应 Python `GanttBridge.export_gantt_data`）：
+/// 导出甘特图数据为文件：
 /// 按 `save_path` 扩展名输出 XLSX / JSON / CSV / TXT
 #[tauri::command]
 fn export_gantt(save_path: String, data: GanttProjectData) -> Result<(), String> {
@@ -584,7 +571,7 @@ fn export_gantt(save_path: String, data: GanttProjectData) -> Result<(), String>
 
 // ─────────────────────────── 项目文档 ───────────────────────────
 
-/// 列出项目文档（对应 Python `load_documents`）：
+/// 列出项目文档：
 /// - `project_id` 为 Some 时只列该项目；为 None 时列全部（「全部文档」模式）。
 /// `upload_time` 按 DESC 排序；`doc_type` 已转换为中文 label。
 #[tauri::command]
@@ -622,7 +609,7 @@ fn update_document(state: State<'_, DbState>, id: i64, input: DocumentInput) -> 
 }
 
 /// 批量删除文档：先删库（事务回填 actionlog），再清理磁盘附件
-/// （对齐 Python：文件删除失败不致命，仅记录）。
+/// （文件删除失败不致命，仅记录）。
 #[tauri::command]
 fn delete_documents(state: State<'_, DbState>, ids: Vec<i64>) -> Result<(), String> {
     let paths = {
@@ -647,7 +634,7 @@ fn update_document_file_path(
         .map_err(|e| format!("更新附件路径失败: {e}"))
 }
 
-/// 导出文档列表到 xlsx（对应 Python `export_document_excel`）：
+/// 导出文档列表到 xlsx：
 /// 7 列 = 文档名称 | 文档类型 | 版本号 | 关键词 | 上传时间 | 文档描述 | 文件路径。
 /// `project_id` 为 None 时导出全部文档。
 #[tauri::command]
@@ -668,7 +655,7 @@ fn export_documents_excel(
 
 // ─────────────────────────── 项目成果 ───────────────────────────
 
-/// 列出项目成果（对应 Python `load_outcome`）：
+/// 列出项目成果：
 /// - `project_id` 为 Some 时只列该项目；为 None 时列全部（「全部成果」模式）。
 /// `publish_date` 按 DESC 排序；`type` / `status` 已转换为中文 label。
 #[tauri::command]
@@ -706,7 +693,7 @@ fn update_outcome(state: State<'_, DbState>, id: i64, input: OutcomeInput) -> Re
 }
 
 /// 批量删除成果：先删库（事务回填 actionlog），再清理磁盘附件
-/// （对齐 Python：文件删除失败不致命，仅记录）。
+/// （文件删除失败不致命，仅记录）。
 #[tauri::command]
 fn delete_outcomes(state: State<'_, DbState>, ids: Vec<i64>) -> Result<(), String> {
     let paths = {
@@ -731,7 +718,7 @@ fn update_outcome_attachment_path(
         .map_err(|e| format!("更新附件路径失败: {e}"))
 }
 
-/// 导出成果列表到 xlsx（对应 Python `export_outcome_excel`）：
+/// 导出成果列表到 xlsx：
 /// 9 列 = 成果名称 | 成果类型 | 成果状态 | 作者/完成人 | 投稿/申请日期 |
 /// 发表/授权日期 | 期刊/授权单位 | 成果描述 | 附件路径。
 /// `project_id` 为 None 时导出全部成果。
@@ -753,8 +740,7 @@ fn export_outcomes_excel(
 
 // ─────────────────────────── 学术活动 ───────────────────────────
 
-/// 列出全部学术活动（对应 Python `load_activities`：全局表，无项目维度，
-/// 按 start_date DESC 排序；type / status 已转换为中文 label）。
+/// 列出全部学术活动（全局表，无项目维度，按 start_date DESC 排序；type / status 已转换为中文 label）。
 #[tauri::command]
 fn list_activities(state: State<'_, DbState>) -> Result<Vec<AcademicActivity>, String> {
     let conn = state.conn.lock().map_err(|e| format!("数据库锁失败: {e}"))?;
@@ -771,14 +757,14 @@ fn get_activity(
     activity::get_activity_by_id(&conn, id).map_err(|e| format!("查询学术活动失败: {e}"))
 }
 
-/// 新增活动（对齐 Python `add_activity`：不写 actionlogs）。
+/// 新增活动（不写 actionlogs）。
 #[tauri::command]
 fn add_activity(state: State<'_, DbState>, input: ActivityInput) -> Result<i64, String> {
     let conn = state.conn.lock().map_err(|e| format!("数据库锁失败: {e}"))?;
     activity::add_activity(&conn, input).map_err(|e| format!("新增学术活动失败: {e}"))
 }
 
-/// 更新活动（对齐 Python `edit_activity`：可一并改写 attachment_path，
+/// 更新活动（可一并改写 attachment_path，
 /// add/replace/delete 均由对话框状态决定后传入；不写 actionlogs）。
 #[tauri::command]
 fn update_activity(state: State<'_, DbState>, id: i64, input: ActivityInput) -> Result<(), String> {
@@ -786,7 +772,7 @@ fn update_activity(state: State<'_, DbState>, id: i64, input: ActivityInput) -> 
     activity::update_activity(&conn, id, input).map_err(|e| format!("更新学术活动失败: {e}"))
 }
 
-/// 批量删除活动：先删库，再清理磁盘附件（对齐 Python：文件删除失败不致命）。
+/// 批量删除活动：先删库，再清理磁盘附件（文件删除失败不致命）。
 #[tauri::command]
 fn delete_activities(state: State<'_, DbState>, ids: Vec<i64>) -> Result<(), String> {
     let paths = {
@@ -799,7 +785,7 @@ fn delete_activities(state: State<'_, DbState>, ids: Vec<i64>) -> Result<(), Str
     Ok(())
 }
 
-/// 导出活动列表到 xlsx（对应 Python `export_activity_excel`）：
+/// 导出活动列表到 xlsx：
 /// 9 列 = 活动名称 | 活动类型 | 活动状态 | 主办方 | 开始日期 | 结束日期 |
 /// 活动地点 | 参与人员 | 活动描述（不含附件列）。导出全部活动。
 #[tauri::command]
@@ -812,7 +798,7 @@ fn export_activities_excel(state: State<'_, DbState>, save_path: String) -> Resu
 
 // ─────────────────────────── 小工具 ───────────────────────────
 
-/// 间接经费计算（对应 `app/tools/IndirectCostCalculator.py::calculate`）。
+/// 间接经费计算。
 /// 费率以小数传入（如 20% 传 0.20），返回最大间接经费（万元）。
 #[tauri::command]
 fn calculate_indirect_cost(
@@ -833,8 +819,8 @@ fn calculate_indirect_cost(
     )
 }
 
-/// 导出树形列表到 json/csv/xlsx（对应 `app/tools/TreeList.py` 的导出逻辑，
-/// 含层级合并单元格的 Excel 导出）。`roots` 为顶层节点。
+/// 导出树形列表到 json/csv/xlsx（含层级合并单元格的 Excel 导出）。
+/// `roots` 为顶层节点。
 #[tauri::command]
 fn export_tree_list(
     save_path: String,
@@ -845,15 +831,14 @@ fn export_tree_list(
         .map_err(|e| format!("导出失败: {e}"))
 }
 
-/// 从 JSON 文件导入树形列表（对应 `TreeList.import_data`：只取顶层 children 递归构建）。
+/// 从 JSON 文件导入树形列表（只取顶层 children 递归构建）。
 #[tauri::command]
 fn import_tree_list(file_path: String) -> Result<Vec<TreeListNode>, String> {
     tree_list::parse_tree_list_json(std::path::Path::new(&file_path))
         .map_err(|e| format!("导入失败: {e}"))
 }
 
-/// 操作日志列表（按时间倒序，最多 limit 条，默认 100；对应 Python
-/// `help_interface.load_actionlogs` 的 `limit(100)`）。
+/// 操作日志列表（按时间倒序，最多 limit 条，默认 100）。
 #[tauri::command]
 fn list_actionlogs(
     state: State<'_, DbState>,
@@ -868,7 +853,7 @@ fn list_actionlogs(
 pub fn run() {
     let database_path = resolve_startup_db_path();
 
-    // 确保数据库目录存在（对应 Python run.py 的 os.makedirs）
+    // 确保数据库目录存在
     if let Some(dir) = database_path.parent() {
         if let Err(e) = std::fs::create_dir_all(dir) {
             eprintln!("创建数据库目录失败 {}: {e}", dir.display());
@@ -893,7 +878,7 @@ pub fn run() {
         }
     }
 
-    // 打开 + 补建缺失表 + 列级迁移（对应 Python init_db + migrate_db）
+    // 打开 + 补建缺失表 + 列级迁移
     let mut conn = db::open(&database_path).expect("打开数据库失败");
     db::init_db(&mut conn).expect("init_db（补建缺失表）失败");
     db::migrate::migrate_db(&mut conn).expect("migrate_db 失败");

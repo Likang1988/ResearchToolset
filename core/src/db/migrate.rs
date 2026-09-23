@@ -1,16 +1,16 @@
-//! migrate_db 等价物：列级数据库迁移
+//! 列级数据库迁移
 //!
-//! 逐字复刻 `app/models/database.py::migrate_db` 的行为（含既有缺陷）：
-//! - B2: `project_outcomes`（复数）表名检查永不命中 → 对应分支为 no-op
-//! - B3: expenses 重建临时表无外键
-//! - B4: actionlogs 临时表外键指向不存在的 `project_outcomes`（SQLite 默认不强制外键，无实际影响）
-//! 缺陷详情与处理策略见 `docs/migration/feature-checklist.md` §11。
+//! 行为要点：
+//! - 迁移在单个事务内推进，内部有多个提交点（见 `migrate_inner` 开头说明）
+//! - `project_outcomes`（复数）表名检查永不命中 → 对应分支为 no-op
+//! - expenses 重建的临时表不带外键
+//! - actionlogs 临时表外键指向不存在的 `project_outcomes`（SQLite 默认不强制外键，无实际影响）
 
 use rusqlite::{Connection, OptionalExtension};
 
 use crate::DbError;
 
-/// 查询表是否存在（与 Python `SELECT name FROM sqlite_master WHERE type='table' AND name=?` 等价）
+/// 查询表是否存在（读取 sqlite_master 元数据）
 fn table_exists(conn: &Connection, name: &str) -> Result<bool, DbError> {
     let exists = conn
         .query_row(
@@ -23,7 +23,7 @@ fn table_exists(conn: &Connection, name: &str) -> Result<bool, DbError> {
     Ok(exists)
 }
 
-/// 查询表的所有列名（PRAGMA table_info 等价物）
+/// 查询表的所有列名（读取 PRAGMA table_info）
 fn table_columns(conn: &Connection, table: &str) -> Result<Vec<(String, String)>, DbError> {
     let mut stmt = conn.prepare(&format!("PRAGMA table_info({table})"))?;
     let cols = stmt
@@ -32,30 +32,29 @@ fn table_columns(conn: &Connection, table: &str) -> Result<Vec<(String, String)>
     Ok(cols)
 }
 
-/// 迁移数据库（Python `migrate_db` 等价物）
+/// 迁移数据库：在显式事务内逐点补列/重建表
 pub fn migrate_db(conn: &mut Connection) -> Result<(), DbError> {
-    // Python 版在外层开启事务，并在若干节点提交；这里显式 BEGIN/COMMIT 复刻同样语义
+    // 外层显式开启事务，迁移内部在若干节点提交；出错则整体回滚
     conn.execute_batch("BEGIN")?;
     let result = migrate_inner(conn);
     if result.is_err() {
-        // 复刻 Python 的 rollback 行为
+        // 失败时回滚整个迁移事务
         let _ = conn.execute_batch("ROLLBACK");
     }
     result
 }
 
 fn migrate_inner(conn: &mut Connection) -> Result<(), DbError> {
-    // Python 版在 expenses/actionlogs 重建后各自对同一 Transaction 对象 commit。
-    // SQLAlchemy 对已提交事务二次 commit 抛 InvalidRequestError（Python 潜在缺陷 B9：
-    // 两表同时需重建时启动崩溃）。Rust 版将后续 commit 降级为 no-op 使迁移可完成。
-    // 另：Python 版若全程无 commit 命中点（如仅需给 gantt_tasks/projects 补列），
-    // finally 会回滚全部 ALTER，迁移实际无效（Python 缺陷 B10）。
-    // Rust 版偏离：结束时若仍有未提交变更则提交，使迁移真正生效。
+    // 迁移在同一事务内推进：expenses/actionlogs 重建后各有一个提交点；
+    // 同一迁移事务内多次提交时，后续提交为无操作，两表同时重建也能完成。
+    // 若中途未命中任何提交点（如仅需给 gantt_tasks/projects 补列），
+    // 结束时若仍有未提交变更则统一提交，使迁移真正生效；
+    // 全程无变更点时整个事务不提交，最终整体回滚（等同空操作）。
     let mut committed = false;
     let mut changed = false;
     let commit_noop = |committed: &mut bool, conn: &mut Connection| -> Result<(), DbError> {
         if *committed {
-            Ok(()) // 已提交过，no-op（对齐 SQLAlchemy 未命中该路径的等价状态）
+            Ok(()) // 已提交过，同一事务内的后续提交为无操作
         } else {
             conn.execute_batch("COMMIT")?;
             *committed = true;
@@ -85,8 +84,8 @@ fn migrate_inner(conn: &mut Connection) -> Result<(), DbError> {
         }
     }
 
-    // ── 2. project_outcomes（复数）：Python 缺陷 B2，表不存在，永不命中 ───────
-    // 保持 no-op，复刻原行为
+    // ── 2. project_outcomes（复数）：该表不存在，条件永不命中 ────────────────
+    // 此分支保持 no-op
 
     // ── 3. projects：补 director 列 ──────────────────────────────────────────
     if table_exists(conn, "projects")? {
@@ -103,7 +102,7 @@ fn migrate_inner(conn: &mut Connection) -> Result<(), DbError> {
         }
     }
 
-    // ── 4. expenses：缺 voucher_path 时重建表（复刻缺陷 B3：无外键）────────────
+    // ── 4. expenses：缺 voucher_path 时重建表（重建后不带外键）────────────────
     if table_exists(conn, "expenses")? {
         let columns = table_columns(conn, "expenses")?;
         if !columns.iter().any(|(name, _)| name == "voucher_path") {
@@ -138,7 +137,7 @@ fn migrate_inner(conn: &mut Connection) -> Result<(), DbError> {
             println!("成功添加voucher_path列");
         }
 
-        // ── 5. actionlogs：结构不满足需求时全表重建（复刻缺陷 B4）───────────────
+        // ── 5. actionlogs：结构不满足需求时全表重建 ───────────────────────────
         if table_exists(conn, "actionlogs")? {
             let columns = table_columns(conn, "actionlogs")?;
             let col_map: std::collections::HashMap<String, String> =
@@ -214,14 +213,14 @@ fn migrate_inner(conn: &mut Connection) -> Result<(), DbError> {
         }
     }
 
-    // ── 6. project_outcomes（复数）：同缺陷 B2，no-op ─────────────────────────
+    // ── 6. project_outcomes（复数）：同第 2 点，表不存在，保持 no-op ──────────
 
     // ── 7. budget_plan_items：按 expected_columns 补缺列 ─────────────────────
     if table_exists(conn, "budget_plan_items")? {
         let columns = table_columns(conn, "budget_plan_items")?;
         let mut needs_commit = false;
 
-        // 模型应有的列及其 SQLite 类型（与 Python expected_columns 一致）
+        // 模型应有的列及其 SQLite 类型
         let expected_columns: [(&str, &str); 9] = [
             ("plan_id", "INTEGER"),
             ("parent_id", "INTEGER"),
@@ -254,7 +253,7 @@ fn migrate_inner(conn: &mut Connection) -> Result<(), DbError> {
         }
     }
 
-    // 偏离 B10：任何未提交的变更（如仅 gantt_tasks/projects 补列）最终提交，
+    // 任何未提交的变更（如仅 gantt_tasks/projects 补列）在此统一提交，
     // 使迁移真正生效
     if !committed && changed {
         conn.execute_batch("COMMIT")?;
@@ -270,7 +269,7 @@ mod tests {
     use std::path::Path;
 
     fn fixture_path(name: &str) -> std::path::PathBuf {
-        // core crate 目录为 rust/core；fixtures 位于 rust/tests/fixtures
+        // fixtures 位于仓库根 tests/fixtures（core crate 的上级目录）
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .parent()
             .unwrap()
@@ -279,7 +278,7 @@ mod tests {
             .join(name)
     }
 
-    /// 与应用的连接语义一致：外键关闭（rusqlite 默认开启，Python/SQLAlchemy 默认关闭。
+    /// 与应用的连接语义一致：外键关闭（rusqlite 默认开启，需显式关闭；
     /// actionlogs 迁移临时表外键指向不存在的 project_outcomes，FK=ON 时会失败）
     fn migrate_conn(path: &std::path::Path) -> Connection {
         let conn = Connection::open(path).unwrap();

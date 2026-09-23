@@ -1,15 +1,12 @@
-//! Excel 导入导出（对应 Python 版 pandas + openpyxl）
+//! Excel 导入导出
 //!
 //! 现状实现：
-//! - `export_expenses_to_xlsx`：支出导出（对齐 `project_expense.py::export_expense_excel`），
-//!   含「费用类别」列下拉数据有效性 + 下方使用说明。
-//! - `generate_expense_import_template`：支出批量导入模板（对齐
-//!   `generate_expense_template.py` / `batch_import_dialog.download_template`）：
+//! - `export_expenses_to_xlsx`：支出导出，含「费用类别」列下拉数据有效性 + 下方使用说明。
+//! - `generate_expense_import_template`：支出批量导入模板 ——
 //!   「支出信息」示例数据 + 「费用类别」+「使用说明」三个 sheet。
-//! - `parse_expenses_from_xlsx`：读取并校验导入文件（对齐 `batch_import_dialog.import_data`），
+//! - `parse_expenses_from_xlsx`：读取并校验导入文件，
 //!   返回结构化支出数据（不含 project/budget 关联，由调用方填充）。
-//! - `export_budget_data`：预算编制导出（对齐 `budgeting_interface.export_data` +
-//!   `budget_export_dialog.get_export_config`）：预算明细 + 预算汇总（支持分年度比例）。
+//! - `export_budget_data`：预算编制导出 —— 预算明细 + 预算汇总（支持分年度比例）。
 
 use std::path::Path;
 
@@ -20,13 +17,13 @@ use rust_xlsxwriter::{DataValidation, Format, Workbook};
 use crate::models::{AcademicActivity, BudgetCategory, Expense, ProjectDocument, ProjectOutcome};
 use crate::DbError;
 
-/// 支出列表列头（与 Python 导出/模板一致）
+/// 支出列表列头（导出与模板共用）
 const EXPENSE_HEADERS: [&str; 7] =
     ["费用类别", "开支内容", "规格型号", "供应商", "报账金额", "报账日期", "备注"];
 
 // ─────────────────────────── 项目文档导出 ───────────────────────────
 
-/// 截断上传时间到分钟（对齐 Python `strftime("%Y-%m-%d %H:%M")`）。
+/// 截断上传时间到分钟，即保留 `YYYY-MM-DD HH:MM`。
 /// 库中存的是 `YYYY-MM-DD HH:MM:SS.ffffff`，取前 16 字符。
 fn truncate_to_minute(s: &str) -> String {
     let chars: Vec<char> = s.chars().collect();
@@ -39,8 +36,7 @@ fn truncate_to_minute(s: &str) -> String {
 
 /// 导出项目文档列表到 xlsx。
 ///
-/// 对齐 Python `export_document_excel`：
-/// 列序 = 文档名称 | 文档类型 | 版本号 | 关键词 | 上传时间 | 文档描述 | 文件路径
+/// 列顺序：文档名称 | 文档类型 | 版本号 | 关键词 | 上传时间 | 文档描述 | 文件路径
 /// （导出列与表格列不同：表格为「文档附件」，导出为「文件路径」完整路径）。
 /// `doc_type` 已由调用方转换为中文 label；上传时间截断到分钟。
 pub fn export_documents_to_xlsx(path: &Path, docs: &[ProjectDocument]) -> Result<(), DbError> {
@@ -101,8 +97,7 @@ pub fn export_documents_to_xlsx(path: &Path, docs: &[ProjectDocument]) -> Result
 
 /// 导出项目成果列表到 xlsx。
 ///
-/// 对齐 Python `export_outcome_excel`：
-/// 列序 = 成果名称 | 成果类型 | 成果状态 | 作者/完成人 | 投稿/申请日期 |
+/// 列顺序：成果名称 | 成果类型 | 成果状态 | 作者/完成人 | 投稿/申请日期 |
 /// 发表/授权日期 | 期刊/授权单位 | 成果描述 | 附件路径（9 列）。
 /// `type` / `status` 已由调用方转换为中文 label；日期原样写入（YYYY-MM-DD）。
 pub fn export_outcomes_to_xlsx(path: &Path, outcomes: &[ProjectOutcome]) -> Result<(), DbError> {
@@ -172,8 +167,7 @@ pub fn export_outcomes_to_xlsx(path: &Path, outcomes: &[ProjectOutcome]) -> Resu
 
 /// 导出活动列表到 xlsx。
 ///
-/// 对齐 Python `export_activity_excel`：
-/// 列序 = 活动名称 | 活动类型 | 活动状态 | 主办方 | 开始日期 | 结束日期 |
+/// 列顺序：活动名称 | 活动类型 | 活动状态 | 主办方 | 开始日期 | 结束日期 |
 /// 活动地点 | 参与人员 | 活动描述（9 列，**不含附件列**）。
 /// `type` / `status` 已由调用方转换为中文 label；日期原样写入（YYYY-MM-DD）。
 pub fn export_activities_to_xlsx(path: &Path, activities: &[AcademicActivity]) -> Result<(), DbError> {
@@ -243,7 +237,6 @@ pub fn export_activities_to_xlsx(path: &Path, activities: &[AcademicActivity]) -
 
 /// 导出支出列表到 xlsx。
 ///
-/// 对齐 Python `export_expense_excel`：
 /// - 列序：费用类别 | 开支内容 | 规格型号 | 供应商 | 报账金额 | 报账日期 | 备注
 /// - 金额保持元单位；日期原样写入（已是 YYYY-MM-DD 字符串）
 /// - 「费用类别」列 A 加下拉数据有效性（10 个预算类别）
@@ -338,8 +331,7 @@ pub fn export_expenses_to_xlsx(path: &Path, expenses: &[Expense]) -> Result<(), 
 
 /// 生成支出批量导入模板（3 个 sheet：支出信息示例数据 + 费用类别 + 使用说明）。
 ///
-/// 对齐 Python `generate_expense_template.py::generate_template` 与
-/// `batch_import_dialog.download_template`。`example_rows` 为可选的示例行
+/// `example_rows` 为可选的示例行
 /// （以 `(类别label, 内容, 规格, 供应商, 金额, 日期, 备注)` 表示）；传空则只写表头。
 pub fn generate_expense_import_template(
     path: &Path,
@@ -509,15 +501,14 @@ fn opt_string(d: &Data) -> Option<String> {
 
 /// 读取并校验支出导入文件，返回结构化支出数据。
 ///
-/// 对齐 Python `batch_import_dialog.import_data`：
 /// - 读取 sheet「支出信息」（.csv 不支持，仅 xlsx）
 /// - 校验：必要列存在、必要列无空值、费用类别为预设之一、金额>0、日期格式合法
-/// - 任一校验失败即返回 `Err`（携带首个错误信息），与 Python 的"首个错误即中断"一致
+/// - 任一校验失败即返回 `Err`（携带首个错误信息，遇错即中断、不逐行汇总）
 pub fn parse_expenses_from_xlsx(path: &Path) -> Result<Vec<ParsedExpense>, DbError> {
     let mut wb = open_workbook_auto(path)
         .map_err(|e| DbError::Other(format!("无法打开 Excel 文件: {e}")))?;
 
-    // 读取「支出信息」sheet；找不到则报错（与 Python pandas read_excel sheet_name 行为一致）
+    // 读取「支出信息」sheet；找不到则报错
     let range = wb
         .worksheet_range("支出信息")
         .map_err(|e| DbError::Other(format!("读取「支出信息」sheet 失败: {e}")))?;
@@ -675,7 +666,7 @@ pub struct BudgetExportData {
     pub categories: Vec<BudgetExportCategory>,
 }
 
-/// 预算导出配置（对应 `BudgetExportDialog.get_export_config`）。
+/// 预算导出配置。
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct BudgetExportConfig {
     pub export_detail: bool,
@@ -701,7 +692,6 @@ fn conv(amount: f64, wan: bool) -> f64 {
 
 /// 导出预算数据到 xlsx（预算明细 + 预算汇总 sheet）。
 ///
-/// 对齐 Python `budgeting_interface.export_data`：
 /// - 预算明细：列 = 项目名称 | 预算类别 | 预算项 | 规格型号 | 单价(unit) | 数量 |
 ///   金额(unit) | 备注 | 类别合计(unit) | 类别备注
 /// - 预算汇总：列 = 序号 | 费用类别 | 经费数额(unit) [| 第1年 | 第2年 | ...]，

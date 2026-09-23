@@ -1,19 +1,18 @@
-//! 预算编制服务：对应 Python `app/views/budgeting_interface.py`
+//! 预算编制服务
 //!
 //! 业务核心：
-//! - 树结构最多三级（与 Python `add_sub_level` 的「最多只能添加三级预算项！」一致）：
+//! - 树结构最多三级：
 //!   预算计划（`budget_plans`）→ 类别占位节点（`budget_plan_items`，`parent_id IS NULL`，
 //!   仅存 amount/remarks，name 等为空）→ 预算条目（`parent_id` = 占位节点 id）。
-//!   保存时也只用「占位行 + 一级子项」两层重写（对齐 Python `save_data`）。
-//! - `category` 以 SQLAlchemy Enum 的名称（KEY，如 `EQUIPMENT`）落库，
-//!   对外统一为中文 label（如「设备费」），读写双向转换（未知 label 不识别则跳过，
-//!   对齐 Python `if category:` 分支）。
-//! - 保存语义（对齐 Python `save_data`）：按 name 查找或创建 BudgetPlan；
+//!   保存时也只用「占位行 + 一级子项」两层重写。
+//! - `category` 以存储 KEY（如 `EQUIPMENT`）落库，对外统一为中文 label
+//!   （如「设备费」），读写双向转换（无法识别的 label 整类跳过）。
+//! - 保存语义：按 name 查找或创建 BudgetPlan；
 //!   对每个类别按 (plan_id, category, parent_id IS NULL) 查找或创建占位行；
 //!   然后 DELETE 占位行的全部旧子项，重新 INSERT 直接子项。
-//! - 删除语义（对齐 Python `delete_item`）：顶层删除整棵计划（级联 items）；
+//! - 删除语义：顶层删除整棵计划（级联 items）；
 //!   条目按 (plan, category, name) 精确匹配删除；类别节点由前端禁止删除。
-//! - 与 Python 一致：保存/删除 **不写 actionlogs**。
+//! - 保存/删除 **不写 actionlogs**。
 
 use std::collections::HashMap;
 
@@ -22,7 +21,7 @@ use rusqlite::{params, Connection, OptionalExtension, Transaction};
 use crate::models::BudgetPlan;
 use crate::DbError;
 
-/// 10 个预算类别中文 label（顺序与 Python `BudgetCategory` 枚举一致，前端渲染/导出用）。
+/// 10 个预算类别中文 label（固定顺序，前端渲染/导出用）。
 pub const BUDGET_CATEGORY_LABELS: [&str; 10] = [
     "设备费",
     "材料费",
@@ -50,7 +49,7 @@ pub const BUDGET_CATEGORY_KEYS: [&str; 10] = [
     "INDIRECT",
 ];
 
-/// 中文 label → 存储 KEY（SQLAlchemy Enum 名称）。未识别返回 None（对齐 Python 跳过保存）。
+/// 中文 label → 存储 KEY。未识别返回 None（调用方跳过该类别的保存）。
 fn to_category_key(label: &str) -> Option<&'static str> {
     match label {
         "设备费" => Some("EQUIPMENT"),
@@ -85,7 +84,7 @@ fn category_to_label(key: &str) -> String {
     .to_string()
 }
 
-/// 预算计划树（顶层节点，对应 Python 的顶级 QTreeWidgetItem）。
+/// 预算计划树（顶层节点）。
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct BudgetPlanNode {
     pub id: i64,
@@ -95,7 +94,7 @@ pub struct BudgetPlanNode {
     pub categories: Vec<BudgetCategoryNode>,
 }
 
-/// 类别节点（第二级，对应 Python 的类别 QTreeWidgetItem）。
+/// 类别节点（第二级）。
 /// `category` 为中文 label；`amount`/`remarks` 来自 DB 占位行（无占位行则为 0 / 空）。
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct BudgetCategoryNode {
@@ -105,7 +104,7 @@ pub struct BudgetCategoryNode {
     pub items: Vec<BudgetPlanItemNode>,
 }
 
-/// 预算条目（第三级，对应 Python 的叶子 QTreeWidgetItem；金额单位为元）。
+/// 预算条目（第三级叶子节点；金额单位为元）。
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct BudgetPlanItemNode {
     pub id: i64,
@@ -146,11 +145,10 @@ pub struct BudgetPlanItemSave {
     pub remarks: Option<String>,
 }
 
-/// 列出全部预算计划树（无显式 ORDER BY，对齐 Python `load_budget_plans`）。
+/// 列出全部预算计划树（无显式 ORDER BY）。
 ///
-/// 每个计划固定包含 10 个类别节点（无占位行的类别金额为 0、备注为空、条目为空），
-/// 与 Python 逐 `BudgetCategory` 建行的行为一致；条目仅加载占位行的直接子项
-/// （对齐 UI 三级约束与保存语义）。
+/// 每个计划固定包含 10 个类别节点（无占位行的类别金额为 0、备注为空、条目为空）；
+/// 条目仅加载占位行的直接子项（对齐三级结构约束与保存语义）。
 pub fn list_budget_plans(conn: &Connection) -> Result<Vec<BudgetPlanNode>, DbError> {
     let mut stmt = conn.prepare("SELECT id, name, create_date, total_amount, remarks FROM budget_plans")?;
     let plans = stmt.query_map([], BudgetPlan::from_row)?;
@@ -199,7 +197,7 @@ fn load_categories(conn: &Connection, plan_id: i64) -> Result<Vec<BudgetCategory
 
     let mut categories = Vec::with_capacity(BUDGET_CATEGORY_KEYS.len());
     for key in BUDGET_CATEGORY_KEYS {
-        // 类别的占位行（parent_id 为空；Python 取 filter 结果的第一个）
+        // 类别的占位行（parent_id 为空，取第一条匹配项）
         let placeholder = by_parent
             .get(&None)
             .and_then(|items| items.iter().find(|i| i.category.as_deref() == Some(key)));
@@ -243,21 +241,21 @@ fn build_items(
         .unwrap_or_default()
 }
 
-/// 保存全部顶层预算计划（单个事务，对齐 Python `save_data` 的一次 commit）。
+/// 保存全部顶层预算计划（单个事务内完成）。
 ///
 /// 每个计划按 name 查找或创建；每个类别按 (plan_id, category, parent_id IS NULL)
 /// 查找或创建占位行，随后删除占位行的全部旧子项并重新插入新子项。
-/// 类别 label 无法识别为内置类别时整类跳过（对齐 Python `if category:`）。
+/// 类别 label 无法识别为内置类别时整类跳过。
 pub fn save_budget_plans(conn: &mut Connection, plans: &[BudgetPlanSave]) -> Result<(), DbError> {
     let tx = conn.transaction()?;
     for plan in plans {
         let plan_id = upsert_plan(&tx, plan)?;
         for cat in &plan.categories {
             let Some(key) = to_category_key(&cat.category) else {
-                continue; // 非标准类别行（如「请输入该级预算名称」）跳过，对齐 Python
+                continue; // 非标准类别行（如「请输入该级预算名称」）跳过
             };
             let placeholder_id = upsert_placeholder(&tx, plan_id, key, cat)?;
-            // 删除占位行的全部旧子项（对齐 Python：filter_by(plan_id, category, parent_id).delete()）
+            // 删除占位行的全部旧子项（按 plan_id + category + parent_id 匹配）
             tx.execute(
                 "DELETE FROM budget_plan_items WHERE plan_id = ?1 AND category = ?2 AND parent_id = ?3",
                 params![plan_id, key, placeholder_id],
@@ -287,7 +285,7 @@ pub fn save_budget_plans(conn: &mut Connection, plans: &[BudgetPlanSave]) -> Res
     Ok(())
 }
 
-/// 按 name 查找或创建预算计划，返回其 id。新建时补 create_date（对齐 Python 默认当天）。
+/// 按 name 查找或创建预算计划，返回其 id。新建时补 create_date（默认当天）。
 fn upsert_plan(tx: &Transaction, plan: &BudgetPlanSave) -> Result<i64, DbError> {
     let existing: Option<i64> = tx
         .query_row(
@@ -316,7 +314,7 @@ fn upsert_plan(tx: &Transaction, plan: &BudgetPlanSave) -> Result<i64, DbError> 
 }
 
 /// 按 (plan_id, category, parent_id IS NULL) 查找或创建类别占位行，返回其 id。
-/// 占位行只写 category/amount/remarks（name 等为空，对齐 Python）。
+/// 占位行只写 category/amount/remarks（name 等为空）。
 fn upsert_placeholder(
     tx: &Transaction,
     plan_id: i64,
@@ -349,9 +347,8 @@ fn upsert_placeholder(
     }
 }
 
-/// 删除整个预算计划（按 name）：级联删除其全部 items 再删计划本身，
-/// 对齐 Python `delete_item` 顶层分支（SQLAlchemy cascade="all, delete-orphan"）。
-/// 计划不存在时静默成功（对齐 Python：查不到则仅删除 UI 行）。
+/// 删除整个预算计划（按 name）：级联删除其全部 items 再删计划本身。
+/// 计划不存在时静默成功，不报错。
 pub fn delete_budget_plan(conn: &mut Connection, name: &str) -> Result<(), DbError> {
     let tx = conn.transaction()?;
     let id: Option<i64> = tx
@@ -365,9 +362,9 @@ pub fn delete_budget_plan(conn: &mut Connection, name: &str) -> Result<(), DbErr
     Ok(())
 }
 
-/// 删除一条预算条目（第三级）：按 (plan_name, category label, item name) 精确匹配删除，
-/// 对齐 Python `delete_item` 条目分支（不级联子项，第三条目无子项）。
-/// 计划不存在或类别非内置时静默成功（Python 同：查不到仅删 UI）。
+/// 删除一条预算条目（第三级）：按 (plan_name, category label, item name) 精确匹配删除。
+/// 第三级条目无子项，无需级联。
+/// 计划不存在或类别非内置时静默成功，不报错。
 pub fn delete_budget_plan_item(
     conn: &Connection,
     plan_name: &str,
@@ -462,7 +459,7 @@ mod tests {
         assert_eq!(t.total_amount, 320000.0);
         assert_eq!(t.remarks, "计划备注");
 
-        // 固定 10 个类别，顺序与 Python 枚举一致
+        // 固定 10 个类别，顺序固定
         assert_eq!(t.categories.len(), 10);
         assert_eq!(t.categories[0].category, "设备费");
         assert_eq!(t.categories[0].amount, 300000.0);

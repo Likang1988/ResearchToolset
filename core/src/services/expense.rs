@@ -1,4 +1,4 @@
-//! 支出服务：对应 Python `app/views/projecting_interface/project_expense.py`
+//! 支出服务
 //!
 //! 业务核心：
 //! - 支出（expenses.amount）单位是「元」
@@ -45,7 +45,7 @@ fn to_label(key: &str) -> String {
         .unwrap_or_else(|| key.to_string())
 }
 
-/// 列出某预算下所有支出（按 date DESC，与 Python `load_expenses` 一致）
+/// 列出某预算下所有支出（按 date DESC）
 pub fn list_expenses_by_budget(conn: &Connection, budget_id: i64) -> Result<Vec<Expense>, DbError> {
     let mut stmt = conn.prepare(
         "SELECT id, project_id, budget_id, category, content, specification, supplier, \
@@ -109,7 +109,7 @@ pub fn get_expense_by_id(conn: &Connection, id: i64) -> Result<Option<Expense>, 
 /// 2. budgets.spent_amount += amount / 10000
 /// 3. budget_items(budget_id + category).spent_amount += amount / 10000
 ///
-/// 返回新支出 id。对齐 Python `add_expense` 的数据库写入部分。
+/// 返回新支出 id。
 pub fn add_expense(conn: &Connection, input: ExpenseInput) -> Result<i64, DbError> {
     crate::db::begin_tx(conn)?;
     let result = add_expense_inner(conn, input);
@@ -125,8 +125,8 @@ pub fn add_expense(conn: &Connection, input: ExpenseInput) -> Result<i64, DbErro
     }
 }
 
-/// 查询预算所属项目的 (year, financial_code)，用于支出日志 related_info
-/// "项目: {financial_code}, 预算: {year}"（对齐 Python project_expense.py）。
+/// 查预算所属项目的 (year, financial_code)，用于拼接支出日志 related_info
+/// （"项目: {financial_code}, 预算: {year}"）。
 fn budget_year_and_code(conn: &Connection, budget_id: i64) -> Result<(i64, Option<String>), DbError> {
     Ok(conn
         .query_row(
@@ -139,7 +139,7 @@ fn budget_year_and_code(conn: &Connection, budget_id: i64) -> Result<(i64, Optio
         .unwrap_or((0, None)))
 }
 
-/// 写支出操作日志（对齐 Python `session.add(Actionlog(...))`）：
+/// 写支出操作日志：
 /// type="支出"，operator="系统用户"，含 category/amount/related_info 扩展字段。
 fn write_expense_log(
     conn: &Connection,
@@ -213,7 +213,7 @@ fn insert_expense_row(conn: &Connection, input: &ExpenseInput) -> Result<i64, Db
 }
 
 /// 新增支出（事务内）：插入 + 联动预算 + "添加"日志。
-/// 对齐 Python `add_expense`（description="添加支出：{content}，金额：{amount:.2f}元"）。
+/// description 为"添加支出：{content}，金额：{amount:.2f}元"。
 fn add_expense_inner(conn: &Connection, input: ExpenseInput) -> Result<i64, DbError> {
     let expense_id = insert_expense_row(conn, &input)?;
     let description = format!("添加支出：{}，金额：{:.2}元", input.content, input.amount);
@@ -241,7 +241,7 @@ pub fn update_expense(conn: &Connection, id: i64, input: ExpenseInput) -> Result
 }
 
 fn update_expense_inner(conn: &Connection, id: i64, input: ExpenseInput) -> Result<(), DbError> {
-    // 查旧记录（完整字段，供 old_data 日志；对齐 Python edit_expense 的 old_data_dict）
+    // 查旧记录（完整字段，供 old_data 日志）
     let old: Option<(
         String,
         String,
@@ -339,7 +339,7 @@ fn update_expense_inner(conn: &Connection, id: i64, input: ExpenseInput) -> Resu
         )?;
     }
 
-    // 写"编辑"操作日志（对齐 Python edit_expense：old_data/new_data 为完整字段 JSON）
+    // 写"编辑"操作日志（old_data/new_data 为完整字段 JSON）
     let old_data = serde_json::json!({
         "category": to_label(&old_cat_key),
         "content": old_content,
@@ -377,7 +377,7 @@ fn update_expense_inner(conn: &Connection, id: i64, input: ExpenseInput) -> Resu
 /// - 按 (category, sum(amount)) 累计回退 budget_items.spent_amount
 /// - 总金额回退 budgets.spent_amount
 ///
-/// 返回实际删除条数。对齐 Python `delete_expense`。
+/// 返回实际删除条数。
 pub fn delete_expenses(conn: &Connection, ids: &[i64]) -> Result<usize, DbError> {
     if ids.is_empty() {
         return Ok(0);
@@ -398,8 +398,8 @@ pub fn delete_expenses(conn: &Connection, ids: &[i64]) -> Result<usize, DbError>
 
 /// 仅更新支出凭证路径（不动金额/类别，不触发预算联动）。
 ///
-/// 对应 Python `execute_attachment_action` 中 replace/delete 分支对
-/// `expense.voucher_path` 的更新：附件文件操作由 attachments 模块完成，
+/// 供附件替换（replace）/删除（delete）后更新 `expense.voucher_path`：
+/// 附件文件操作由 attachments 模块完成，
 /// 此函数只把最新路径写入数据库（删除即传 `None`）。
 pub fn update_expense_voucher(
     conn: &Connection,
@@ -454,7 +454,7 @@ fn delete_expenses_inner(conn: &Connection, ids: &[i64]) -> Result<usize, DbErro
         total_wan += amount / 10000.0;
         deleted += 1;
 
-        // 写"删除"日志（对齐 Python delete_expense：删除前记录，
+        // 写"删除"日志（删除前记录，
         // old_data 含 category/content/amount/date，记录被删的 expense_id）
         let old_data = serde_json::json!({
             "category": to_label(&cat_key),
@@ -518,7 +518,7 @@ fn delete_expenses_inner(conn: &Connection, ids: &[i64]) -> Result<usize, DbErro
 
 /// 批量导入支出（事务）：逐条插入 + 联动预算，每条写"批量导入"日志。
 ///
-/// 对齐 Python `add_expenses`（description="批量导入支出：{content}，金额：{amount:.2f}元"）。
+/// description 为"批量导入支出：{content}，金额：{amount:.2f}元"。
 /// items 为已解析/校验通过的支出列表（category 为中文 label、amount 单位为元）。
 /// 返回实际导入条数。
 pub fn batch_add_expenses(
@@ -947,7 +947,7 @@ mod tests {
         .unwrap();
         assert_eq!(n, 2);
 
-        // 共 5 条日志：添加 / 编辑 / 删除 / 批量导入×2（每条支出 1 条，对齐 Python）
+        // 共 5 条日志：添加 / 编辑 / 删除 / 批量导入×2（每条支出 1 条）
         let mut stmt = conn
             .prepare(
                 "SELECT action, category, amount, related_info, expense_id \

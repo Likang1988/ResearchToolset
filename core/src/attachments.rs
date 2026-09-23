@@ -1,4 +1,4 @@
-//! 附件管理（对应 `app/utils/attachment_utils.py` 中与 UI 无关的核心逻辑）
+//! 附件管理（与 UI 无关的附件路径与文件核心逻辑）
 //!
 //! 实现：
 //! - 文件名清洗 `sanitize_filename`
@@ -8,15 +8,15 @@
 //! - 上传 / 替换 / 删除的纯文件操作（`save_attachment` / `replace_attachment` / `delete_attachment`）
 //! - 删除项目时清理附件目录 `clean_project_attachments`
 //!
-//! 注：对话框（QFileDialog）、系统打开（os.startfile/open/xdg-open）属 UI 层，
+//! 注：文件选择对话框、系统默认程序打开属 UI 层，
 //! 由 Tauri command / 前端负责；本模块只做可复用的路径与文件逻辑。
 
 use std::path::{Path, PathBuf};
 
 use crate::DbError;
 
-/// 清洗文件名中的 Windows 非法字符（对应 Python `sanitize_filename`：
-/// 先 strip，再将 `[\\/*?:"<>|]` 替换为下划线）。
+/// 清洗文件名中的 Windows 非法字符：先去除首尾空白，
+/// 再将 `\ / * ? : " < > |` 替换为下划线。
 pub fn sanitize_filename(name: &str) -> String {
     name.trim()
         .chars()
@@ -30,7 +30,7 @@ pub fn sanitize_filename(name: &str) -> String {
         .collect()
 }
 
-/// 确保目录存在，必要时递归创建。对应 Python `ensure_directory_exists`。
+/// 确保目录存在，必要时递归创建。
 pub fn ensure_directory_exists(dir_path: &Path) -> Result<(), DbError> {
     if !dir_path.exists() {
         std::fs::create_dir_all(dir_path)?;
@@ -38,13 +38,13 @@ pub fn ensure_directory_exists(dir_path: &Path) -> Result<(), DbError> {
     Ok(())
 }
 
-/// 当前时间戳，格式 YYYYMMDDHHMMSS。对应 Python `get_timestamp_str`。
+/// 当前时间戳，格式 YYYYMMDDHHMMSS。
 pub fn get_timestamp_str() -> String {
     chrono::Local::now().format("%Y%m%d%H%M%S").to_string()
 }
 
 /// 从原始文件名拆分出 (清洗后的基本名, 带点扩展名)。
-/// 对应 Python `os.path.splitext(os.path.basename(...))`。
+/// 先丢弃路径前缀只取文件名，再按最后一个 `.` 拆分基本名与扩展名。
 fn split_base_and_ext(original_filename: &str) -> (String, String) {
     let basename = Path::new(original_filename)
         .file_name()
@@ -89,8 +89,8 @@ pub struct AttachmentContext {
     pub base_folder: Option<String>,
 }
 
-/// 生成附件保存的完整路径（含创建目标目录），对应 Python `generate_attachment_path`。
-/// 可空字段均回退为 "unknown_*"，与 Python 一致。
+/// 生成附件保存的完整路径（含创建目标目录）。
+/// 可空字段均回退为 "unknown_*"。
 pub fn generate_attachment_path(
     root_dir: &Path,
     kind: AttachmentKind,
@@ -155,7 +155,7 @@ pub fn generate_attachment_path(
 
 /// 上传/替换附件：把 `source` 拷贝到目标路径，返回完整目标路径。
 ///
-/// 对应 Python `execute_attachment_action` 中 "replace" 分支：
+/// 处理步骤：
 /// 1. 生成目标路径（调用 `generate_attachment_path`）
 /// 2. ensure 目录
 /// 3. 拷贝源文件到目标
@@ -188,7 +188,7 @@ pub fn save_attachment(
     Ok(new_path)
 }
 
-/// 删除附件文件。对应 Python "delete" 分支（文件删除部分）。
+/// 删除附件文件（仅做文件删除，数据库由调用方处理）。
 /// 文件不存在视为成功（空操作）。
 pub fn delete_attachment(path: &Path) -> Result<(), DbError> {
     if path.exists() {
@@ -199,7 +199,7 @@ pub fn delete_attachment(path: &Path) -> Result<(), DbError> {
 
 /// 批量校验附件文件是否真实存在（应对"程序外删除"等异常情况）。
 ///
-/// 与 Python 版不同，SQLite 只记录路径字符串，磁盘文件可能已被用户
+/// SQLite 只记录路径字符串，磁盘文件可能已被用户
 /// 在程序外删除。列表加载时代理侧校验，返回与输入等长的布尔数组
 /// （`true` 表示文件存在）；路径为空或不可访问一律视为不存在。
 /// 仅作展示层提示用，不抛错、不阻塞列表加载。
@@ -210,9 +210,9 @@ pub fn check_attachments_exist(paths: &[String]) -> Vec<bool> {
         .collect()
 }
 
-/// 删除项目时清理其专属附件目录（对应 Python `delete_selected_project` 的文件清理部分）。
+/// 删除项目时清理其专属附件目录（仅文件清理部分）。
 ///
-/// 路径对齐 Python：`root_dir/documents/{project_id}` 与 `root_dir/vouchers/{project_id}`。
+/// 清理路径：`root_dir/documents/{project_id}` 与 `root_dir/vouchers/{project_id}`。
 /// 目录不存在视为成功（空操作）；目录存在则递归删除。
 /// 返回 (doc_deleted, voucher_deleted) 标志，调用方可据此提示用户。
 pub fn clean_project_attachments(root_dir: &Path, project_id: i64) -> (bool, bool) {
@@ -229,8 +229,7 @@ fn rm_dir_if_exists(path: &Path) -> bool {
     if path.is_dir() {
         match std::fs::remove_dir_all(path) {
             Ok(_) => true,
-            // 删除失败不向上抛——Python 版也是吞掉错误继续，
-            // 数据库已提交，不应因文件清理失败让整体回滚。
+            // 删除失败不向上抛：数据库已提交，不应因文件清理失败让整体回滚。
             Err(_) => false,
         }
     } else {
@@ -244,7 +243,6 @@ mod tests {
 
     #[test]
     fn strips_windows_illegal_chars_to_underscore() {
-        // Python: re.sub(r'[\\/*?:"<>|]', '_', filename)（且先 strip）
         assert_eq!(sanitize_filename("a/b\\c:d*e?f\"g<h>i|j"), "a_b_c_d_e_f_g_h_i_j");
         assert_eq!(sanitize_filename("正常文件名.pdf"), "正常文件名.pdf");
         assert_eq!(sanitize_filename("  前后空格  "), "前后空格");
@@ -269,7 +267,7 @@ mod tests {
         let path = generate_attachment_path(root, AttachmentKind::Default, "申请书/最终版.pdf", &ctx)
             .unwrap();
         // <root>/attachments/2023KJ001/申请材料/<ts>_最终版.pdf
-        // （Python os.path.basename 只取 "最终版.pdf"，路径前缀 "申请书/" 被丢弃）
+        // （只取文件名部分 "最终版.pdf"，路径前缀 "申请书/" 被丢弃）
         let rel = path.strip_prefix(root).unwrap();
         let parts: Vec<_> = rel
             .components()

@@ -1,6 +1,4 @@
 // 项目经费页：项目下拉 + 三级预算树表格 + 右侧科目占比饼图
-// 对应 Python app/views/projecting_interface/project_fund.py::load_budgets
-// 对应 Python app/components/budget_chart_widget.py 的类别分布饼图
 
 import { useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
@@ -69,7 +67,7 @@ interface BudgetPlanNode {
   categories: { category: string; amount: number; remarks: string; items: unknown[] }[];
 }
 
-// 金额格式化：千分位 + 2 位小数（对齐 Python f"{x:,.2f}"）
+// 金额格式化：千分位 + 2 位小数
 function fmt(n: number): string {
   return n.toLocaleString("zh-CN", {
     minimumFractionDigits: 2,
@@ -78,7 +76,7 @@ function fmt(n: number): string {
 }
 
 interface ProjectFundPageProps {
-  /** 由 App 层持有：切换标签页后返回仍保持所选项目（Python 版页面常驻） */
+  /** 由 App 层持有：切换标签页后返回仍保持所选项目 */
   selectedProjectId?: number | null;
   onProjectChange?: (id: number | null) => void;
 }
@@ -103,10 +101,10 @@ export default function ProjectFundPage({
 
   // 饼图联动：当前选中预算节点 id + 视图（类别分布 / 时间分布）
   const [selectedNodeId, setSelectedNodeId] = useState<number | null>(null);
-  // 对齐 Python BudgetChartWidget：默认类别视图，可切到时间视图
+  // 默认类别视图，可切到时间视图
   const [pieView, setPieView] = useState<"category" | "time">("category");
 
-  // 当前选中节点的支出记录（图表数据源，对齐 Python update_charts）
+  // 当前选中节点的支出记录（图表数据源）
   const [nodeExpenses, setNodeExpenses] = useState<ChartExpense[]>([]);
   // 支出管理返回后手动触发图表数据重拉
   const [chartReloadKey, setChartReloadKey] = useState(0);
@@ -187,7 +185,7 @@ export default function ProjectFundPage({
     return all.find((n) => n.id === selectedNodeId) ?? null;
   })();
 
-  // 选中节点变化 → 拉取该节点支出作为图表数据源（对齐 Python update_charts）
+  // 选中节点变化 → 拉取该节点支出作为图表数据源
   useEffect(() => {
     if (!selectedNode) {
       setNodeExpenses([]);
@@ -231,7 +229,7 @@ export default function ProjectFundPage({
       if (pieView === "category") {
         key = exp.category;
       } else {
-        // 时间维度：总预算按年度，年度预算按月度（对齐 Python show_time_distribution）
+        // 时间维度：总预算按年度，年度预算按月度
         const parts = (exp.date ?? "").split("-");
         key =
           selectedNode.year === null
@@ -256,7 +254,7 @@ export default function ProjectFundPage({
 
   // 总预算各科目结余 + 总结余（万元）：
   // 各类结余 = 总预算该类金额 - 该类所有年度预算累计支出；
-  // 总结余 = Σ各类结余。对齐 Python update_balance_amounts。
+  // 总结余 = Σ各类结余。
   // null = 尚未设置总预算
   const budgetBalances: {
     total: number;
@@ -282,7 +280,7 @@ export default function ProjectFundPage({
     return { total: Math.round(total * 100) / 100, byCategory };
   }, [tree]);
 
-  // 点击"添加预算"：对齐 Python add_budget 的前置校验
+  // 点击"添加预算"：前置校验
   const handleAddBudget = () => {
     if (selectedId === null) {
       alert("请先选择一个项目");
@@ -296,7 +294,7 @@ export default function ProjectFundPage({
     setBudgetDialogOpen(true);
   };
 
-  // 点击删除预算：弹出确认对话框（对齐 Python delete_budget 前置提示）
+  // 点击删除预算：弹出确认对话框
   const handleDeleteBudget = () => {
     if (!selectedNode) {
       alert("请先选中要删除的预算行");
@@ -312,7 +310,7 @@ export default function ProjectFundPage({
     });
   };
 
-  // 确认删除：级联删除预算（及关联支出），对齐 Python delete_budget 分支
+  // 确认删除：级联删除预算（及关联支出）
   const confirmDeleteBudget = async () => {
     if (!deleteTarget) return;
     setIsDeleting(true);
@@ -349,7 +347,7 @@ export default function ProjectFundPage({
     setBudgetDialogOpen(true);
   };
 
-  // 点击"导入预算计划"：对齐 Python import_budget_plan 的前置流程
+  // 点击"导入预算计划"：前置校验后加载计划列表
   const handleImportBudgetPlan = async () => {
     if (selectedId === null) {
       alert("请先选择一个项目");
@@ -383,7 +381,7 @@ export default function ProjectFundPage({
     const prefill: Record<string, number> = {};
     for (const cat of BUDGET_CATEGORIES) {
       const node = plan.categories.find((c) => c.category === cat);
-      // 对齐 Python：在计划中的填金额（万元），不在的填 0
+      // 在计划中的填金额（万元），不在的填 0
       prefill[cat] =
         node && node.amount > 0
           ? Math.round((node.amount / 10000) * 100) / 100
@@ -591,7 +589,7 @@ export default function ProjectFundPage({
               title={pieTitle}
               entries={pieEntries}
               toolbar={
-                /* 分布切换图标按钮（对齐 Python ToolButton + category/calendar 图标） */
+                /* 分布切换图标按钮 */
                 <div className="pie-view-switch">
                   <button
                     className={`icon-btn ${pieView === "category" ? "active" : ""}`}
@@ -709,7 +707,7 @@ export default function ProjectFundPage({
           </div>
         </div>
       )}
-    {/* 从预算编制导入：计划选择对话框（对齐 Python import_budget_plan 的 QDialog） */}
+    {/* 从预算编制导入：计划选择对话框 */}
       {importDialogOpen && (
         <div className="dialog-overlay">
           <div className="dialog-container" style={{ width: 420 }}>
@@ -854,8 +852,8 @@ function BudgetRows({
   );
 }
 
-// 执行率进度条（对应 Python ProgressBarDelegate）
-// 颜色逻辑对齐 Python：RGB 在浅绿 (153,255,153) 与浅红 (255,153,153) 之间
+// 执行率进度条
+// 颜色逻辑：RGB 在浅绿 (153,255,153) 与浅红 (255,153,153) 之间
 // 按执行率线性插值；执行率 >=100% 固定为浅红
 function pctColor(pct: number): string {
   const ratio = Math.min(pct / 100, 1); // 0..1

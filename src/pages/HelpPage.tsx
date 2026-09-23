@@ -1,8 +1,8 @@
-// 帮助页：三个展开卡片 + 操作日志表（对应 Python app/views/help_interface.py）
+// 帮助页：三个展开卡片 + 操作日志表
 // - 软件简介：标题/副标题 + 项目简介 + 主要功能 + 计划 + 系统要求 + 依赖项 + 注意事项 + 许可证
 // - 使用帮助：系统介绍 + 功能指南 + 常见问题
 // - 操作日志：7 列表格（时间/类型/动作/描述/相关信息/原数据/新数据），
-//   按时间倒序最多 100 条；原/新数据列只展示字段级 diff（对齐 Python find_diff）
+//   按时间倒序最多 100 条；原/新数据列只展示字段级 diff
 
 import { useEffect, useState, type ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
@@ -28,8 +28,7 @@ interface ActionLog {
   related_info: string | null;
 }
 
-// 字段级 diff（对齐 Python help_interface.find_diff：
-// 仅列出两个 JSON 中取值不同的键；单侧为 null 时整侧全量展示）。
+// 字段级 diff：仅列出两个 JSON 中取值不同的键；单侧为 null 时整侧全量展示。
 function findDiff(
   oldData: string | null,
   newData: string | null,
@@ -82,14 +81,14 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
-// diff 值格式化：字符串原样，数字/布尔转文本，对象 JSON 紧凑序列化（对齐 Python f-string）
+// diff 值格式化：字符串原样，数字/布尔转文本，对象 JSON 紧凑序列化
 function fmtValue(v: unknown): string {
   if (v === null || v === undefined) return "null";
   if (typeof v === "object") return JSON.stringify(v);
   return String(v);
 }
 
-// 单侧 diff 文本：`key: value` 每行一条（对齐 Python old_diff_text / new_diff_text）
+// 单侧 diff 文本：`key: value` 每行一条
 function diffText(side: "old" | "new", diff: Record<string, { old: unknown; new: unknown }>): string {
   const lines: string[] = [];
   for (const [key, values] of Object.entries(diff)) {
@@ -104,7 +103,7 @@ interface ExpandCardProps {
   children: ReactNode;
 }
 
-// 展开卡片（对齐 Python ExpandGroupSettingCard：点击标题展开/收起）
+// 展开卡片：点击标题展开/收起
 function ExpandCard({ title, defaultOpen = false, children }: ExpandCardProps) {
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -118,7 +117,7 @@ function ExpandCard({ title, defaultOpen = false, children }: ExpandCardProps) {
   );
 }
 
-// 小节：标题 + 一段文本（Python BodyLabel setWordWrap）
+// 小节：标题 + 一段文本
 function Section({ title, text }: { title: string; text: string }) {
   return (
     <div className="help-section">
@@ -133,7 +132,7 @@ export default function HelpPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 页面挂载即加载（对齐 Python showEvent → load_actionlogs）
+  // 页面挂载即加载
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -197,7 +196,7 @@ export default function HelpPage() {
           <Section
             title="计划"
             text={
-              "- [x] 基于qfluentwidgets重构UI\n" +
+              "- [x] UI 全面重构（Fluent 风格）\n" +
               "- [x] 支出信息批量导入\n" +
               "- [x] 支出信息列表排序、筛选、导出\n" +
               "- [x] 支出凭证插入、导出\n" +

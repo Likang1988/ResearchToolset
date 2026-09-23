@@ -1,18 +1,17 @@
 //! 数据模型：12 张表的结构体与枚举
 //!
-//! 字段与 `rust/tests/golden/schema.sql` 逐字一致。
+//! 字段与 `tests/golden/schema.sql` 逐字一致。
 //! 日期/时间列以字符串存储（SQLite 实际存储格式），金额用 Option<f64>（schema 可空）。
 //! 枚举 **存储层（budget_items.category）用英文 KEY**（EQUIPMENT/MATERIAL/…），
 //! 展示层用中文（设备费/材料费/…）。因此：
 //! - DB 查询/写入时使用 `storage_key()`（英文 KEY）
 //! - 展示/serde 输出到前端时使用 `label()`（中文）
-//! 参考：Python BudgetCategory.EQUIPMENT = "设备费"，但实际写入 DB 时写入的是
-//! BudgetCategory.EQUIPMENT.name（EQUIPMENT）。这在 SQLAlchemy 下用 Enum 的 values
-//! 存储方式，而原始 DB 中证实存的是英文枚举名。
+//! 注意：写入 DB 的是枚举名（如 EQUIPMENT）而非中文 label（如 "设备费"），
+//! 与既有数据库核对证实如此。
 
 use serde::{Deserialize, Serialize};
 
-/// 预算费用类别（10 类，与 Python BudgetCategory 一致）
+/// 预算费用类别（10 类）
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum BudgetCategory {
     #[serde(rename = "设备费")]
@@ -463,7 +462,7 @@ impl ProjectDocument {
     }
 }
 
-/// project_outcome（单数表名，Python 版即如此）
+/// project_outcome（单数表名）
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ProjectOutcome {
     pub id: i64,

@@ -1,5 +1,4 @@
-// 学术活动页：对应 Python app/views/activity_interface.py
-// 9 列表格（活动名称/类型/状态/主办方/开始日期/结束日期/活动地点/参与人员/活动附件）
+// 学术活动页：9 列表格（活动名称/类型/状态/主办方/开始日期/结束日期/活动地点/参与人员/活动附件）
 // + 关键词(name/description/participants/location)/类型/状态/开始日期范围筛选
 // + 新增/编辑/删除（ActivityFormDialog，对话框内可改附件）
 // + 行内附件 5 个操作（查看/路径/下载/替换/删除，无附件时显示「上传附件」）
@@ -48,7 +47,7 @@ const dateStr = (d: Date) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 
-// 默认日期范围（对齐 Python：当年 1 月 1 日 ～ 今天）
+// 默认日期范围：当年 1 月 1 日 ～ 今天（本地时区）
 const defaultStartDate = () => dateStr(new Date(new Date().getFullYear(), 0, 1));
 const defaultEndDate = () => dateStr(new Date());
 
@@ -121,8 +120,8 @@ export default function ProjectActivityPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 本地筛选（对齐 Python apply_filters：keyword 匹配 name/description/participants/location，
-  // 类型/状态相等，start_date 落在 [start, end] 闭区间——无 start_date 的记录不满足日期条件被筛除）
+  // 本地筛选：keyword 匹配 name/description/participants/location，
+  // 类型/状态相等，start_date 落在 [start, end] 闭区间——无 start_date 的记录不满足日期条件被筛除
   const filteredActivities = useMemo(() => {
     const kw = keyword.trim().toLowerCase();
     return allActivities.filter((a) => {
@@ -165,7 +164,7 @@ export default function ProjectActivityPage() {
     });
   };
 
-  // 提交表单：先按附件状态处理文件（对齐 Python edit/add 的附件分支），再入库
+  // 提交表单：先按附件状态处理文件（新增/替换/删除），再入库
   const applyAttachment = async (
     att: ActivityAttachmentState,
     typeLabel: string
@@ -229,7 +228,7 @@ export default function ProjectActivityPage() {
     }
   };
 
-  // 导出 Excel（对齐 Python export_activity_excel：9 列数据，不含附件列）
+  // 导出 Excel：9 列数据，不含附件列
   const handleExportExcel = async () => {
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, "0");
@@ -249,8 +248,8 @@ export default function ProjectActivityPage() {
     }
   };
 
-  // 导出附件（对齐 Python export_activity_attachments：直接拷入所选目录，无子目录；
-  // 目标已存在时文件名加 {name}_{时间戳}{ext}）
+  // 导出附件：直接拷入所选目录，无子目录；
+  // 目标已存在时文件名加 {name}_{时间戳}{ext}
   const handleExportAttachments = async () => {
     const withFile = filteredActivities.filter((a) => a.attachment_path);
     if (withFile.length === 0) {
@@ -276,7 +275,7 @@ export default function ProjectActivityPage() {
         const dot = filename.lastIndexOf(".");
         const base = dot > 0 ? filename.slice(0, dot) : filename;
         const ext = dot > 0 ? filename.slice(dot) : "";
-        // 目标已存在（copy 失败）→ 用 Python 相同的时间戳后缀重试，仍冲突再递增序号
+        // 目标已存在（copy 失败）→ 用时间戳后缀重试，仍冲突再递增序号
         const attempts = [filename, `${base}_${Date.now()}${ext}`];
         let dest = `${dir}/${attempts[0]}`;
         let ok = false;
@@ -301,7 +300,7 @@ export default function ProjectActivityPage() {
     }
   };
 
-  // 行内附件操作（对齐 Python attachment_utils 菜单动作：查看/下载/路径/替换/删除/上传）
+  // 行内附件操作：查看/下载/路径/替换/删除/上传
   const handleAttachmentAction = async (activity: AcademicActivity, action: string) => {
     setAttachmentMenuFor(null);
     const path = activity.attachment_path;
@@ -491,7 +490,7 @@ export default function ProjectActivityPage() {
         </div>
       )}
 
-      {/* 筛选 + 导出（对齐 Python 搜索栏布局） */}
+      {/* 筛选 + 导出 */}
       <div className="expense-filter">
         <label>关键词:</label>
         <input

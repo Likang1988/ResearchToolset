@@ -1,4 +1,4 @@
-//! 间接经费计算器（对应 `app/tools/IndirectCostCalculator.py::calculate_max_indirect_cost`）
+//! 间接经费计算器
 //!
 //! 规则：间接经费基数 = 直接经费 - 设备费 - 外协费；
 //! 分档费率（默认 500 万内 20%、500-1000 万 15%、1000 万以上 13%），
@@ -11,7 +11,7 @@
 /// - `external_cooperation_cost`：外协费（万元）
 /// - 费率均以小数传入（如 20% 传 0.20）
 ///
-/// 与 Python 版算法逐语句一致（含 0.01 收敛精度与 `total_funds - left` 的返回方式）。
+/// 二分搜索，收敛精度 0.01，返回值为 `total_funds - left`。
 pub fn calculate_max_indirect_cost(
     total_funds: f64,
     equipment_cost: f64,
@@ -58,11 +58,10 @@ pub fn calculate_max_indirect_cost(
 mod tests {
     use super::*;
 
-    /// 与 Python 版对拍基准（默认费率）
-    /// Python: calculate_max_indirect_cost(100, 20, 10, 0.2, 0.15, 0.13)
+    /// 手工推算校验基准（默认费率）
     /// 直接经费 x：x + (x-30)*0.2 <= 100 → x <= 88.3333 → 间接 = 11.6667
     #[test]
-    fn matches_python_reference() {
+    fn matches_hand_computed_baseline() {
         let r = calculate_max_indirect_cost(100.0, 20.0, 10.0, 0.20, 0.15, 0.13);
         assert!((r - 11.666666666666657).abs() < 0.01, "实际值 {r}");
     }

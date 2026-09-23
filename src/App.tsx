@@ -1,6 +1,6 @@
 // ResearchToolset Rust 版导航壳
-// 对应 Python app/views/main_window.py：左侧 Fluent 导航栏 + 右侧内容区切换
-// 当前仅 UI 骨架，未连后端；业务页用占位页展示计划功能
+// 左侧 Fluent 导航栏 + 右侧内容区切换
+// 各业务页已接入后端命令；未实现的导航项由 PlaceholderPage 兜底
 
 import { useState } from "react";
 import Sidebar from "./components/Sidebar";
@@ -21,7 +21,7 @@ import "./styles/fluent.css";
 
 function App() {
   const [active, setActive] = useState(DEFAULT_PAGE);
-  // 项目经费页所选项目：提升到 App 层，标签切换后返回保持（对齐 Python 页面常驻）
+  // 项目经费页所选项目：提升到 App 层，标签切换后返回保持（页面状态常驻）
   const [fundProjectId, setFundProjectId] = useState<number | null>(null);
   // 项目进度页所选项目（主页卡片跳转预选）
   const [progressProjectId, setProgressProjectId] = useState<number | null>(null);

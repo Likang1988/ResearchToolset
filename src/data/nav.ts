@@ -1,17 +1,16 @@
-// 导航配置：对应 Python app/views/main_window.py 的 addSubInterface 顺序
-// 10 项 = 9 主项 + 帮助置底；阶段标注与功能要点来自 docs/feature-checklist.md
+// 导航配置：10 项 = 9 主项（上）+ 帮助（置底）
 
 export type NavPosition = "top" | "bottom";
 
 export interface NavItem {
   /** 路由 key */
   key: string;
-  /** 中文标签（与 Python 导航项一致） */
+  /** 中文标签 */
   label: string;
   /** 图标：以 /icons/ 开头为静态 SVG 资源；home/tools/help 为内置图标标识 */
   icon: string;
   position: NavPosition;
-  /** 该页计划承载的功能要点（feature-checklist 摘要） */
+  /** 该页对应的功能要点摘要 */
   summary: string;
 }
 
@@ -42,7 +41,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: "项目进度",
     icon: "/icons/tab_progress.svg",
     position: "top",
-    summary: "jQueryGantt 复用，QWebChannel→Tauri IPC 桥；任务增删改/拖拽/里程碑/依赖/导出 XLSX/JSON/CSV",
+    summary: "jQueryGantt 复用，Tauri IPC 桥；任务增删改/拖拽/里程碑/依赖/导出 XLSX/JSON/CSV",
   },
   {
     key: "project-document",

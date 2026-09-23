@@ -1,8 +1,7 @@
-//! 数据库层：连接、建表（create_all 等价物）、迁移（migrate_db 等价物）
+//! 数据库层：连接、建表（create_all）、迁移（migrate_db）
 //!
-//! 语义对齐 Python 版 `app/models/database.py`：
-//! - `init_db`：连接 + 无条件补建缺失表（`Base.metadata.create_all` 等价物）
-//! - `migrate_db`：列级迁移，**复刻既有行为（含缺陷）**，见 feature-checklist.md §11
+//! - `init_db`：打开连接 + 无条件补建缺失表
+//! - `migrate_db`：列级迁移，行为要点见 `migrate` 模块头部说明
 
 pub mod migrate;
 pub mod schema;
@@ -14,9 +13,8 @@ use crate::DbError;
 
 /// 打开数据库连接。
 ///
-/// 与 SQLAlchemy pysqlite 行为对齐：**关闭外键强制**
-/// （实测 SQLAlchemy 连接 `PRAGMA foreign_keys = 0`，Python 版依赖该默认值，
-/// 如 expenses 迁移重建表时 DROP 父表不报错）。
+/// **关闭外键强制**：本项目依赖外键不生效的语义，
+/// 如 expenses 迁移重建表时 DROP 父表不报错。
 /// 注意 rusqlite 默认开启外键，必须显式关闭。
 ///
 /// 额外设置：
@@ -33,7 +31,7 @@ pub fn open(db_path: &Path) -> Result<Connection, DbError> {
     Ok(conn)
 }
 
-/// init_db 等价物：打开连接并补建缺失表（已有表不动）。
+/// 打开连接并补建缺失表（已有表不动）。
 pub fn init_db(conn: &mut Connection) -> Result<(), DbError> {
     schema::create_all(conn)
 }

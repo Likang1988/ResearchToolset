@@ -1,5 +1,4 @@
 // 支出对话框：新增 / 编辑共用
-// 对应 Python app/components/expense_dialog.py::ExpenseDialog
 // 本期不实现文件选择，voucher_path 为文本输入
 
 import { useEffect, useState } from "react";
@@ -104,7 +103,7 @@ export default function ExpenseFormDialog({
     })();
   }, [isEdit, editingId]);
 
-  // 选择凭证文件（对齐 Python ExpenseDialog.select_voucher：仅存所选文件路径）
+  // 选择凭证文件（仅存所选文件路径）
   const selectVoucher = async () => {
     try {
       const file = await open({

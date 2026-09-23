@@ -1,5 +1,4 @@
 // 支出管理页：项目经费页子页（双击年度预算行进入）
-// 对应 Python app/views/projecting_interface/project_expense.py
 // 顶部工具栏（增删改+导出 Excel）+ 过滤器 + 支出列表 + 底部统计表
 
 import { useEffect, useMemo, useState } from "react";
@@ -168,7 +167,7 @@ export default function ExpenseManagementPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [budgetId, projectId]);
 
-  // 本地过滤 + 表头排序（与 Python apply_filters 一致：内存过滤，不重查 DB）
+  // 本地过滤 + 表头排序：内存过滤，不重查 DB
   const filteredExpenses = useMemo(() => {
     const min = filterMinAmount ? parseFloat(filterMinAmount) : null;
     const max = filterMaxAmount ? parseFloat(filterMaxAmount) : null;
@@ -322,7 +321,7 @@ export default function ExpenseManagementPage({
     }
   };
 
-  // 导出当前筛选结果的凭证附件（对齐 Python export_expense_vouchers）
+  // 导出当前筛选结果的凭证附件
   const handleExportVouchers = async () => {
     const withVoucher = filteredExpenses.filter((e) => e.voucher_path);
     if (withVoucher.length === 0) {
@@ -366,7 +365,7 @@ export default function ExpenseManagementPage({
     }
   };
 
-  // 行内凭证附件操作（对齐 Python attachment_utils 的菜单动作）
+  // 行内凭证附件操作
   const handleVoucherAction = async (e: Expense, action: string) => {
     setVoucherMenuFor(null);
     const path = e.voucher_path;
@@ -406,7 +405,7 @@ export default function ExpenseManagementPage({
       return;
     }
 
-    // 下载：另存为副本（对应 Python download_attachment 的 shutil.copy2）
+    // 下载：另存为副本
     if (action === "download") {
       if (!path) return alert("附件不存在");
       const dest = await save({
@@ -713,7 +712,7 @@ export default function ExpenseManagementPage({
                   <td>{e.date ?? ""}</td>
                   <td>{e.remarks ?? ""}</td>
                   <td className="voucher-cell">
-                    {/* 行内附件按钮（对齐 Python create_attachment_button：有→attach 图标，无→add 图标） */}
+                    {/* 行内附件按钮：有附件→attach 图标，无附件→add 图标 */}
                     <button
                       className={`voucher-btn${e.voucher_path ? " has" : ""}${
                         e.voucher_path && missingVouchers.has(e.voucher_path) ? " missing" : ""
@@ -754,7 +753,7 @@ export default function ExpenseManagementPage({
                         </svg>
                       )}
                     </button>
-                    {/* 弹出菜单（对齐 Python create_attachment_menu） */}
+                    {/* 弹出菜单 */}
                     {voucherMenuFor === e.id && (
                       <>
                         <div

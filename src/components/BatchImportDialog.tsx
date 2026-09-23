@@ -1,4 +1,4 @@
-// 批量导入支出对话框：对应 Python app/components/batch_import_dialog.py::BatchImportDialog
+// 批量导入支出对话框
 // 流程：下载模板 → 选择文件 → 解析预览 → 确认导入（batch_add_expenses）
 
 import { useState } from "react";

@@ -60,7 +60,7 @@ export default function ProjectListPage() {
   // 选中项目 ID (用于编辑按钮)
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
 
-  // 右键菜单：复制单元格内容（对齐 Python copy_cell_content）
+  // 右键菜单：复制单元格内容
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -96,7 +96,7 @@ export default function ProjectListPage() {
     return () => document.removeEventListener("click", close);
   }, []);
 
-  // 复制单元格内容到剪贴板（对齐 Python copy_cell_content：复制被右键单元格文本）
+  // 复制单元格内容到剪贴板（被右键单元格的文本）
   const copyCellContent = async (text: string) => {
     setContextMenu(null);
     try {
@@ -112,7 +112,7 @@ export default function ProjectListPage() {
     }
   };
 
-  // 导出项目数据（对齐 Python export_project_data：选项目 → 存 JSON → 写文件）
+  // 导出项目数据：选项目 → 存 JSON → 写文件
   const handleExport = async () => {
     if (!selectedProjectId) {
       alert("请先选择要导出的项目");
@@ -140,8 +140,7 @@ export default function ProjectListPage() {
     }
   };
 
-  // 导入项目数据（对齐 Python import_project_data：
-  // 先 overwrite=false，财务编号重复则弹覆盖确认后以 overwrite=true 重试）
+  // 导入项目数据：先 overwrite=false，财务编号重复则弹覆盖确认后以 overwrite=true 重试
   const runImport = async (path: string, overwrite: boolean) => {
     try {
       await invoke("import_project_data", { path, overwrite });
@@ -173,7 +172,7 @@ export default function ProjectListPage() {
     }
   };
 
-  // 确认覆盖：删除原项目后重新导入（对齐 Python MessageBox「覆盖」分支）
+  // 确认覆盖：删除原项目后重新导入
   const confirmImportOverwrite = async () => {
     if (!importOverwriteFile) return;
     const path = importOverwriteFile;
@@ -449,7 +448,7 @@ export default function ProjectListPage() {
         />
       )}
 
-      {/* 覆盖确认对话框：财务编号重复的导入（对齐 Python MessageBox「覆盖」） */}
+      {/* 覆盖确认对话框：财务编号重复的导入 */}
       {importOverwriteFile && (
         <div className="dialog-overlay">
           <div className="dialog-container" style={{ width: 420 }}>
@@ -530,7 +529,7 @@ export default function ProjectListPage() {
         </div>
       )}
 
-      {/* 右键菜单：复制单元格内容（对齐 Python show_context_menu / copy_cell_content） */}
+      {/* 右键菜单：复制单元格内容 */}
       {contextMenu && (
         <div
           className="context-menu"

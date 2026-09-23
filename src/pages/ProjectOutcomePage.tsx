@@ -1,5 +1,4 @@
-// 项目成果页：对应 Python app/views/projecting_interface/project_outcome.py
-// 9 列表格（成果名称/类型/状态/作者/完成人/投稿/申请日期/发表/授权日期/期刊/授权单位/描述/成果附件）
+// 项目成果页：9 列表格（成果名称/类型/状态/作者/完成人/投稿/申请日期/发表/授权日期/期刊/授权单位/描述/成果附件）
 // + 关键词/类型/状态/发表-授权日期范围筛选
 // + 新增/编辑/删除（OutcomeFormDialog）+ 附件 5 个操作（查看/路径/下载/替换/删除/上传）
 // + Excel 导出（export_outcomes_excel）+ 附件打包导出（成果附件_{financial_code}）
@@ -51,13 +50,13 @@ const dateStr = (d: Date) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 
-// 默认日期范围（对齐 Python 无项目时的默认：去年 1 月 1 日 ～ 今天）
+// 默认日期范围：去年 1 月 1 日 ～ 今天（本地时区）
 const defaultStartDate = () =>
   dateStr(new Date(new Date().getFullYear() - 1, 0, 1));
 const defaultEndDate = () => dateStr(new Date());
 
 export default function ProjectOutcomePage() {
-  // 项目下拉（"" = 全部成果，对齐 Python "全部成果" 选项）
+  // 项目下拉（"" = 全部成果）
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectChoice, setProjectChoice] = useState<string>("");
 
@@ -142,8 +141,8 @@ export default function ProjectOutcomePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectChoice]);
 
-  // 本地筛选（对齐 Python apply_filters：keyword 匹配 name/authors/journal/description，
-  // 类型/状态相等，发表/授权日期落在 [start_date, end_date] 闭区间）
+  // 本地筛选：keyword 匹配 name/authors/journal/description，
+  // 类型/状态相等，发表/授权日期落在 [start_date, end_date] 闭区间
   const filteredOutcomes = useMemo(() => {
     const kw = keyword.trim().toLowerCase();
     return allOutcomes.filter((o) => {
@@ -249,7 +248,7 @@ export default function ProjectOutcomePage() {
     }
   };
 
-  // 导出附件（对齐 Python export_outcome_attachments：拷贝到 成果附件_{financial_code} 目录）
+  // 导出附件：拷贝到 成果附件_{financial_code} 目录
   const handleExportAttachments = async () => {
     if (!selectedProject) {
       alert("请先选择一个项目（「全部成果」模式不支持导出附件）");
@@ -277,7 +276,7 @@ export default function ProjectOutcomePage() {
           continue;
         }
         const filename = p.split(/[\\/]/).pop() ?? "attachment";
-        // 避免文件名冲突（对齐 Python：base_1.ext 递增）
+        // 避免文件名冲突（base_1.ext 递增）
         let dest = `${projectDir}/${filename}`;
         let counter = 1;
         while (true) {
@@ -305,7 +304,7 @@ export default function ProjectOutcomePage() {
     }
   };
 
-  // 行内附件操作（对齐 Python attachment_utils 菜单动作：查看/下载/路径/替换/删除/上传）
+  // 行内附件操作：查看/下载/路径/替换/删除/上传
   const handleAttachmentAction = async (outcome: ProjectOutcome, action: string) => {
     setAttachmentMenuFor(null);
     const path = outcome.attachment_path;
@@ -373,7 +372,7 @@ export default function ProjectOutcomePage() {
         title: "选择成果文件",
       });
       if (typeof file !== "string") return; // 用户取消
-      // 用该成果所属项目的 financial_code + 成果类型中文 label 生成路径（对齐 Python generate_attachment_path）
+      // 用该成果所属项目的 financial_code + 成果类型中文 label 生成附件存储路径
       const owner = projects.find((p) => p.id === outcome.project_id) ?? selectedProject;
       const context: OutcomeAttachmentContext = {
         financial_code: owner?.financial_code ?? null,
@@ -505,7 +504,7 @@ export default function ProjectOutcomePage() {
         </div>
       )}
 
-      {/* 筛选 + 导出（对齐 Python 搜索栏布局） */}
+      {/* 筛选 + 导出 */}
       <div className="expense-filter">
         <label>关键词:</label>
         <input

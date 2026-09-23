@@ -1,4 +1,4 @@
-// 小工具首页：对应 Python app/views/tools_interface.py
+// 小工具首页
 // 两张工具卡片（间接经费计算器 / 树形列表工具）+ 打开按钮 → 切换子视图
 // 子工具为独立视图（IndirectCostCalculatorView / TreeListView），可从顶部返回首页
 

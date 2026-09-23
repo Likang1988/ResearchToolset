@@ -1,5 +1,5 @@
-// Fluent 风格左侧导航栏（对应 Python MainWindow(FluentWindow) 的导航项）
-// 9 主项 + 帮助置底；图标：7 个复用自 Python 的 tab_*.svg，3 个 FluentIcon 用内置 SVG 替代
+// Fluent 风格左侧导航栏
+// 9 主项 + 帮助置底；图标：7 个 /icons/tab_*.svg 静态资源，3 个内置 SVG 图标
 // 支持折叠/展开（默认折叠）：折叠时仅显示图标，hover 显示名称提示
 
 import { useState } from "react";
@@ -15,7 +15,7 @@ interface SidebarProps {
 // Windows 标题栏左上角已显示程序图标，故不渲染
 const SHOW_SIDEBAR_LOGO = !navigator.userAgent.includes("Windows");
 
-// 内置图标（替代 QFluentWidgets 的 FluentIcon.HOME / DEVELOPER_TOOLS / HELP）
+// 内置 SVG 图标（主页 / 小工具 / 帮助）
 function InlineIcon({ name }: { name: string }) {
   switch (name) {
     case "home":

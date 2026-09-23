@@ -1,7 +1,4 @@
 //! 项目服务：项目列表查询、新增、编辑、删除、JSON 导入导出
-//!
-//! 对应 Python `app/views/projecting_interface/project_list.py`
-//! 中的查询、添加、修改、删除、导入导出逻辑。
 
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
@@ -35,8 +32,8 @@ pub fn list_projects(conn: &Connection) -> Result<Vec<Project>, DbError> {
     Ok(projects)
 }
 
-/// 新增项目：同时创建总预算 (year IS NULL) 和 10 个预算类别明细
-/// （对应 Python `add_project_to_db` 的初始化语义），并写入"新增"操作日志。
+/// 新增项目：同时创建总预算 (year IS NULL) 和 10 个预算类别明细，
+/// 并写入"新增"操作日志。
 pub fn add_project(conn: &Connection, data: ProjectNew) -> Result<i64, DbError> {
     crate::db::begin_tx(conn)?;
     let result = add_project_inner(conn, data);
@@ -85,7 +82,7 @@ fn add_project_inner(conn: &Connection, data: ProjectNew) -> Result<i64, DbError
         )?;
     }
 
-    // 记录添加项目的活动（对应 Python `session.add(Actionlog(...))`）
+    // 记录添加项目的活动
     crate::logging::log_action(
         conn,
         Some(project_id),
@@ -237,7 +234,7 @@ fn update_project_inner(conn: &Connection, id: i64, data: ProjectNew) -> Result<
     Ok(())
 }
 
-/// 删除项目：级联删除所有关联表记录（对应 Python `delete_selected_project` 的数据库部分）
+/// 删除项目：级联删除所有关联表记录
 ///
 /// 删除顺序（SQLite 外键关闭，需显式级联）：
 /// 1. budget_items（通过 budget_id 子查询关联 budgets）
@@ -249,7 +246,7 @@ fn update_project_inner(conn: &Connection, id: i64, data: ProjectNew) -> Result<
 /// 7. budgets（project_id）
 /// 8. projects（id）
 ///
-/// 不删除 actionlogs：保留操作历史（与 Python 行为一致）。
+/// 不删除 actionlogs：保留操作历史。
 /// 附件文件清理见 `attachments::clean_project_attachments`，由调用方在事务提交后执行。
 pub fn delete_project(conn: &Connection, id: i64) -> Result<(), DbError> {
     crate::db::begin_tx(conn)?;
@@ -267,7 +264,7 @@ pub fn delete_project(conn: &Connection, id: i64) -> Result<(), DbError> {
 }
 
 fn delete_project_inner(conn: &Connection, id: i64) -> Result<(), DbError> {
-    // 删除前取项目信息，写入"删除"操作日志（对齐 Python：log 在删库前写入）
+    // 删除前取项目信息，写入"删除"操作日志
     let (name, _financial_code, project_code): (String, Option<String>, Option<String>) = conn
         .query_row(
             "SELECT name, financial_code, project_code FROM projects WHERE id = ?1",
@@ -311,7 +308,7 @@ fn delete_project_inner(conn: &Connection, id: i64) -> Result<(), DbError> {
     conn.execute("DELETE FROM gantt_tasks WHERE project_id = ?1", params![id])?;
     // 5. project_documents
     conn.execute("DELETE FROM project_documents WHERE project_id = ?1", params![id])?;
-    // 6. project_outcome（单数表名，复刻 Python 缺陷：原表即如此命名）
+    // 6. project_outcome（表名为单数）
     conn.execute("DELETE FROM project_outcome WHERE project_id = ?1", params![id])?;
     // 7. budgets
     conn.execute("DELETE FROM budgets WHERE project_id = ?1", params![id])?;
@@ -320,8 +317,8 @@ fn delete_project_inner(conn: &Connection, id: i64) -> Result<(), DbError> {
     Ok(())
 }
 
-/// 操作日志 old_data/new_data 的项目字段串（对齐 Python 的 `f"名称: ..., 财务编号: ..."`）。
-/// 金额缺失按 Python `float(x) if x else 0.0` 语义输出 `0.0`。
+/// 操作日志 old_data/new_data 的项目字段串。
+/// 金额缺失时输出 `0.0`。
 fn project_fields_str(
     name: &str,
     financial_code: &Option<String>,
@@ -346,14 +343,14 @@ fn project_fields_str(
 }
 
 // ---------------------------------------------------------------------------
-// 项目数据 JSON 导出 / 导入（对齐 Python `export_project_data` / `import_project_data`）
+// 项目数据 JSON 导出 / 导入
 // ---------------------------------------------------------------------------
 
-/// 导出项目数据为 JSON 字符串（对齐 Python 结构：
-/// `{ project, budgets: [{id, year, total_amount, spent_amount, items}], expenses: [...] }`）。
-/// 注意：Python 导出未包含 director 字段，此处保持完全一致以保证互操作。
+/// 导出项目数据为 JSON 字符串，结构：
+/// `{ project, budgets: [{id, year, total_amount, spent_amount, items}], expenses: [...] }`。
+/// 注意：导出有意省略 director 字段，与既有导出格式保持一致以保证互操作。
 pub fn export_project_data(conn: &Connection, project_id: i64) -> Result<String, DbError> {
-    // 项目基本信息（Python 导出字段子集）
+    // 项目基本信息（导出字段子集）
     let project: serde_json::Value = conn
         .query_row(
             "SELECT id, name, financial_code, project_code, project_type, start_date, end_date, \
@@ -469,21 +466,21 @@ pub fn export_project_data(conn: &Connection, project_id: i64) -> Result<String,
         "budgets": budgets_json,
         "expenses": expenses_json,
     });
-    // ensure_ascii=False + indent=2，对齐 Python json.dump
+    // 缩进美化输出，非 ASCII 字符原样保留
     serde_json::to_string_pretty(&root).map_err(DbError::Json)
 }
 
-/// 从 JSON 文件导入项目数据（对齐 Python `import_project_data`）。
+/// 从 JSON 文件导入项目数据。
 ///
 /// - `overwrite=false` 且检测到相同财务编号项目时返回
 ///   `Err(DbError::Other("DUPLICATE_FINANCIAL_CODE"))`，由前端弹覆盖确认后重试。
 /// - `overwrite=true` 时先删除旧项目及其关联数据，再导入。
-/// - 支出按日期年份重新绑定到新项目的对应年度预算（对齐 Python：预算 id 重新分配）。
+/// - 支出按日期年份重新绑定到新项目的对应年度预算（预算 id 重新分配）。
 pub fn import_project_data(conn: &Connection, path: &str, overwrite: bool) -> Result<i64, DbError> {
     let text = std::fs::read_to_string(path).map_err(DbError::Io)?;
     let data: serde_json::Value = serde_json::from_str(&text).map_err(DbError::Json)?;
 
-    // 验证数据格式（对齐 Python `if not all(key in import_data ...)`）
+    // 验证数据格式
     let project_obj = data
         .get("project")
         .ok_or_else(|| DbError::Other("数据格式不正确".to_string()))?;
@@ -535,11 +532,11 @@ fn import_project_data_inner(
         if !overwrite {
             return Err(DbError::Other("DUPLICATE_FINANCIAL_CODE".to_string()));
         }
-        // 覆盖：删除原有项目数据（含级联预算/支出，对齐 Python session.delete）
+        // 覆盖：删除原有项目数据（含级联预算/支出）
         delete_project_inner(conn, existing_id)?;
     }
 
-    // 创建新项目（Python 导入不含 director）
+    // 创建新项目（导入数据不含 director，写 NULL）
     conn.execute(
         "INSERT INTO projects (name, financial_code, project_code, project_type, \
          start_date, end_date, total_budget, director) \
@@ -588,8 +585,7 @@ fn import_project_data_inner(
                 }
             };
 
-            // 删除现有的预算明细（对齐 Python：仅在更新既有预算时清空重建；
-            // 此处对已有记录统一重建，语义一致）
+            // 清空既有预算明细，按导入数据重建
             conn.execute("DELETE FROM budget_items WHERE budget_id = ?1", params![budget_id])?;
             if let Some(items) = budget_data.get("items").and_then(|v| v.as_array()) {
                 for item_data in items {
@@ -618,7 +614,7 @@ fn import_project_data_inner(
             let remarks = json_opt_str(expense_data, "remarks");
             let voucher_path = json_opt_str(expense_data, "voucher_path");
 
-            // 年份取自日期字符串前缀（对齐 Python datetime.fromisoformat(date).year）
+            // 年份取自日期字符串前缀
             let expense_year: Option<i64> = date
                 .split('-')
                 .next()
@@ -634,7 +630,7 @@ fn import_project_data_inner(
                 None => None,
             };
 
-            // 对齐 Python：找到了对应年度预算才创建支出
+            // 找到对应年度预算才创建支出
             if let Some(bid) = budget_id {
                 conn.execute(
                     "INSERT INTO expenses (project_id, budget_id, category, content, specification, \

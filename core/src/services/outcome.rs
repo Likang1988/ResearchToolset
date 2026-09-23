@@ -1,12 +1,12 @@
-//! 项目成果服务：对应 Python `app/views/projecting_interface/project_outcome.py`
+//! 项目成果服务
 //!
 //! 业务核心：
-//! - `type` / `status` 在库中以 SQLAlchemy Enum 的枚举名存储（如 `PAPER` / `DRAFT`），
+//! - `type` / `status` 在库中以英文枚举名（KEY）存储（如 `PAPER` / `DRAFT`），
 //!   对外统一为中文 label（如「论文」/「草稿」），读写时双向转换。
-//! - 新增/编辑/删除均写入 actionlogs（type="成果"），对齐 Python 行为：
+//! - 新增/编辑/删除均写入 actionlogs（type="成果"）：
 //!   新增/编辑携带 `project_outcome_id`，删除时不填（先删成果再记日志）。
 //! - 附件文件操作（拷贝/删除）由 attachments 模块完成，本服务只负责路径落库；
-//!   成果附件使用 `base_folder: "outcomes"`（对齐 Python `handle_attachment` 的 base_folder 参数）。
+//!   成果附件使用 `base_folder: "outcomes"`。
 //! - 删除成果后由调用方（command 层）清理磁盘附件。
 
 use rusqlite::{params, Connection, OptionalExtension};
@@ -20,7 +20,7 @@ pub const OUTCOME_TYPES: [&str; 6] = ["论文", "专利", "软著", "标准", "�
 /// 全部成果状态的中文 label（与 `OutcomeStatus` 枚举顺序一致，前端下拉框用）。
 pub const OUTCOME_STATUSES: [&str; 5] = ["草稿", "已提交", "已接收", "已发表/授权", "已拒绝"];
 
-/// 中文 label → 存储 KEY（SQLAlchemy Enum 名称）。未识别返回原值（兜底）。
+/// 中文 label → 存储 KEY（英文枚举名）。未识别返回原值（兜底）。
 fn to_storage_key(label: &str) -> String {
     match label {
         "论文" => "PAPER",
@@ -77,8 +77,8 @@ fn status_to_label(key: &str) -> String {
 /// 新增/编辑成果输入。
 ///
 /// `type` / `status` 从前端传入中文 label，service 内转存储 KEY 入库。
-/// `attachment_path` 仅新增时由调用方填写（编辑不改附件路径，与 Python 一致；
-/// Python OutcomeDialog 不含附件字段，附件走表格按钮单独管理）。
+/// `attachment_path` 仅新增时由调用方填写（编辑不改附件路径；
+/// 附件不进编辑表单，走表格按钮单独管理）。
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct OutcomeInput {
     pub project_id: i64,
@@ -117,7 +117,7 @@ fn row_to_outcome(row: &rusqlite::Row) -> rusqlite::Result<ProjectOutcome> {
     })
 }
 
-/// 列出某项目下全部成果（按 publish_date DESC 排序，与 Python `load_outcome` 一致）。
+/// 列出某项目下全部成果（按 publish_date DESC 排序）。
 pub fn list_outcomes_by_project(
     conn: &Connection,
     project_id: i64,
@@ -159,7 +159,7 @@ pub fn get_outcome_by_id(conn: &Connection, id: i64) -> Result<Option<ProjectOut
     Ok(row)
 }
 
-/// 写入操作日志（对齐 Python 内联 Actionlog 写法；operator 暂记「当前用户」）。
+/// 写入操作日志（operator 暂记「当前用户」）。
 fn log_outcome_action(
     conn: &Connection,
     project_id: i64,
@@ -170,7 +170,7 @@ fn log_outcome_action(
     status_label: &str,
 ) -> Result<(), DbError> {
     let description = format!("{action}成果: {name}");
-    // 对齐 Python：related_info = "类型: X, 状态: Y"（状态可能为空 → “无”）
+    // related_info = "类型: X, 状态: Y"（状态可能为空 → “无”）
     let related_info = format!("类型: {type_label}, 状态: {}", if status_label.is_empty() { "无" } else { status_label });
     conn.execute(
         "INSERT INTO actionlogs \
@@ -232,7 +232,7 @@ fn add_outcome_inner(conn: &Connection, input: OutcomeInput) -> Result<i64, DbEr
 }
 
 /// 更新成果（事务）：改 name/type/status/authors/日期/journal/description
-/// （不改 attachment_path），写「编辑」日志。对齐 Python `edit_outcome`。
+/// （不改 attachment_path），写「编辑」日志。
 pub fn update_outcome(conn: &Connection, id: i64, input: OutcomeInput) -> Result<(), DbError> {
     crate::db::begin_tx(conn)?;
     let result = update_outcome_inner(conn, id, input);
@@ -283,7 +283,7 @@ fn update_outcome_inner(conn: &Connection, id: i64, input: OutcomeInput) -> Resu
 }
 
 /// 批量删除成果（事务）。返回被删除成果的磁盘附件路径列表，
-/// 由调用方在事务提交后执行文件清理（对齐 Python：文件删除失败不致命）。
+/// 由调用方在事务提交后执行文件清理（文件删除失败不致命，仅记录）。
 pub fn delete_outcomes(conn: &Connection, ids: &[i64]) -> Result<Vec<Option<String>>, DbError> {
     if ids.is_empty() {
         return Ok(Vec::new());
@@ -305,7 +305,7 @@ pub fn delete_outcomes(conn: &Connection, ids: &[i64]) -> Result<Vec<Option<Stri
 fn delete_outcomes_inner(conn: &Connection, ids: &[i64]) -> Result<Vec<Option<String>>, DbError> {
     let mut paths = Vec::new();
     for id in ids {
-        // 取记录用于日志与文件清理；不存在则跳过（对齐 Python query.first() 判空）
+        // 取记录用于日志与文件清理；不存在则跳过
         let row: Option<(i64, String, String, Option<String>, Option<String>)> = conn
             .query_row(
                 "SELECT project_id, name, type, status, attachment_path \
@@ -326,7 +326,7 @@ fn delete_outcomes_inner(conn: &Connection, ids: &[i64]) -> Result<Vec<Option<St
             continue;
         };
         conn.execute("DELETE FROM project_outcome WHERE id = ?1", [id])?;
-        // 删除日志不填 project_outcome_id（对齐 Python：先删成果再记日志）
+        // 删除日志不填 project_outcome_id（先删成果再记日志）
         log_outcome_action(
             conn,
             project_id,
