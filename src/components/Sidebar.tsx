@@ -1,10 +1,10 @@
 // Fluent 风格左侧导航栏
-// 9 主项 + 设置置底；图标全部内联 SVG（currentColor 跟随主题），见 tabIcons.tsx / InlineIcon
+// 9 主项 + 设置置底；图标全部内联 SVG（currentColor 跟随主题），见 icons.tsx / InlineIcon
 // 支持折叠/展开（默认折叠）：折叠时仅显示图标，hover 显示名称提示
 
 import { useState } from "react";
 import { NAV_ITEMS } from "../data/nav";
-import { TAB_ICONS } from "./tabIcons";
+import { SVG_ICONS } from "./icons";
 
 interface SidebarProps {
   active: string;
@@ -52,7 +52,7 @@ function NavIcon({ icon }: { icon: string }) {
   // 图标全部内联（tab_* 图形 + home/tools/settings），currentColor 跟随主题
   return (
     <span className="nav-icon">
-      {TAB_ICONS[icon] ?? <InlineIcon name={icon} />}
+      {SVG_ICONS[icon] ?? <InlineIcon name={icon} />}
     </span>
   );
 }

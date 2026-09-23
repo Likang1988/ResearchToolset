@@ -5,18 +5,18 @@
 import { useState } from "react";
 import IndirectCostCalculatorView from "./IndirectCostCalculatorView";
 import TreeListView from "./TreeListView";
+import { SVG_ICONS } from "../components/icons";
 
 type ToolsView = "home" | "calculator" | "treelist";
 
 interface ToolCard {
   key: ToolsView;
-  icon: string;
   name: string;
 }
 
 const TOOLS: ToolCard[] = [
-  { key: "calculator", icon: "/icons/calculator.svg", name: "间接经费计算器" },
-  { key: "treelist", icon: "/icons/treelist.svg", name: "树形列表工具" },
+  { key: "calculator", name: "间接经费计算器" },
+  { key: "treelist", name: "树形列表工具" },
 ];
 
 export default function ToolsPage() {
@@ -35,7 +35,7 @@ export default function ToolsPage() {
         {TOOLS.map((t) => (
           <div key={t.key} className="tools-card">
             <div className="tools-card-body">
-              <img className="tools-card-icon" src={t.icon} alt={t.name} />
+              <span className="tools-card-icon">{SVG_ICONS[t.key]}</span>
               <span className="tools-card-title">{t.name}</span>
             </div>
             <button className="primary-btn" onClick={() => setView(t.key)}>

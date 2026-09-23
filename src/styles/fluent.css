@@ -1410,7 +1410,8 @@ input.disabled-input {
   background-color: var(--hover);
   opacity: 1;
 }
-.fund-ops-btn img {
+.fund-ops-btn img,
+.fund-ops-btn svg {
   width: 16px;
   height: 16px;
   display: block;
@@ -1756,6 +1757,12 @@ input.disabled-input {
 .tools-card-icon {
   width: 32px;
   height: 32px;
+  color: var(--text-secondary);
+}
+.tools-card-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 .tools-card-title {
   font-size: 14px;

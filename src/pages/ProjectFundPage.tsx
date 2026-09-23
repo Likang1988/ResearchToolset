@@ -8,6 +8,7 @@ import BudgetFormDialog, {
   type BudgetFormPayload,
 } from "../components/BudgetFormDialog";
 import CategoryExpensesDialog from "../components/CategoryExpensesDialog";
+import { SVG_ICONS } from "../components/icons";
 import ExpenseManagementPage from "./ExpenseManagementPage";
 import { emitBudgetOrExpenseUpdated } from "../data/events";
 
@@ -867,7 +868,7 @@ function BudgetRows({
                 onManageExpenses();
               }}
             >
-              <img src="/icons/expense.svg" alt="支出管理" />
+              {SVG_ICONS.expense}
             </button>
           )}
         </td>
