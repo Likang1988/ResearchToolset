@@ -22,6 +22,9 @@
   --text-muted: #888888;
   /* 表面（卡片/对话框/输入控件等白底）；深色主题见文末 */
   --surface: #ffffff;
+  --row-selected-bg: #cfe3f5; /* 行选中高亮（比 --selected 更实） */
+  --total-row-bg: #e8eef5;   /* 预算树总预算行底 */
+  --track-bg: #e0e0e0;        /* 进度条底槽 */
   --surface-translucent: rgba(255, 255, 255, 0.85);
   --radius: 8px;
   --sidebar-width: 150px;
@@ -581,7 +584,7 @@ body {
 }
 
 .data-table thead th.sortable:hover {
-  color: var(--primary);
+  color: var(--accent);
 }
 
 .data-table tbody td {
@@ -1007,7 +1010,7 @@ button.danger-btn:hover:not(:disabled) {
 
 /* 总预算行更突出 */
 .fund-tree tr.tree-total td {
-  background-color: #e8eef5;
+  background-color: var(--total-row-bg);
 }
 
 /* 科目子项行：缩进 + 普通字重 */
@@ -1052,7 +1055,7 @@ button.danger-btn:hover:not(:disabled) {
 .progress-track {
   flex: 1;
   height: 10px;
-  background-color: #e0e0e0;
+  background-color: var(--track-bg);
   border-radius: 5px;
   overflow: hidden;
   min-width: 90px;
@@ -1075,7 +1078,7 @@ button.danger-btn:hover:not(:disabled) {
 
 /* 选中行高亮 */
 .fund-tree tr.row-selected td {
-  background-color: #cfe3f5 !important;
+  background-color: var(--row-selected-bg) !important;
   box-shadow: inset 3px 0 0 var(--accent);
 }
 
@@ -1270,7 +1273,7 @@ button.danger-btn:hover:not(:disabled) {
 }
 .budget-current-total strong {
   font-size: 16px;
-  color: var(--text-primary);
+  color: var(--text);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1315,7 +1318,7 @@ button.danger-btn:hover:not(:disabled) {
 
 .budget-table-cat {
   font-size: 13px;
-  color: var(--text-primary);
+  color: var(--text);
 }
 
 .budget-table-input {
@@ -1335,7 +1338,7 @@ button.danger-btn:hover:not(:disabled) {
   border-top: 1px solid var(--border);
   padding-top: 6px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--text);
 }
 .budget-table-amount {
   font-size: 14px;
@@ -1404,7 +1407,7 @@ input.disabled-input {
   opacity: 0.75;
 }
 .fund-ops-btn:hover {
-  background-color: var(--bg-hover);
+  background-color: var(--hover);
   opacity: 1;
 }
 .fund-ops-btn img {
@@ -1442,7 +1445,7 @@ input.disabled-input {
   cursor: pointer;
 }
 .expense-toolbar .back-btn:hover {
-  background-color: var(--bg-hover);
+  background-color: var(--hover);
 }
 
 .expense-filter {
@@ -1524,7 +1527,7 @@ input.disabled-input {
   font-weight: 600;
 }
 .expense-stats tbody tr:nth-child(odd) {
-  background-color: var(--bg-hover);
+  background-color: var(--hover);
 }
 
 /* ===== 预算编制页（三级可编辑树） ===== */
@@ -1546,10 +1549,10 @@ input.disabled-input {
   border-bottom: none;
 }
 .bt-row:hover {
-  background-color: var(--bg-hover);
+  background-color: var(--hover);
 }
 .bt-row.selected {
-  background-color: #cfe3f5 !important;
+  background-color: var(--row-selected-bg) !important;
   box-shadow: inset 3px 0 0 var(--accent);
 }
 
@@ -1700,7 +1703,7 @@ input.disabled-input {
   text-align: right;
 }
 .export-spin:disabled {
-  background-color: var(--bg-hover);
+  background-color: var(--hover);
   color: var(--text-secondary);
 }
 .export-proportions {
@@ -2026,6 +2029,9 @@ html[data-theme="dark"] {
   --text-muted: #8b8f96;
   --surface: #2c2e31;
   --surface-translucent: rgba(44, 46, 49, 0.88);
+  --row-selected-bg: #1d3a55;
+  --total-row-bg: #2f3b47;
+  --track-bg: #3a3d41;
 }
 /* 深色下阴影加深，白底卡片改用 surface 后仍有层次感 */
 html[data-theme="dark"] .dialog-container,
