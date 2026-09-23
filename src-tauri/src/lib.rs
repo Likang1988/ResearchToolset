@@ -367,15 +367,16 @@ fn list_expenses(
         .map_err(|e| format!("查询支出列表失败: {e}"))
 }
 
-/// 按科目列出项目全部支出（跨全部年度，总预算科目明细用；按日期倒序）
+/// 按科目列出项目支出（budget_id 有值时限定该年度预算，否则跨全部年度；按日期倒序）
 #[tauri::command]
 fn list_project_expenses_by_category(
     state: State<'_, DbState>,
     project_id: i64,
     category: String,
+    budget_id: Option<i64>,
 ) -> Result<Vec<expense::ProjectExpenseRow>, String> {
     let conn = state.conn.lock().map_err(|e| format!("数据库锁失败: {e}"))?;
-    expense::list_project_expenses_by_category(&conn, project_id, &category)
+    expense::list_project_expenses_by_category(&conn, project_id, &category, budget_id)
         .map_err(|e| format!("查询科目支出失败: {e}"))
 }
 

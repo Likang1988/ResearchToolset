@@ -93,23 +93,30 @@ pub struct ProjectExpenseRow {
     pub voucher_path: Option<String>,
 }
 
-/// 按项目 + 科目列出支出（跨全部年度），按日期倒序。
+/// 按项目 + 科目列出支出，按日期倒序。
 ///
 /// `category_label` 为中文 label（如「材料费」），内部转 storage_key 匹配库内存储值。
+/// `budget_id` 为 Some 时只返回该预算下的支出（年度预算行入口用），None 则跨全部年度（总预算行入口用）。
 pub fn list_project_expenses_by_category(
     conn: &Connection,
     project_id: i64,
     category_label: &str,
+    budget_id: Option<i64>,
 ) -> Result<Vec<ProjectExpenseRow>, DbError> {
     let key = to_storage_key(category_label);
-    let mut stmt = conn.prepare(
+    let mut sql = String::from(
         "SELECT e.id, b.year, e.category, e.content, e.specification, e.supplier, \
          e.amount, e.date, e.remarks, e.voucher_path \
          FROM expenses e LEFT JOIN budgets b ON e.budget_id = b.id \
-         WHERE e.project_id = ?1 AND e.category = ?2 \
-         ORDER BY e.date DESC, e.id DESC",
-    )?;
-    let rows = stmt.query_map(params![project_id, key], |r| {
+         WHERE e.project_id = ?1 AND e.category = ?2",
+    );
+    if budget_id.is_some() {
+        sql.push_str(" AND e.budget_id = ?3");
+    }
+    sql.push_str(" ORDER BY e.date DESC, e.id DESC");
+
+    let mut stmt = conn.prepare(&sql)?;
+    let map_row = |r: &rusqlite::Row| -> rusqlite::Result<ProjectExpenseRow> {
         let category_key: String = r.get(2)?;
         Ok(ProjectExpenseRow {
             id: r.get(0)?,
@@ -123,10 +130,21 @@ pub fn list_project_expenses_by_category(
             remarks: r.get(8)?,
             voucher_path: r.get(9)?,
         })
-    })?;
+    };
     let mut expenses = Vec::new();
-    for row in rows {
-        expenses.push(row?);
+    match budget_id {
+        Some(bid) => {
+            let rows = stmt.query_map(params![project_id, key, bid], map_row)?;
+            for row in rows {
+                expenses.push(row?);
+            }
+        }
+        None => {
+            let rows = stmt.query_map(params![project_id, key], map_row)?;
+            for row in rows {
+                expenses.push(row?);
+            }
+        }
     }
     Ok(expenses)
 }
@@ -1100,7 +1118,7 @@ mod tests {
         add(budget_ids[1], "差旅费", "会议出差", "2025-04-01");
 
         // 材料费：跨两个年度共 2 条，按日期倒序，year 回填正确
-        let mat = list_project_expenses_by_category(&conn, pid, "材料费").unwrap();
+        let mat = list_project_expenses_by_category(&conn, pid, "材料费", None).unwrap();
         assert_eq!(mat.len(), 2);
         assert_eq!(mat[0].content, "2025试剂");
         assert_eq!(mat[0].year, Some(2025));
@@ -1110,10 +1128,21 @@ mod tests {
         assert!(mat.iter().all(|r| r.category == "材料费"));
 
         // 差旅费只有 1 条；无支出科目返回空
-        let trip = list_project_expenses_by_category(&conn, pid, "差旅费").unwrap();
+        let trip = list_project_expenses_by_category(&conn, pid, "差旅费", None).unwrap();
         assert_eq!(trip.len(), 1);
         assert_eq!(trip[0].year, Some(2025));
-        let none = list_project_expenses_by_category(&conn, pid, "出版文献费").unwrap();
+        let none = list_project_expenses_by_category(&conn, pid, "出版文献费", None).unwrap();
         assert!(none.is_empty());
+
+        // 限定 budget_id：只看 2024 年度预算
+        let mat24 =
+            list_project_expenses_by_category(&conn, pid, "材料费", Some(budget_ids[0].1)).unwrap();
+        assert_eq!(mat24.len(), 1);
+        assert_eq!(mat24[0].content, "2024试剂");
+        assert_eq!(mat24[0].year, Some(2024));
+        // 差旅费只发生在 2025，2024 预算下为空
+        let trip24 =
+            list_project_expenses_by_category(&conn, pid, "差旅费", Some(budget_ids[0].1)).unwrap();
+        assert!(trip24.is_empty());
     }
 }

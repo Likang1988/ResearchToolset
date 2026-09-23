@@ -133,10 +133,12 @@ export default function ProjectFundPage({
   // 支出管理子页：非空时切换到支出管理，覆盖预算树区域
   const [expenseView, setExpenseView] = useState<{ budgetId: number; year: number } | null>(null);
 
-  // 总预算科目行点击 → 弹窗展示该科目跨全部年度的支出明细
+  // 预算科目行点击 → 弹窗展示该科目支出明细（总预算=跨全部年度；年度预算=限定该年度）
   const [categoryDetail, setCategoryDetail] = useState<{
     category: string;
     amount: number;
+    budgetId: number | null;
+    scopeLabel: string | null;
   } | null>(null);
 
   // 当前选中的项目（用于支出管理子页传 props）
@@ -560,7 +562,12 @@ export default function ProjectFundPage({
                     onSelect={setSelectedNodeId}
                     onManageExpenses={null}
                     onShowCategoryExpenses={(category, amount) =>
-                      setCategoryDetail({ category, amount })
+                      setCategoryDetail({
+                        category,
+                        amount,
+                        budgetId: null,
+                        scopeLabel: null,
+                      })
                     }
                   />
                 )}
@@ -578,6 +585,14 @@ export default function ProjectFundPage({
                         ? () =>
                             setExpenseView({ budgetId: b.id, year: b.year as number })
                         : null
+                    }
+                    onShowCategoryExpenses={(category, amount) =>
+                      setCategoryDetail({
+                        category,
+                        amount,
+                        budgetId: b.id,
+                        scopeLabel: b.year !== null ? `${b.year}年度` : null,
+                      })
                     }
                   />
                 ))}
@@ -757,12 +772,14 @@ export default function ProjectFundPage({
         </div>
       )}
 
-      {/* 总预算科目支出明细弹窗 */}
+      {/* 预算科目支出明细弹窗 */}
       {categoryDetail && selectedId !== null && (
         <CategoryExpensesDialog
           projectId={selectedId}
           category={categoryDetail.category}
           budgetAmount={categoryDetail.amount}
+          budgetId={categoryDetail.budgetId}
+          scopeLabel={categoryDetail.scopeLabel}
           onClose={() => setCategoryDetail(null)}
         />
       )}
@@ -864,41 +881,47 @@ function BudgetRows({
               key={item.category}
               className="tree-child"
               style={clickable ? { cursor: "pointer" } : undefined}
-              title={clickable ? "点击查看该科目全部支出" : undefined}
+              title={clickable ? "点击查看该科目支出明细" : undefined}
               onClick={
                 clickable
                   ? () => onShowCategoryExpenses!(item.category, item.amount)
                   : undefined
               }
             >
-              <td className="tree-label child-label">
-                {item.category}
-                {clickable && (
-                  <svg
-                    className="category-detail-icon"
-                    viewBox="0 0 24 24"
-                    width="12"
-                    height="12"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    style={{ marginLeft: 4, verticalAlign: -2, opacity: 0.55 }}
-                  >
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="12" y1="16" x2="12" y2="12" />
-                    <line x1="12" y1="8" x2="12.01" y2="8" />
-                  </svg>
-                )}
-              </td>
+              <td className="tree-label child-label">{item.category}</td>
               <td className="num">{fmt(item.amount)}</td>
               <td className="num">{fmt(item.spent_amount)}</td>
               <td className="num">{fmt(itemBalance)}</td>
               <td>
                 <ProgressBar amount={item.amount} spent={item.spent_amount} />
               </td>
-              <td></td>
+              <td className="fund-ops-cell">
+                {clickable && (
+                  <button
+                    className="fund-ops-btn"
+                    title="查看支出明细"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onShowCategoryExpenses!(item.category, item.amount);
+                    }}
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="16"
+                      height="16"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="16" x2="12" y2="12" />
+                      <line x1="12" y1="8" x2="12.01" y2="8" />
+                    </svg>
+                  </button>
+                )}
+              </td>
             </tr>
           );
         })}

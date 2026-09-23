@@ -29,8 +29,12 @@ interface CategoryExpensesDialogProps {
   projectId: number;
   /** 科目中文 label，如「材料费」 */
   category: string;
-  /** 该科目总预算额（万元），头部摘要展示 */
+  /** 该科目预算额（万元），头部摘要展示 */
   budgetAmount: number;
+  /** 限定预算 id（年度预算行入口）；不传 = 跨全部年度（总预算行入口） */
+  budgetId?: number | null;
+  /** 头部标题里的范围标注，如「2024年度」 */
+  scopeLabel?: string | null;
   onClose: () => void;
 }
 
@@ -38,6 +42,8 @@ export default function CategoryExpensesDialog({
   projectId,
   category,
   budgetAmount,
+  budgetId,
+  scopeLabel,
   onClose,
 }: CategoryExpensesDialogProps) {
   const [rows, setRows] = useState<ProjectExpenseRow[] | null>(null);
@@ -48,6 +54,7 @@ export default function CategoryExpensesDialog({
     invoke<ProjectExpenseRow[]>("list_project_expenses_by_category", {
       projectId,
       category,
+      budgetId: budgetId ?? null,
     })
       .then((data) => {
         if (!cancelled) setRows(data);
@@ -58,7 +65,7 @@ export default function CategoryExpensesDialog({
     return () => {
       cancelled = true;
     };
-  }, [projectId, category]);
+  }, [projectId, category, budgetId]);
 
   // 合计（元）
   const total = (rows ?? []).reduce((s, r) => s + (r.amount ?? 0), 0);
@@ -72,16 +79,19 @@ export default function CategoryExpensesDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="dialog-header">
-          <h2>{category} · 支出明细</h2>
+          <h2>
+            {category} · 支出明细
+            {scopeLabel ? `（${scopeLabel}）` : ""}
+          </h2>
           <button className="close-btn" onClick={onClose}>
             &times;
           </button>
         </div>
         <div className="dialog-body">
           <p className="hint" style={{ marginBottom: 8 }}>
-            项目全部年度中「{category}」科目的支出记录，共{" "}
-            {rows === null ? "…" : rows.length} 笔；科目预算 {fmt(budgetAmount)}{" "}
-            万元。
+            {scopeLabel ? `${scopeLabel}中` : "项目全部年度中"}「{category}」
+            科目的支出记录，共 {rows === null ? "…" : rows.length} 笔；科目预算{" "}
+            {fmt(budgetAmount)} 万元。
           </p>
 
           {error && (
