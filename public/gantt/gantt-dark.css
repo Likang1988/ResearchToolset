@@ -48,12 +48,17 @@ html[data-theme="dark"] .ganttBodyCell.holy { background-color: rgba(120, 95, 50
 html[data-theme="dark"] .ganttLines { border-top-color: rgba(255, 255, 255, 0.07); }
 html[data-theme="dark"] .ganttLinesSVG { stroke: rgba(255, 255, 255, 0.09); }
 
-/* 行斑马与选中 */
+/* 行斑马与选中（行号列是 th.gdfCell.edit，必须与 td 同覆盖） */
 html[data-theme="dark"] .isGanttList .taskEditRow:nth-child(even) td,
-html[data-theme="dark"] .isGanttList .taskEditRow:nth-child(odd) td {
+html[data-theme="dark"] .isGanttList .taskEditRow:nth-child(odd) td,
+html[data-theme="dark"] .isGanttList .taskEditRow:nth-child(even) th,
+html[data-theme="dark"] .isGanttList .taskEditRow:nth-child(odd) th {
   background-color: #26282b;
 }
-html[data-theme="dark"] .taskEditRow.rowSelected td { background-color: #1d3a55 !important; }
+html[data-theme="dark"] .taskEditRow.rowSelected td,
+html[data-theme="dark"] .taskEditRow.rowSelected th {
+  background-color: #1d3a55 !important;
+}
 html[data-theme="dark"] .ganttLinesSVG.rowSelected {
   fill: #1d3a55 !important;
   stroke: #4cc2ff;
@@ -105,6 +110,14 @@ html[data-theme="dark"] .calDayHeader { background-color: #3a5a63; }
 html[data-theme="dark"] .calNavBar { background-color: rgba(0, 0, 0, 0.45); }
 html[data-theme="dark"] .selected,
 html[data-theme="dark"] .calDay .selected { background-color: #4cc2ff; color: #111; }
+
+/* th 通用兜底：platform.css 有全局 TH{background:#f0f0f0;color:#555} 元素规则，
+   行号列（th.gdfCell.edit）等漏网 th 统一上深色；带类名的表头规则特异性更高，不受影响 */
+html[data-theme="dark"] th {
+  background-color: #26282b;
+  color: #b0b3b8;
+}
+html[data-theme="dark"] .taskRowIndex { color: #c0c0c0; }
 
 /* 其他零星面板 */
 html[data-theme="dark"] .ganttAddResource {
