@@ -131,8 +131,13 @@ export default function HelpPage() {
   const [logs, setLogs] = useState<ActionLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // 重建支出统计：确认框 / 执行中 / 结果提示；reloadKey 触发日志重拉
+  const [confirmRebuild, setConfirmRebuild] = useState(false);
+  const [rebuildBusy, setRebuildBusy] = useState(false);
+  const [rebuildMsg, setRebuildMsg] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
-  // 页面挂载即加载
+  // 挂载及 rebuild 后重新加载
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -152,7 +157,19 @@ export default function HelpPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadKey]);
+
+  const doRebuild = () => {
+    setRebuildBusy(true);
+    setRebuildMsg(null);
+    invoke<[number, number]>("rebuild_expense_stats")
+      .then(([items, budgets]) => {
+        setRebuildMsg(`重建完成：已重算 budget_items ${items} 行、budgets ${budgets} 行。`);
+        setReloadKey((k) => k + 1);
+      })
+      .catch((e) => setRebuildMsg(`重建失败：${typeof e === "string" ? e : String(e)}`))
+      .finally(() => setRebuildBusy(false));
+  };
 
   return (
     <div className="help-page">
@@ -258,6 +275,50 @@ export default function HelpPage() {
               "A: 目前正在开发导出功能，敬请期待。"
             }
           />
+        </ExpandCard>
+
+        <ExpandCard title="系统维护">
+          <Section
+            title="重建支出统计"
+            text="预算树中各科目显示的“支出额”来自预算表的统计列，个别历史操作可能使其与支出记录不一致（明细弹窗合计与树中数字对不上）。此处按支出记录全量重算所有统计列：操作幂等、不改任何业务数据，可放心执行。"
+          />
+          <div className="dialog-footer" style={{ justifyContent: "flex-start", borderTop: "none" }}>
+            <button onClick={() => setConfirmRebuild(true)} disabled={rebuildBusy}>
+              {rebuildBusy ? "正在重建…" : "重建支出统计"}
+            </button>
+            {rebuildMsg && <span className="hint" style={{ marginLeft: 12 }}>{rebuildMsg}</span>}
+          </div>
+          {confirmRebuild && (
+            <div className="dialog-overlay" onClick={() => setConfirmRebuild(false)}>
+              <div
+                className="dialog-container"
+                style={{ width: 420 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="dialog-header">
+                  <h2>确认重建支出统计</h2>
+                  <button className="close-btn" onClick={() => setConfirmRebuild(false)}>
+                    &times;
+                  </button>
+                </div>
+                <div className="dialog-body">
+                  将按支出记录重算全部项目的预算支出统计列，业务数据不受影响。确定继续？
+                </div>
+                <div className="dialog-footer">
+                  <button onClick={() => setConfirmRebuild(false)}>取消</button>
+                  <button
+                    className="primary-btn"
+                    onClick={() => {
+                      setConfirmRebuild(false);
+                      doRebuild();
+                    }}
+                  >
+                    重建
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </ExpandCard>
 
         <ExpandCard title="操作日志">

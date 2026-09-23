@@ -149,6 +149,59 @@ pub fn list_project_expenses_by_category(
     Ok(expenses)
 }
 
+/// 维护功能：从 expenses 全量重算 budgets / budget_items 的 spent_amount（万元）。
+///
+/// 修复历史缺陷或异常中断造成的冗余统计列漂移；幂等，可重复执行。
+/// 事务内完成并写「维护/重建」操作日志。返回 (重算的 budget_items 行数, budgets 行数)。
+pub fn rebuild_spent_amounts(conn: &Connection) -> Result<(usize, usize), DbError> {
+    crate::db::begin_tx(conn)?;
+    let result = (|| -> Result<(usize, usize), DbError> {
+        let items = conn.execute(
+            "UPDATE budget_items SET spent_amount = COALESCE(( \
+               SELECT SUM(e.amount) / 10000.0 FROM expenses e \
+               WHERE e.budget_id = budget_items.budget_id AND e.category = budget_items.category \
+             ), 0)",
+            [],
+        )?;
+        let budgets = conn.execute(
+            "UPDATE budgets SET spent_amount = COALESCE(( \
+               SELECT SUM(e.amount) / 10000.0 FROM expenses e \
+               WHERE e.budget_id = budgets.id \
+             ), 0)",
+            [],
+        )?;
+        Ok((items, budgets))
+    })();
+    match result {
+        Ok((items, budgets)) => {
+            crate::logging::log_action(
+                conn,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                "维护",
+                "重建",
+                &format!("从支出记录重建预算支出统计：budget_items {items} 行 / budgets {budgets} 行"),
+                "系统用户",
+                None,
+                None,
+                None,
+                None,
+                None,
+            )?;
+            conn.execute_batch("COMMIT")?;
+            Ok((items, budgets))
+        }
+        Err(e) => {
+            let _ = conn.execute_batch("ROLLBACK");
+            Err(e)
+        }
+    }
+}
+
 /// 按 id 查支出（编辑回填用）。返回的 category 是中文 label。
 pub fn get_expense_by_id(conn: &Connection, id: i64) -> Result<Option<Expense>, DbError> {
     let row = conn
@@ -1144,5 +1197,71 @@ mod tests {
         let trip24 =
             list_project_expenses_by_category(&conn, pid, "差旅费", Some(budget_ids[0].1)).unwrap();
         assert!(trip24.is_empty());
+    }
+
+    #[test]
+    fn rebuild_spent_amounts_fixes_drift_and_logs() {
+        let (conn, pid, bid) = setup_project_with_annual_budget();
+        add_expense(
+            &conn,
+            ExpenseInput {
+                project_id: pid,
+                budget_id: bid,
+                category: "材料费".to_string(),
+                content: "试剂".to_string(),
+                specification: None,
+                supplier: None,
+                amount: 10000.0, // 1 万元
+                date: "2024-05-01".to_string(),
+                remarks: None,
+                voucher_path: None,
+            },
+        )
+        .unwrap();
+
+        // 人为制造漂移：所有统计列写脏
+        conn.execute("UPDATE budget_items SET spent_amount = 99", [])
+            .unwrap();
+        conn.execute("UPDATE budgets SET spent_amount = 99", [])
+            .unwrap();
+
+        let (items, budgets) = rebuild_spent_amounts(&conn).unwrap();
+        assert!(items >= 10, "应覆盖年度预算 10 个科目行，实际 {items}");
+        assert!(budgets >= 2, "应覆盖总+年度 budgets 行，实际 {budgets}");
+
+        // MATERIAL 恢复真实值 1.0 万元；无支出的科目清零
+        let mat: f64 = conn
+            .query_row(
+                "SELECT spent_amount FROM budget_items WHERE budget_id = ?1 AND category = 'MATERIAL'",
+                [bid],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert!((mat - 1.0).abs() < 1e-9);
+        let others: f64 = conn
+            .query_row(
+                "SELECT COALESCE(SUM(spent_amount), 0) FROM budget_items \
+                 WHERE budget_id = ?1 AND category <> 'MATERIAL'",
+                [bid],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert!((others - 0.0).abs() < 1e-9);
+
+        // budgets 列同步恢复
+        let bs: f64 = conn
+            .query_row("SELECT spent_amount FROM budgets WHERE id = ?1", [bid], |r| r.get(0))
+            .unwrap();
+        assert!((bs - 1.0).abs() < 1e-9);
+
+        // 写了「维护/重建」日志
+        let cnt: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM actionlogs WHERE type = '维护' AND action = '重建'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(cnt, 1);
     }
 }

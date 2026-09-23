@@ -380,6 +380,13 @@ fn list_project_expenses_by_category(
         .map_err(|e| format!("查询科目支出失败: {e}"))
 }
 
+/// 维护：从支出记录全量重算预算支出统计（修复统计漂移，幂等）
+#[tauri::command]
+fn rebuild_expense_stats(state: State<'_, DbState>) -> Result<(usize, usize), String> {
+    let conn = state.conn.lock().map_err(|e| format!("数据库锁失败: {e}"))?;
+    expense::rebuild_spent_amounts(&conn).map_err(|e| format!("重建支出统计失败: {e}"))
+}
+
 /// 按 id 查询支出（编辑回填用）。不存在返回 null。
 #[tauri::command]
 fn get_expense(state: State<'_, DbState>, id: i64) -> Result<Option<Expense>, String> {
@@ -941,6 +948,7 @@ pub fn run() {
             delete_total_budget,
             list_expenses,
             list_project_expenses_by_category,
+            rebuild_expense_stats,
             get_expense,
             add_expense,
             update_expense,

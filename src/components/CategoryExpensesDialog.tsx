@@ -1,6 +1,6 @@
-// 科目支出明细弹窗：展示项目某科目跨全部年度的支出列表（总预算科目行点击入口）
+// 科目支出明细弹窗：展示项目某科目支出列表（总预算入口=跨全部年度；年度预算入口=限定该年度）
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
 // 与 Rust expense::ProjectExpenseRow 对齐
@@ -48,6 +48,33 @@ export default function CategoryExpensesDialog({
 }: CategoryExpensesDialogProps) {
   const [rows, setRows] = useState<ProjectExpenseRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // 排序：默认日期倒序（后端即此序）；点击日期/金额表头切换
+  const [sortKey, setSortKey] = useState<"date" | "amount">("date");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  const toggleSort = (key: "date" | "amount") => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("desc");
+    }
+  };
+  const sortIndicator = (key: "date" | "amount") =>
+    sortKey === key ? (sortDir === "asc" ? " ▲" : " ▼") : "";
+
+  const sortedRows = useMemo(() => {
+    if (!rows) return null;
+    const mul = sortDir === "asc" ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      const cmp =
+        sortKey === "date"
+          ? (a.date ?? "").localeCompare(b.date ?? "")
+          : (a.amount ?? 0) - (b.amount ?? 0);
+      return cmp * mul || b.id - a.id; // 同值按 id 倒序稳定
+    });
+  }, [rows, sortKey, sortDir]);
 
   useEffect(() => {
     let cancelled = false;
@@ -112,15 +139,27 @@ export default function CategoryExpensesDialog({
                 <thead>
                   <tr>
                     <th style={{ width: 70 }}>年度</th>
-                    <th style={{ width: 100 }}>日期</th>
+                    <th
+                      className="sortable"
+                      style={{ width: 110 }}
+                      onClick={() => toggleSort("date")}
+                    >
+                      日期{sortIndicator("date")}
+                    </th>
                     <th style={{ textAlign: "left" }}>支出内容</th>
                     <th style={{ width: 110 }}>供应商</th>
-                    <th style={{ width: 110 }}>金额(元)</th>
+                    <th
+                      className="sortable"
+                      style={{ width: 120 }}
+                      onClick={() => toggleSort("amount")}
+                    >
+                      金额(元){sortIndicator("amount")}
+                    </th>
                     <th style={{ width: 110 }}>备注</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r) => (
+                  {sortedRows!.map((r) => (
                     <tr key={r.id}>
                       <td>{r.year ?? "—"}</td>
                       <td>{r.date ?? "—"}</td>
