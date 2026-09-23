@@ -227,7 +227,103 @@ export default function SettingsPage() {
   return (
     <div className="help-page">
       <div className="help-cards">
-        <ExpandCard title="软件简介" defaultOpen>
+        <ExpandCard title="外观主题" defaultOpen>
+          <Section
+            title="显示主题"
+            text="选择“跟随系统”时，随操作系统的深浅色设置实时切换。主题偏好保存在本机。"
+          />
+          <div
+            className="dialog-footer"
+            style={{ justifyContent: "flex-start", gap: 20, borderTop: "none" }}
+          >
+            {(
+              [
+                ["light", "浅色"],
+                ["dark", "深色"],
+                ["system", "跟随系统"],
+              ] as [ThemeMode, string][]
+            ).map(([mode, label]) => (
+              <label key={mode} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <input
+                  type="radio"
+                  name="theme-mode"
+                  checked={theme === mode}
+                  onChange={() => pickTheme(mode)}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+        </ExpandCard>
+
+        <ExpandCard title="数据库" defaultOpen>
+          <p className="form-hint" style={{ lineHeight: 1.8 }}>
+            当前数据库：<br />
+            <code style={{ wordBreak: "break-all" }}>{dbPath || "加载中…"}</code>
+          </p>
+          <p className="form-hint" style={{ marginTop: 8 }}>
+            提示：切换数据库后页面将自动重新加载；新数据库会自动补建缺失的表并执行迁移。
+          </p>
+          {dbError && (
+            <div className="form-error" style={{ marginTop: 8 }}>
+              {dbError}
+            </div>
+          )}
+          <div className="dialog-footer" style={{ justifyContent: "flex-start" }}>
+            <button onClick={resetDefaultDb} disabled={dbBusy}>
+              恢复默认数据库
+            </button>
+            <button onClick={pickDbFile} disabled={dbBusy} className="primary-btn">
+              {dbBusy ? "切换中..." : "选择其他数据库文件…"}
+            </button>
+          </div>
+        </ExpandCard>
+
+        <ExpandCard title="系统维护" defaultOpen>
+          <Section
+            title="重建支出统计"
+            text="预算树中各科目显示的“支出额”来自预算表的统计列，个别历史操作可能使其与支出记录不一致（明细弹窗合计与树中数字对不上）。此处按支出记录全量重算所有统计列：操作幂等、不改任何业务数据，可放心执行。"
+          />
+          <div className="dialog-footer" style={{ justifyContent: "flex-start", borderTop: "none" }}>
+            <button onClick={() => setConfirmRebuild(true)} disabled={rebuildBusy}>
+              {rebuildBusy ? "正在重建…" : "重建支出统计"}
+            </button>
+            {rebuildMsg && <span className="hint" style={{ marginLeft: 12 }}>{rebuildMsg}</span>}
+          </div>
+          {confirmRebuild && (
+            <div className="dialog-overlay" onClick={() => setConfirmRebuild(false)}>
+              <div
+                className="dialog-container"
+                style={{ width: 420 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="dialog-header">
+                  <h2>确认重建支出统计</h2>
+                  <button className="close-btn" onClick={() => setConfirmRebuild(false)}>
+                    &times;
+                  </button>
+                </div>
+                <div className="dialog-body">
+                  将按支出记录重算全部项目的预算支出统计列，业务数据不受影响。确定继续？
+                </div>
+                <div className="dialog-footer">
+                  <button onClick={() => setConfirmRebuild(false)}>取消</button>
+                  <button
+                    className="primary-btn"
+                    onClick={() => {
+                      setConfirmRebuild(false);
+                      doRebuild();
+                    }}
+                  >
+                    重建
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </ExpandCard>
+
+        <ExpandCard title="软件简介">
           <Section title="科研工具集 - ResearchToolset" text="基于 Rust + Tauri 的跨平台科研工具软件" />
           <Section
             title="项目简介"
@@ -328,102 +424,6 @@ export default function SettingsPage() {
               "A: 目前正在开发导出功能，敬请期待。"
             }
           />
-        </ExpandCard>
-
-        <ExpandCard title="外观主题" defaultOpen>
-          <Section
-            title="显示主题"
-            text="选择“跟随系统”时，随操作系统的深浅色设置实时切换。主题偏好保存在本机。"
-          />
-          <div
-            className="dialog-footer"
-            style={{ justifyContent: "flex-start", gap: 20, borderTop: "none" }}
-          >
-            {(
-              [
-                ["light", "浅色"],
-                ["dark", "深色"],
-                ["system", "跟随系统"],
-              ] as [ThemeMode, string][]
-            ).map(([mode, label]) => (
-              <label key={mode} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                <input
-                  type="radio"
-                  name="theme-mode"
-                  checked={theme === mode}
-                  onChange={() => pickTheme(mode)}
-                />
-                {label}
-              </label>
-            ))}
-          </div>
-        </ExpandCard>
-
-        <ExpandCard title="数据库">
-          <p className="form-hint" style={{ lineHeight: 1.8 }}>
-            当前数据库：<br />
-            <code style={{ wordBreak: "break-all" }}>{dbPath || "加载中…"}</code>
-          </p>
-          <p className="form-hint" style={{ marginTop: 8 }}>
-            提示：切换数据库后页面将自动重新加载；新数据库会自动补建缺失的表并执行迁移。
-          </p>
-          {dbError && (
-            <div className="form-error" style={{ marginTop: 8 }}>
-              {dbError}
-            </div>
-          )}
-          <div className="dialog-footer" style={{ justifyContent: "flex-start" }}>
-            <button onClick={resetDefaultDb} disabled={dbBusy}>
-              恢复默认数据库
-            </button>
-            <button onClick={pickDbFile} disabled={dbBusy} className="primary-btn">
-              {dbBusy ? "切换中..." : "选择其他数据库文件…"}
-            </button>
-          </div>
-        </ExpandCard>
-
-        <ExpandCard title="系统维护">
-          <Section
-            title="重建支出统计"
-            text="预算树中各科目显示的“支出额”来自预算表的统计列，个别历史操作可能使其与支出记录不一致（明细弹窗合计与树中数字对不上）。此处按支出记录全量重算所有统计列：操作幂等、不改任何业务数据，可放心执行。"
-          />
-          <div className="dialog-footer" style={{ justifyContent: "flex-start", borderTop: "none" }}>
-            <button onClick={() => setConfirmRebuild(true)} disabled={rebuildBusy}>
-              {rebuildBusy ? "正在重建…" : "重建支出统计"}
-            </button>
-            {rebuildMsg && <span className="hint" style={{ marginLeft: 12 }}>{rebuildMsg}</span>}
-          </div>
-          {confirmRebuild && (
-            <div className="dialog-overlay" onClick={() => setConfirmRebuild(false)}>
-              <div
-                className="dialog-container"
-                style={{ width: 420 }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="dialog-header">
-                  <h2>确认重建支出统计</h2>
-                  <button className="close-btn" onClick={() => setConfirmRebuild(false)}>
-                    &times;
-                  </button>
-                </div>
-                <div className="dialog-body">
-                  将按支出记录重算全部项目的预算支出统计列，业务数据不受影响。确定继续？
-                </div>
-                <div className="dialog-footer">
-                  <button onClick={() => setConfirmRebuild(false)}>取消</button>
-                  <button
-                    className="primary-btn"
-                    onClick={() => {
-                      setConfirmRebuild(false);
-                      doRebuild();
-                    }}
-                  >
-                    重建
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </ExpandCard>
 
         <ExpandCard title="操作日志">
