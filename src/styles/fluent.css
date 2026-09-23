@@ -1105,6 +1105,10 @@ button.danger-btn:hover:not(:disabled) {
 /* 选中行高亮 */
 .fund-tree tr.row-selected td {
   background-color: var(--row-selected-bg) !important;
+}
+/* Fluent 选中指示条只画在行首格——写在 td 上会让每个单元格左侧都亮一条，
+   相邻格看起来像单元格两侧都被高亮 */
+.fund-tree tr.row-selected td:first-child {
   box-shadow: inset 3px 0 0 var(--accent);
 }
 
