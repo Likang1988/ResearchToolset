@@ -1,13 +1,21 @@
 //! 临时验证脚本：在真实 database/database.db 上跑 list_project_budgets(2)
 //!
-//! 用法：cargo run --example dump_project2_budget
+//! 用法：cargo run --example dump_project2_budget [数据库路径]
+//! 不带参数时使用仓库根 database/database.db。
 use research_toolset_core::db;
 use research_toolset_core::services::budget::list_project_budgets;
 
 fn main() {
-    let db_path = std::path::PathBuf::from(
-        "/Users/likang/Library/CloudStorage/SynologyDrive-Synodrive/Coding/ResearchToolset-migrate/database/database.db",
-    );
+    let db_path = std::env::args()
+        .nth(1)
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .parent()
+                .expect("仓库根应存在")
+                .join("database")
+                .join("database.db")
+        });
     let mut conn = db::open(&db_path).expect("open db");
     db::init_db(&mut conn).expect("init_db");
     db::migrate::migrate_db(&mut conn).expect("migrate");
