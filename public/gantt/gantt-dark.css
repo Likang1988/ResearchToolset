@@ -1,0 +1,114 @@
+/* 甘特图深色主题覆盖层
+   - 触发：父页（项目进度）把 <html data-theme="dark|light"> 同步进本 iframe
+   - 原则：全部规则带 html[data-theme="dark"] 前缀，特异性高于 gantt.css/platform.css 原规则
+   - 内联白底（body / ConfirmDialog）用 !important 压制 */
+
+html[data-theme="dark"] {
+  color-scheme: dark; /* 原生滚动条/控件转深 */
+}
+
+/* 基础面 */
+html[data-theme="dark"] body {
+  background-color: #1f2123 !important;
+  color: #e6e6e6;
+}
+html[data-theme="dark"] .TWGanttWorkSpace,
+html[data-theme="dark"] .TWGanttWorkSpace.ganttFullScreen {
+  background-color: #1f2123;
+}
+html[data-theme="dark"] .splitElement { background-color: #26282b; }
+
+/* 左侧任务表格 */
+html[data-theme="dark"] .gdfTable { background-color: #26282b; }
+html[data-theme="dark"] .gdfCell {
+  border-bottom-color: #33363a;
+  border-right-color: #33363a;
+}
+html[data-theme="dark"] .gdfColHeader {
+  background-color: #2e3033;
+  border-bottom-color: #4a4d52;
+  border-right-color: #4a4d52;
+  color: #b0b3b8;
+}
+html[data-theme="dark"] .gdfCellInput { background-color: #24352c; }
+html[data-theme="dark"] .gdfCellWrap { background-color: #402b2b; }
+
+/* 右侧时间网格 */
+html[data-theme="dark"] .ganttTable { background-color: #26282b; }
+html[data-theme="dark"] .ganttHead1 th,
+html[data-theme="dark"] .ganttHead2 th {
+  background-color: #2e3033;
+  border-right-color: #4a4d52;
+  border-bottom-color: #4a4d52;
+  color: #b0b3b8;
+}
+html[data-theme="dark"] .ganttHead1 th.holy,
+html[data-theme="dark"] .ganttHead2 th.holy { background-color: #3a3527; }
+html[data-theme="dark"] .ganttBodyCell.holy { background-color: rgba(120, 95, 50, 0.2); }
+html[data-theme="dark"] .ganttLines { border-top-color: rgba(255, 255, 255, 0.07); }
+html[data-theme="dark"] .ganttLinesSVG { stroke: rgba(255, 255, 255, 0.09); }
+
+/* 行斑马与选中 */
+html[data-theme="dark"] .isGanttList .taskEditRow:nth-child(even) td,
+html[data-theme="dark"] .isGanttList .taskEditRow:nth-child(odd) td {
+  background-color: #26282b;
+}
+html[data-theme="dark"] .taskEditRow.rowSelected td { background-color: #1d3a55 !important; }
+html[data-theme="dark"] .ganttLinesSVG.rowSelected {
+  fill: #1d3a55 !important;
+  stroke: #4cc2ff;
+}
+
+/* 任务条与标签 */
+html[data-theme="dark"] .taskBoxDiv .layout {
+  background: #3a3d42;
+  border-color: #5a5e66;
+}
+html[data-theme="dark"] .taskLabel,
+html[data-theme="dark"] .critical .taskLabel { color: #d8d8d8; }
+html[data-theme="dark"] .taskLabelSVG,
+html[data-theme="dark"] .taskLabelSVG text { fill: #c0c0c0; }
+html[data-theme="dark"] .taskStatusBox {
+  background-color: #2c2e31;
+  border-color: #555;
+}
+
+/* 工具栏 */
+html[data-theme="dark"] .ganttButtonBar { border-bottom-color: rgba(255, 255, 255, 0.15); }
+html[data-theme="dark"] .ganttButtonBar h1 { color: #e6e6e6; }
+html[data-theme="dark"] .ganttButtonSeparator { border-left-color: #4a4d52; }
+html[data-theme="dark"] .ganttButtonBar .buttons .button.textual.icon { color: #c8c8c8; }
+html[data-theme="dark"] .ganttButtonBar .buttons .button.textual.icon:hover {
+  background-color: #33363a;
+}
+html[data-theme="dark"] .ganttButtonBar .buttons .button.file-btn { color: #d0d0d0; }
+html[data-theme="dark"] .ganttButtonBar .buttons .button.file-btn:hover { color: #8ab4f8; }
+
+/* 分隔条 */
+html[data-theme="dark"] .vSplitBar {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+/* 确认对话框（JS 动态创建，内联白底） */
+html[data-theme="dark"] #ganttConfirmOverlay > div {
+  background: #2c2e31 !important;
+  color: #e6e6e6 !important;
+}
+html[data-theme="dark"] #ganttConfirmOverlay #ganttConfirmCancel {
+  background: #3a3d42 !important;
+  color: #e6e6e6 !important;
+}
+
+/* 日期选择弹层 */
+html[data-theme="dark"] .calBox { background-color: #2c2e31; color: #ddd; }
+html[data-theme="dark"] .calDayHeader { background-color: #3a5a63; }
+html[data-theme="dark"] .calNavBar { background-color: rgba(0, 0, 0, 0.45); }
+html[data-theme="dark"] .selected,
+html[data-theme="dark"] .calDay .selected { background-color: #4cc2ff; color: #111; }
+
+/* 其他零星面板 */
+html[data-theme="dark"] .ganttAddResource {
+  background-color: #2c2e31;
+  border-color: #555;
+}
+html[data-theme="dark"] .resourceRowContainer span.avatar span { border-color: #26282b; }

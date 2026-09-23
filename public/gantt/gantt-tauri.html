@@ -9,6 +9,12 @@
   <link rel="stylesheet" href="libs/jquery/dateField/jquery.dateField.css" type="text/css">
   <link rel="stylesheet" href="gantt.css" type="text/css">
   <link rel="stylesheet" href="libs/jquery/valueSlider/mb.slider.css" type="text/css">
+  <link rel="stylesheet" href="gantt-dark.css" type="text/css">
+  <script>
+    // 主题：初始从 URL ?theme= 取（避免闪白），之后由父页同步 <html data-theme>
+    document.documentElement.dataset.theme =
+      new URLSearchParams(location.search).get("theme") === "dark" ? "dark" : "light";
+  </script>
 
   <script src="libs/jquery/jquery.min.js"></script>
   <script src="libs/jquery/jquery-ui.min.js"></script>

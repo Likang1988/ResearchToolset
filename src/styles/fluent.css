@@ -342,7 +342,7 @@ body {
   gap: 16px;
   padding: 16px;
   /* 上移叠压页眉横幅（不压缩 header），加高概览卡片框 */
-  margin-top: -96px;
+  margin-top: -32px;
   position: relative;
   z-index: 1;
   overflow: hidden;

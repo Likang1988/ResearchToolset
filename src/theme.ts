@@ -18,6 +18,8 @@ function systemIsDark(): boolean {
 export function applyTheme(mode: ThemeMode): void {
   const dark = mode === "dark" || (mode === "system" && systemIsDark());
   document.documentElement.dataset.theme = dark ? "dark" : "light";
+  // 通知订阅者（如项目进度页把主题转发进甘特 iframe）
+  window.dispatchEvent(new CustomEvent("rt-theme-change"));
   // 非 Tauri 环境（纯浏览器预览）或旧系统不支持时静默跳过
   getCurrentWindow()
     .setTheme(dark ? "dark" : "light")
@@ -27,6 +29,12 @@ export function applyTheme(mode: ThemeMode): void {
 export function getThemeMode(): ThemeMode {
   const v = localStorage.getItem(STORAGE_KEY);
   return v === "dark" || v === "system" ? v : "light";
+}
+
+/** 当前解析后的实际深浅色（供 iframe 同步等场景） */
+export function isDarkNow(): boolean {
+  const m = getThemeMode();
+  return m === "dark" || (m === "system" && systemIsDark());
 }
 
 export function setThemeMode(mode: ThemeMode): void {

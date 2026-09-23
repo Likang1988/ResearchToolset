@@ -6,6 +6,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { emitProjectUpdated, emitProgressUpdated } from "../data/events";
+import { isDarkNow } from "../theme";
 
 interface Project {
   id: number;
@@ -97,6 +98,17 @@ export default function ProjectProgressPage({
     },
     [postToIframe]
   );
+
+  // 主题同步：把主界面解析出的深浅色写入甘特 iframe（同源）
+  const syncGanttTheme = useCallback(() => {
+    const doc = iframeRef.current?.contentDocument;
+    if (doc) doc.documentElement.dataset.theme = isDarkNow() ? "dark" : "light";
+  }, []);
+  useEffect(() => {
+    const h = () => syncGanttTheme();
+    window.addEventListener("rt-theme-change", h);
+    return () => window.removeEventListener("rt-theme-change", h);
+  }, [syncGanttTheme]);
 
   // iframe 消息监听（ready / save / load_error）
   useEffect(() => {
@@ -283,8 +295,9 @@ export default function ProjectProgressPage({
       ) : (
         <iframe
           ref={iframeRef}
-          src="/gantt/gantt-tauri.html"
+          src={`/gantt/gantt-tauri.html?theme=${isDarkNow() ? "dark" : "light"}`}
           title="甘特图"
+          onLoad={syncGanttTheme}
           style={{
             width: "100%",
             flex: 1,
