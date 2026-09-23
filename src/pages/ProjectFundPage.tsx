@@ -7,6 +7,7 @@ import BudgetFormDialog, {
   BUDGET_CATEGORIES,
   type BudgetFormPayload,
 } from "../components/BudgetFormDialog";
+import CategoryExpensesDialog from "../components/CategoryExpensesDialog";
 import ExpenseManagementPage from "./ExpenseManagementPage";
 import { emitBudgetOrExpenseUpdated } from "../data/events";
 
@@ -131,6 +132,12 @@ export default function ProjectFundPage({
 
   // 支出管理子页：非空时切换到支出管理，覆盖预算树区域
   const [expenseView, setExpenseView] = useState<{ budgetId: number; year: number } | null>(null);
+
+  // 总预算科目行点击 → 弹窗展示该科目跨全部年度的支出明细
+  const [categoryDetail, setCategoryDetail] = useState<{
+    category: string;
+    amount: number;
+  } | null>(null);
 
   // 当前选中的项目（用于支出管理子页传 props）
   const selectedProject = projects.find((p) => p.id === selectedId) ?? null;
@@ -552,6 +559,9 @@ export default function ProjectFundPage({
                     selectedNodeId={selectedNodeId}
                     onSelect={setSelectedNodeId}
                     onManageExpenses={null}
+                    onShowCategoryExpenses={(category, amount) =>
+                      setCategoryDetail({ category, amount })
+                    }
                   />
                 )}
                 {/* 年度预算行 + 各自 10 科目子项 */}
@@ -746,6 +756,16 @@ export default function ProjectFundPage({
           </div>
         </div>
       )}
+
+      {/* 总预算科目支出明细弹窗 */}
+      {categoryDetail && selectedId !== null && (
+        <CategoryExpensesDialog
+          projectId={selectedId}
+          category={categoryDetail.category}
+          budgetAmount={categoryDetail.amount}
+          onClose={() => setCategoryDetail(null)}
+        />
+      )}
     </div>
   );
 }
@@ -758,6 +778,7 @@ function BudgetRows({
   selectedNodeId,
   onSelect,
   onManageExpenses,
+  onShowCategoryExpenses,
 }: {
   node: BudgetNode;
   label: string;
@@ -765,6 +786,8 @@ function BudgetRows({
   selectedNodeId: number | null;
   onSelect: (id: number) => void;
   onManageExpenses: (() => void) | null;
+  /** 传入时（总预算行）科目子项行可点击，弹出该科目跨年度支出明细 */
+  onShowCategoryExpenses?: (category: string, amount: number) => void;
 }) {
   const balance = node.total_amount - node.spent_amount;
   const isSelected = selectedNodeId === node.id;
@@ -835,9 +858,40 @@ function BudgetRows({
       {expanded &&
         node.items.map((item) => {
           const itemBalance = item.amount - item.spent_amount;
+          const clickable = Boolean(onShowCategoryExpenses);
           return (
-            <tr key={item.category} className="tree-child">
-              <td className="tree-label child-label">{item.category}</td>
+            <tr
+              key={item.category}
+              className="tree-child"
+              style={clickable ? { cursor: "pointer" } : undefined}
+              title={clickable ? "点击查看该科目全部支出" : undefined}
+              onClick={
+                clickable
+                  ? () => onShowCategoryExpenses!(item.category, item.amount)
+                  : undefined
+              }
+            >
+              <td className="tree-label child-label">
+                {item.category}
+                {clickable && (
+                  <svg
+                    className="category-detail-icon"
+                    viewBox="0 0 24 24"
+                    width="12"
+                    height="12"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ marginLeft: 4, verticalAlign: -2, opacity: 0.55 }}
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                  </svg>
+                )}
+              </td>
               <td className="num">{fmt(item.amount)}</td>
               <td className="num">{fmt(item.spent_amount)}</td>
               <td className="num">{fmt(itemBalance)}</td>

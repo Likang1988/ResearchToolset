@@ -367,6 +367,18 @@ fn list_expenses(
         .map_err(|e| format!("查询支出列表失败: {e}"))
 }
 
+/// 按科目列出项目全部支出（跨全部年度，总预算科目明细用；按日期倒序）
+#[tauri::command]
+fn list_project_expenses_by_category(
+    state: State<'_, DbState>,
+    project_id: i64,
+    category: String,
+) -> Result<Vec<expense::ProjectExpenseRow>, String> {
+    let conn = state.conn.lock().map_err(|e| format!("数据库锁失败: {e}"))?;
+    expense::list_project_expenses_by_category(&conn, project_id, &category)
+        .map_err(|e| format!("查询科目支出失败: {e}"))
+}
+
 /// 按 id 查询支出（编辑回填用）。不存在返回 null。
 #[tauri::command]
 fn get_expense(state: State<'_, DbState>, id: i64) -> Result<Option<Expense>, String> {
@@ -927,6 +939,7 @@ pub fn run() {
             delete_annual_budget,
             delete_total_budget,
             list_expenses,
+            list_project_expenses_by_category,
             get_expense,
             add_expense,
             update_expense,
