@@ -86,6 +86,17 @@ html[data-theme="dark"] .ganttButtonBar .buttons .button.textual.icon { color: #
 html[data-theme="dark"] .ganttButtonBar .buttons .button.textual.icon:hover {
   background-color: #33363a;
 }
+/* 撤销/重做/缩放/视图切换等是 teamworkIcon 字体图标，platform.css 把
+   #34495e 直接写在 span 上，必须同样落到 span 才能盖住 */
+html[data-theme="dark"] .ganttButtonBar .button span.teamworkIcon {
+  color: #d0d0d0;
+}
+html[data-theme="dark"] .ganttButtonBar .button:hover span.teamworkIcon {
+  color: #ffffff;
+}
+html[data-theme="dark"] .ganttButtonBar .button[disabled] span.teamworkIcon {
+  color: #5a5e66;
+}
 html[data-theme="dark"] .ganttButtonBar .buttons .button.file-btn { color: #d0d0d0; }
 html[data-theme="dark"] .ganttButtonBar .buttons .button.file-btn:hover { color: #8ab4f8; }
 
