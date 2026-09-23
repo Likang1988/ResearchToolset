@@ -12,6 +12,11 @@ html[data-theme="dark"] body {
   background-color: #1f2123 !important;
   color: #e6e6e6;
 }
+/* platform.css 把深蓝灰(#1e2f41)写 BODY, TBODY 两个元素上：弹窗表格内的
+   label 等文字会从 TBODY 取色而不继承面板浅色，必须同样点名翻亮 */
+html[data-theme="dark"] tbody {
+  color: #e6e6e6;
+}
 html[data-theme="dark"] .TWGanttWorkSpace,
 html[data-theme="dark"] .TWGanttWorkSpace.ganttFullScreen {
   background-color: #1f2123;
@@ -130,6 +135,13 @@ html[data-theme="dark"] th {
 }
 html[data-theme="dark"] .taskRowIndex { color: #c0c0c0; }
 
+/* teamworkIcon 字体图标：platform.css 把 #34495e 深蓝灰直接写在类上，
+   弹窗日历/行编辑/删除等散落的图标全走此源，统一翻亮；
+   工具栏按钮的图标另有更高特异性规则，不受影响 */
+html[data-theme="dark"] .teamworkIcon {
+  color: #b0b3b8;
+}
+
 /* 其他零星面板 */
 html[data-theme="dark"] .ganttAddResource {
   background-color: #2c2e31;
@@ -156,4 +168,37 @@ html[data-theme="dark"] .taskEditRow input {
 }
 html[data-theme="dark"] .taskEditRow input[readonly] {
   color: #9ca0a6;
+}
+
+/* ===== 任务编辑器 / 项目团队弹窗（bwin 弹窗：.modalPopup > .bwinPopupd） ===== */
+/* 遮罩：与自绘确认框一致的暗化底；特异性同时盖过基础白遮罩与 inIframe 透明规则 */
+html[data-theme="dark"] .modalPopup {
+  background-color: rgba(0, 0, 0, 0.35);
+}
+/* 弹层面板：platform.css 白底 / inIframe #f9f9f9 浅底 → 统一上深色 */
+html[data-theme="dark"] .modalPopup .bwinPopupd {
+  background-color: #2c2e31;
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 0 4px rgba(76, 194, 255, 0.2), 0 6px 24px rgba(0, 0, 0, 0.5);
+  color: #e6e6e6;
+}
+html[data-theme="dark"] .modalPopup .bwinPopupd h1,
+html[data-theme="dark"] .modalPopup .bwinPopupd h2 {
+  color: #e6e6e6;
+}
+html[data-theme="dark"] .modalPopup .popUpClose {
+  color: #c8c8c8;
+}
+/* 表单输入：platform.css 把 #F5F5F5 写在 .formElements 类上，
+   特异性高于通用 input 兜底规则，必须点名覆盖，否则浅底配浅色字不可读 */
+html[data-theme="dark"] .ganttTaskEditor .formElements,
+html[data-theme="dark"] .resourceEditor .formElements {
+  background-color: #24262a;
+  border-color: #4a4d52;
+  color: #e6e6e6;
+}
+/* 行分隔线：#cecece 亮线在深底上刺眼 */
+html[data-theme="dark"] .bwinPopupd .resRow td,
+html[data-theme="dark"] .bwinPopupd .assigEditRow td {
+  border-bottom-color: #44474b;
 }
