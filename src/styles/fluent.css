@@ -341,6 +341,10 @@ body {
   grid-template-columns: 1fr 1fr;
   gap: 16px;
   padding: 16px;
+  /* 上移叠压页眉横幅（不压缩 header），加高概览卡片框 */
+  margin-top: -96px;
+  position: relative;
+  z-index: 1;
   overflow: hidden;
   min-height: 0;
 }
