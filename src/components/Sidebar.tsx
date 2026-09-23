@@ -1,10 +1,9 @@
 // Fluent 风格左侧导航栏
-// 9 主项 + 帮助置底；图标：7 个 /icons/tab_*.svg 静态资源，3 个内置 SVG 图标
+// 9 主项 + 设置置底；图标：7 个 /icons/tab_*.svg 静态资源，3 个内置 SVG 图标
 // 支持折叠/展开（默认折叠）：折叠时仅显示图标，hover 显示名称提示
 
 import { useState } from "react";
 import { NAV_ITEMS } from "../data/nav";
-import DatabaseDialog from "./DatabaseDialog";
 
 interface SidebarProps {
   active: string;
@@ -33,11 +32,14 @@ function InlineIcon({ name }: { name: string }) {
           />
         </svg>
       );
-    case "help":
+    case "settings":
       return (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-          <circle cx="12" cy="12" r="9" />
-          <path d="M9.5 9a2.5 2.5 0 0 1 4.5 1.5c0 1.5-2 2-2 3.5M12 17h.01" strokeLinecap="round" />
+          <circle cx="12" cy="12" r="3.2" />
+          <path
+            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+            strokeLinejoin="round"
+          />
         </svg>
       );
     default:
@@ -63,7 +65,6 @@ function NavIcon({ icon }: { icon: string }) {
 export default function Sidebar({ active, onSelect }: SidebarProps) {
   // 默认折叠状态
   const [collapsed, setCollapsed] = useState(true);
-  const [dbDialogOpen, setDbDialogOpen] = useState(false);
   const top = NAV_ITEMS.filter((n) => n.position === "top");
   const bottom = NAV_ITEMS.filter((n) => n.position === "bottom");
 
@@ -88,24 +89,7 @@ export default function Sidebar({ active, onSelect }: SidebarProps) {
         </div>
       )}
       <div className="sidebar-section">{top.map(renderItem)}</div>
-      <div className="sidebar-section bottom">
-        {bottom.map(renderItem)}
-        {/* 数据库管理入口（非导航页，点击弹出对话框） */}
-        <div
-          className="nav-item"
-          title={collapsed ? "数据库管理" : undefined}
-          onClick={() => setDbDialogOpen(true)}
-        >
-          <span className="nav-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <ellipse cx="12" cy="5.5" rx="7.5" ry="2.8" />
-              <path d="M4.5 5.5v13c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8v-13" />
-              <path d="M4.5 12c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8" />
-            </svg>
-          </span>
-          <span className="nav-label">数据库</span>
-        </div>
-      </div>
+      <div className="sidebar-section bottom">{bottom.map(renderItem)}</div>
       <button
         className="sidebar-collapse-btn"
         title={collapsed ? "展开侧边栏" : "折叠侧边栏"}
@@ -120,7 +104,6 @@ export default function Sidebar({ active, onSelect }: SidebarProps) {
         </svg>
         <span className="nav-label">折叠</span>
       </button>
-      <DatabaseDialog open={dbDialogOpen} onClose={() => setDbDialogOpen(false)} />
     </aside>
   );
 }

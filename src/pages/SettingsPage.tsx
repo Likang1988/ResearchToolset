@@ -1,11 +1,13 @@
-// 帮助页：三个展开卡片 + 操作日志表
-// - 软件简介：标题/副标题 + 项目简介 + 主要功能 + 计划 + 系统要求 + 依赖项 + 注意事项 + 许可证
-// - 使用帮助：系统介绍 + 功能指南 + 常见问题
-// - 操作日志：7 列表格（时间/类型/动作/描述/相关信息/原数据/新数据），
-//   按时间倒序最多 100 条；原/新数据列只展示字段级 diff
+// 设置页：外观主题 / 数据库管理 / 系统维护 / 软件简介 / 使用帮助 / 操作日志
+// - 外观主题：浅色/深色/跟随系统（localStorage 持久化，见 src/theme.ts）
+// - 数据库：查看当前库文件、切换其他库、恢复默认（原 DatabaseDialog 并入）
+// - 系统维护：从支出记录重建预算支出统计（幂等）
+// - 帮助内容：软件简介 / 使用帮助 / 操作日志（100 条，JSON 字段级 diff）三个卡片
 
 import { useEffect, useState, type ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
+import { getThemeMode, setThemeMode, type ThemeMode } from "../theme";
 
 // 与 Rust core::models::Actionlog 对齐
 interface ActionLog {
@@ -127,7 +129,7 @@ function Section({ title, text }: { title: string; text: string }) {
   );
 }
 
-export default function HelpPage() {
+export default function SettingsPage() {
   const [logs, setLogs] = useState<ActionLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -136,11 +138,62 @@ export default function HelpPage() {
   const [rebuildBusy, setRebuildBusy] = useState(false);
   const [rebuildMsg, setRebuildMsg] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  // 外观主题
+  const [theme, setTheme] = useState<ThemeMode>(getThemeMode());
+  // 数据库管理（原 DatabaseDialog 并入）
+  const [dbPath, setDbPath] = useState("");
+  const [dbBusy, setDbBusy] = useState(false);
+  const [dbError, setDbError] = useState("");
 
-  // 挂载及 rebuild 后重新加载
+  const pickTheme = (mode: ThemeMode) => {
+    setTheme(mode);
+    setThemeMode(mode);
+  };
+
+  const switchDb = async (path: string) => {
+    setDbBusy(true);
+    setDbError("");
+    try {
+      await invoke("open_database", { path });
+      // 切换成功后重载页面，让所有页面从新数据库重新拉取数据
+      window.location.reload();
+    } catch (e) {
+      setDbError(String(e));
+      setDbBusy(false);
+    }
+  };
+
+  const pickDbFile = async () => {
+    const selected = await openFileDialog({
+      multiple: false,
+      directory: false,
+      title: "选择数据库文件",
+      filters: [{ name: "数据库文件", extensions: ["db", "sqlite", "sqlite3"] }],
+    });
+    if (typeof selected === "string" && selected) {
+      await switchDb(selected);
+    }
+  };
+
+  const resetDefaultDb = async () => {
+    setDbBusy(true);
+    setDbError("");
+    try {
+      await invoke("reset_database");
+      window.location.reload();
+    } catch (e) {
+      setDbError(String(e));
+      setDbBusy(false);
+    }
+  };
+
+  // 挂载及 rebuild 后重新加载日志；顺带查询当前数据库路径
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    invoke<string>("db_path")
+      .then(setDbPath)
+      .catch((e) => setDbError(String(e)));
     invoke<ActionLog[]>("list_actionlogs")
       .then((data) => {
         if (!cancelled) {
@@ -275,6 +328,58 @@ export default function HelpPage() {
               "A: 目前正在开发导出功能，敬请期待。"
             }
           />
+        </ExpandCard>
+
+        <ExpandCard title="外观主题" defaultOpen>
+          <Section
+            title="显示主题"
+            text="选择“跟随系统”时，随操作系统的深浅色设置实时切换。主题偏好保存在本机。"
+          />
+          <div
+            className="dialog-footer"
+            style={{ justifyContent: "flex-start", gap: 20, borderTop: "none" }}
+          >
+            {(
+              [
+                ["light", "浅色"],
+                ["dark", "深色"],
+                ["system", "跟随系统"],
+              ] as [ThemeMode, string][]
+            ).map(([mode, label]) => (
+              <label key={mode} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <input
+                  type="radio"
+                  name="theme-mode"
+                  checked={theme === mode}
+                  onChange={() => pickTheme(mode)}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+        </ExpandCard>
+
+        <ExpandCard title="数据库">
+          <p className="form-hint" style={{ lineHeight: 1.8 }}>
+            当前数据库：<br />
+            <code style={{ wordBreak: "break-all" }}>{dbPath || "加载中…"}</code>
+          </p>
+          <p className="form-hint" style={{ marginTop: 8 }}>
+            提示：切换数据库后页面将自动重新加载；新数据库会自动补建缺失的表并执行迁移。
+          </p>
+          {dbError && (
+            <div className="form-error" style={{ marginTop: 8 }}>
+              {dbError}
+            </div>
+          )}
+          <div className="dialog-footer" style={{ justifyContent: "flex-start" }}>
+            <button onClick={resetDefaultDb} disabled={dbBusy}>
+              恢复默认数据库
+            </button>
+            <button onClick={pickDbFile} disabled={dbBusy} className="primary-btn">
+              {dbBusy ? "切换中..." : "选择其他数据库文件…"}
+            </button>
+          </div>
         </ExpandCard>
 
         <ExpandCard title="系统维护">

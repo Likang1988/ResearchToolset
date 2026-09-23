@@ -20,6 +20,9 @@
   --text: #1a1a1a;
   --text-secondary: #555555;
   --text-muted: #888888;
+  /* 表面（卡片/对话框/输入控件等白底）；深色主题见文末 */
+  --surface: #ffffff;
+  --surface-translucent: rgba(255, 255, 255, 0.85);
   --radius: 8px;
   --sidebar-width: 150px;
 }
@@ -245,7 +248,7 @@ body {
 }
 
 .placeholder-card {
-  background-color: #ffffff;
+  background-color: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 24px;
@@ -309,14 +312,14 @@ body {
   justify-content: center;
   border: none;
   border-radius: 6px;
-  background-color: rgba(255, 255, 255, 0.85);
+  background-color: var(--surface-translucent);
   color: var(--text);
   cursor: pointer;
   transition: background-color 0.12s ease;
 }
 
 .home-refresh-btn:hover {
-  background-color: #ffffff;
+  background-color: var(--surface);
 }
 
 .home-refresh-btn:disabled {
@@ -387,7 +390,7 @@ body {
   margin-bottom: 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background-color: #ffffff;
+  background-color: var(--surface);
   cursor: pointer;
   transition: box-shadow 0.15s ease, border-color 0.15s ease;
   /* 经费/进度概览卡片统一最小高度，避免两张卡片高度不一致 */
@@ -620,7 +623,7 @@ button {
   padding: 6px 14px;
   border-radius: 4px;
   border: 1px solid var(--border);
-  background-color: #fff;
+  background-color: var(--surface);
   color: var(--text);
   cursor: pointer;
   transition: background-color 0.12s;
@@ -667,7 +670,7 @@ button.danger-btn:hover:not(:disabled) {
 }
 
 .dialog-container {
-  background-color: #fff;
+  background-color: var(--surface);
   border-radius: var(--radius);
   width: 500px;
   max-width: 90%;
@@ -732,7 +735,7 @@ button.danger-btn:hover:not(:disabled) {
   position: fixed;
   z-index: 1100;
   min-width: 120px;
-  background-color: #fff;
+  background-color: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
@@ -780,7 +783,7 @@ button.danger-btn:hover:not(:disabled) {
   padding: 6px 8px;
   border: 1px solid var(--border);
   border-radius: 4px;
-  background-color: #fff;
+  background-color: var(--surface);
   outline: none;
 }
 
@@ -800,7 +803,7 @@ button.danger-btn:hover:not(:disabled) {
   padding: 6px 12px;
   border: 1px solid var(--border);
   border-radius: 4px;
-  background-color: #fff;
+  background-color: var(--surface);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -840,7 +843,7 @@ button.danger-btn:hover:not(:disabled) {
   padding: 0;
   border: 1px solid var(--border);
   border-radius: 4px;
-  background-color: #fff;
+  background-color: var(--surface);
   color: var(--text-secondary);
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s;
@@ -879,7 +882,7 @@ button.danger-btn:hover:not(:disabled) {
   z-index: 100;
   min-width: 110px;
   padding: 4px;
-  background-color: #fff;
+  background-color: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
@@ -971,7 +974,7 @@ button.danger-btn:hover:not(:disabled) {
   padding: 6px 10px;
   border: 1px solid var(--border);
   border-radius: 4px;
-  background-color: #fff;
+  background-color: var(--surface);
   color: var(--text);
   min-width: 280px;
   outline: none;
@@ -997,7 +1000,7 @@ button.danger-btn:hover:not(:disabled) {
 /* 父行（总预算 / 年度预算）：加粗 + 淡灰底 */
 .fund-tree tr.tree-parent td {
   font-weight: 600;
-  background-color: #f5f5f5;
+  background-color: var(--header-bg);
   border-bottom: 1px solid var(--border);
   border-top: 1px solid var(--border);
 }
@@ -1364,7 +1367,7 @@ button.danger-btn:hover:not(:disabled) {
 }
 
 input.disabled-input {
-  background-color: #f5f5f5;
+  background-color: var(--header-bg);
   color: var(--text-secondary);
   cursor: not-allowed;
 }
@@ -1529,7 +1532,7 @@ input.disabled-input {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: auto;
-  background-color: #fff;
+  background-color: var(--surface);
 }
 
 /* 行：6 列 flex 布局 */
@@ -1551,7 +1554,7 @@ input.disabled-input {
 }
 
 .bt-header {
-  background-color: #f5f5f5;
+  background-color: var(--header-bg);
   font-weight: 600;
   color: var(--text-secondary);
   position: sticky;
@@ -1559,7 +1562,7 @@ input.disabled-input {
   z-index: 1;
 }
 .bt-header:hover {
-  background-color: #f5f5f5;
+  background-color: var(--header-bg);
 }
 
 .bt-cell {
@@ -1602,11 +1605,11 @@ input.disabled-input {
 }
 .bt-input:hover {
   border-color: var(--border);
-  background-color: #fff;
+  background-color: var(--surface);
 }
 .bt-input:focus {
   border-color: var(--accent);
-  background-color: #fff;
+  background-color: var(--surface);
 }
 .bt-num-input {
   text-align: right;
@@ -1735,7 +1738,7 @@ input.disabled-input {
   align-items: center;
   justify-content: space-between;
   padding: 14px 18px;
-  background-color: #fff;
+  background-color: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
@@ -1764,7 +1767,7 @@ input.disabled-input {
 
 /* 间接经费计算器 */
 .calc-form {
-  background-color: #fff;
+  background-color: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 16px;
@@ -1774,7 +1777,7 @@ input.disabled-input {
   margin-bottom: 12px;
 }
 .calc-result {
-  background-color: #fff;
+  background-color: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 16px;
@@ -1798,7 +1801,7 @@ input.disabled-input {
   gap: 8px;
 }
 .tl-tree {
-  background-color: #fff;
+  background-color: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: auto;
@@ -1886,7 +1889,7 @@ input.disabled-input {
 .tl-menu {
   position: fixed;
   z-index: 1002;
-  background-color: #fff;
+  background-color: var(--surface);
   border: 1px solid var(--border);
   border-radius: 6px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
@@ -1925,7 +1928,7 @@ input.disabled-input {
 .help-card {
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background-color: #fff;
+  background-color: var(--surface);
   overflow: hidden;
 }
 
@@ -2007,4 +2010,26 @@ input.disabled-input {
   word-break: break-all;
   font-size: 12px;
   color: var(--text-secondary);
+}
+/* ===== Dark Theme（<html data-theme="dark">，由 src/theme.ts 切换）===== */
+html[data-theme="dark"] {
+  color-scheme: dark; /* 原生控件/滚动条/日期选择跟随深色 */
+  --bg: #1f2123;
+  --sidebar-bg: #26282b;
+  --header-bg: #2e3033;
+  --border: rgba(255, 255, 255, 0.14);
+  --hover: rgba(255, 255, 255, 0.055);
+  --selected: rgba(76, 194, 255, 0.16);
+  --accent: #4cc2ff;
+  --text: #e6e6e6;
+  --text-secondary: #b0b3b8;
+  --text-muted: #8b8f96;
+  --surface: #2c2e31;
+  --surface-translucent: rgba(44, 46, 49, 0.88);
+}
+/* 深色下阴影加深，白底卡片改用 surface 后仍有层次感 */
+html[data-theme="dark"] .dialog-container,
+html[data-theme="dark"] .menu,
+html[data-theme="dark"] .context-menu {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
 }

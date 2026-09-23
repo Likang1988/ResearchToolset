@@ -13,11 +13,15 @@ import ProjectOutcomePage from "./pages/ProjectOutcomePage";
 import ProjectActivityPage from "./pages/ProjectActivityPage";
 import BudgetingPage from "./pages/BudgetingPage";
 import ToolsPage from "./pages/ToolsPage";
-import HelpPage from "./pages/HelpPage";
+import SettingsPage from "./pages/SettingsPage";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import { NAV_ITEMS, DEFAULT_PAGE } from "./data/nav";
+import { initTheme } from "./theme";
 import "./App.css";
 import "./styles/fluent.css";
+
+// 启动即上色（模块加载期，早于首帧渲染，避免主题闪烁）
+initTheme();
 
 function App() {
   const [active, setActive] = useState(DEFAULT_PAGE);
@@ -69,8 +73,8 @@ function App() {
             <BudgetingPage />
           ) : active === "tools" ? (
             <ToolsPage />
-          ) : active === "help" ? (
-            <HelpPage />
+          ) : active === "settings" ? (
+            <SettingsPage />
           ) : currentItem ? (
             <PlaceholderPage item={currentItem} />
           ) : null}

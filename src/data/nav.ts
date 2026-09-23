@@ -79,11 +79,12 @@ export const NAV_ITEMS: NavItem[] = [
     summary: "间接经费二分法计算器（费率阶梯 20%/15%/13%）+ 树形列表工具（增删/批量/导入导出）",
   },
   {
-    key: "help",
-    label: "帮助",
-    icon: "help",
+    key: "settings",
+    label: "设置",
+    icon: "settings",
     position: "bottom",
-    summary: "三个展开卡片：软件简介 / 使用帮助 / 操作日志（100 条上限，JSON 字段级 diff）",
+    summary:
+      "外观主题（浅色/深色/跟随系统）、数据库管理（查看/切换/恢复默认）、系统维护（重建支出统计）、软件简介、使用帮助、操作日志（100 条上限，JSON 字段级 diff）",
   },
 ];
 

@@ -289,9 +289,9 @@ export default function ProjectProgressPage({
             width: "100%",
             flex: 1,
             minHeight: 0,
-            border: "1px solid #ddd",
+            border: "1px solid var(--border)",
             borderRadius: 8,
-            background: "#fff",
+            background: "var(--surface)",
           }}
         />
       )}
