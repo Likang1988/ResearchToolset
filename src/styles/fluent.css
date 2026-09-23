@@ -362,8 +362,14 @@ body {
 .home-col {
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
   min-height: 0;
+}
+
+/* 标题下方的卡片框（列内容所在，内部滚动） */
+.home-col-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .home-loading {

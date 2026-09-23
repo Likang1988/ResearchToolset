@@ -132,8 +132,9 @@ export default function HomePage({ onNavigate, refreshKey = 0 }: HomePageProps) 
           <div className="home-loading">正在加载主页数据…</div>
         ) : (
           <>
-            <div className="card home-col">
+            <div className="home-col">
               <div className="home-col-title">项目经费概览</div>
+              <div className="card home-col-body">
               {error && <div className="home-error">{error}</div>}
               {!error && overview && overview.funds.length === 0 && (
                 <div className="empty-state">
@@ -171,10 +172,12 @@ export default function HomePage({ onNavigate, refreshKey = 0 }: HomePageProps) 
               {overview !== null && overview.funds.length > 0 && (
                 <div className="home-hint">点击卡片进入项目经费页查看详情</div>
               )}
+              </div>
             </div>
 
-            <div className="card home-col">
+            <div className="home-col">
               <div className="home-col-title">项目进度概览</div>
+              <div className="card home-col-body">
               {error && <div className="home-error">{error}</div>}
               {!error && overview && overview.progress.length === 0 && (
                 <div className="empty-state">
@@ -214,6 +217,7 @@ export default function HomePage({ onNavigate, refreshKey = 0 }: HomePageProps) 
               {overview !== null && overview.progress.length > 0 && (
                 <div className="home-hint">点击卡片进入项目进度页查看详情</div>
               )}
+              </div>
             </div>
           </>
         )}
