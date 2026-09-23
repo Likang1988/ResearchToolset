@@ -728,6 +728,22 @@ button.danger-btn:hover:not(:disabled) {
   overflow: visible;
 }
 
+/* 表头需与提示文字一同固定的弹窗（如科目支出明细）：
+   body 不滚动，滚动移入表格容器内部——提示文字在滚动区外常驻，
+   sticky 表头吸附容器顶边紧随其下 */
+.dialog-body-fixed-table {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dialog-body-fixed-table .table-frame {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
 .dialog-footer {
   padding: 12px 20px;
   border-top: 1px solid var(--border);

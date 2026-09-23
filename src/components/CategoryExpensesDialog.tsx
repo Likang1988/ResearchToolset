@@ -114,7 +114,8 @@ export default function CategoryExpensesDialog({
             &times;
           </button>
         </div>
-        <div className="dialog-body">
+        {/* body 不自身滚动：提示文字固定，滚动只发生在表格容器内（表头随之吸顶） */}
+        <div className="dialog-body dialog-body-fixed-table">
           <p className="hint" style={{ marginBottom: 8 }}>
             {scopeLabel ? `${scopeLabel}中` : "项目全部年度中"}「{category}」
             科目的支出记录，共 {rows === null ? "…" : rows.length} 笔；科目预算{" "}
