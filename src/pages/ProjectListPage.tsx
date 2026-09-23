@@ -1,6 +1,6 @@
 // 项目清单页：调用 list_projects/add_project/update_project 命令，支持查看、新增和编辑
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import ProjectFormDialog, { ProjectFormData } from "../components/ProjectFormDialog";
@@ -48,6 +48,32 @@ export default function ProjectListPage() {
   const [filterType, setFilterType] = useState<string>("全部类别");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+
+  // 日期筛选默认值：现有项目最早开始日期 ~ 最晚结束日期（直接显示真实日期，
+  // 规避 WebView2 空态占位符混排「yyyy/mm/日」）。max 取结束与开始日期的较大者，
+  // 保证默认范围能覆盖所有项目的开始日期（数据缺 end_date 时也不会误滤）
+  const dateRange = useMemo(() => {
+    let min = "";
+    let max = "";
+    for (const p of projects) {
+      if (p.start_date) {
+        if (!min || p.start_date < min) min = p.start_date;
+        if (!max || p.start_date > max) max = p.start_date;
+      }
+      if (p.end_date && (!max || p.end_date > max)) max = p.end_date;
+    }
+    return { min, max };
+  }, [projects]);
+
+  // 首次拿到数据时填充默认范围（用户手动清空后不再回填）
+  const boundsInitRef = useRef(false);
+  useEffect(() => {
+    if (boundsInitRef.current) return;
+    if (!dateRange.min && !dateRange.max) return;
+    boundsInitRef.current = true;
+    setStartDate(dateRange.min);
+    setEndDate(dateRange.max);
+  }, [dateRange]);
 
   // 对话框状态
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -303,8 +329,9 @@ export default function ProjectListPage() {
   const resetFilters = () => {
     setKeyword("");
     setFilterType("全部类别");
-    setStartDate("");
-    setEndDate("");
+    // 重置回默认日期范围（等价于不过滤，同时始终显示真实日期）
+    setStartDate(dateRange.min);
+    setEndDate(dateRange.max);
   };
 
   if (loading) {
