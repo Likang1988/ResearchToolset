@@ -1481,6 +1481,10 @@ input.disabled-input {
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
+/* 日期控件被压缩时 Chromium 会降级为 yyyy/mm/日 之类的畸形格式，禁止收缩 */
+input[type="date"] {
+  flex-shrink: 0;
+}
 .expense-filter button {
   padding: 4px 10px;
   background-color: var(--bg);
