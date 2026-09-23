@@ -545,7 +545,8 @@ body {
   background-color: transparent;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  overflow: hidden;
+  /* 不可设 overflow:hidden：表格自身成为裁切容器会让 sticky 表头失效 */
+  overflow: visible;
   border-spacing: 0;
 }
 
@@ -559,6 +560,12 @@ body {
   border-bottom: 1px solid var(--border);
   font-size: 12px;
   white-space: nowrap;
+  /* 表头固定：在所属滚动容器（.table-frame / .dialog-body / 页面滚动区）内吸顶 */
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  /* collapse 模式下滚动时折叠边框不跟随 sticky，用内阴影补底边线 */
+  box-shadow: inset 0 -1px 0 var(--border);
 }
 
 .data-table thead th:last-child {
@@ -697,6 +704,12 @@ button.danger-btn:hover:not(:disabled) {
   padding: 20px;
   overflow-y: auto;
   flex: 1;
+}
+
+/* 对话框内的表格容器不再自建滚动区：让滚动发生在 dialog-body，
+   sticky 表头才能吸附其顶边 */
+.dialog-body .table-frame {
+  overflow: visible;
 }
 
 .dialog-footer {
