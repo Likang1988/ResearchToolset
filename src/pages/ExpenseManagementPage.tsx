@@ -1,7 +1,7 @@
 // 支出管理页：项目经费页子页（双击年度预算行进入）
 // 顶部工具栏（增删改+导出 Excel）+ 过滤器 + 支出列表 + 底部统计表
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
@@ -124,6 +124,52 @@ export default function ExpenseManagementPage({
     | "remarks";
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  // 列宽（px，可拖拽调整）：勾选/类别/内容/规格/供应商/金额/日期/备注/凭证
+  // 表头 fixed 布局下按比例分配剩余空间，拖动某列时其余列自动让位
+  const COL_MIN_W = 40;
+  const COL_MAX_W = 600;
+  const [colWidths, setColWidths] = useState<number[]>([
+    40, 100, 180, 100, 100, 110, 100, 140, 80,
+  ]);
+  const dragColRef = useRef<{ idx: number; startX: number; startW: number } | null>(null);
+
+  // 表头右侧的拖拽把手
+  const resizeHandle = (idx: number) => (
+    <span
+      className="th-resizer"
+      onClick={(e) => e.stopPropagation() /* 拖完不触发表头排序 */}
+      onPointerDown={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const th = e.currentTarget.closest("th");
+        dragColRef.current = {
+          idx,
+          startX: e.clientX,
+          startW: th ? th.getBoundingClientRect().width : colWidths[idx],
+        };
+        e.currentTarget.setPointerCapture(e.pointerId);
+        e.currentTarget.classList.add("active");
+      }}
+      onPointerMove={(e) => {
+        const d = dragColRef.current;
+        if (!d) return;
+        const w = Math.min(
+          COL_MAX_W,
+          Math.max(COL_MIN_W, d.startW + (e.clientX - d.startX))
+        );
+        setColWidths((prev) => prev.map((v, i) => (i === d.idx ? w : v)));
+      }}
+      onPointerUp={(e) => {
+        dragColRef.current = null;
+        e.currentTarget.classList.remove("active");
+      }}
+      onPointerCancel={(e) => {
+        dragColRef.current = null;
+        e.currentTarget.classList.remove("active");
+      }}
+    />
+  );
 
   // 刷新支出列表 + 预算节点
   const refresh = async () => {
@@ -651,9 +697,15 @@ export default function ExpenseManagementPage({
           {/* 支出列表 */}
           <div className="table-frame">
             <table className="data-table expense-table">
+              {/* fixed 布局 + colgroup 列宽：配合表头右侧把手拖拽调整 */}
+              <colgroup>
+                {colWidths.map((w, i) => (
+                  <col key={i} style={{ width: w }} />
+                ))}
+              </colgroup>
               <thead>
                 <tr>
-                  <th style={{ width: 40 }}>
+                  <th>
                     <input
                       type="checkbox"
                       checked={
@@ -662,29 +714,37 @@ export default function ExpenseManagementPage({
                       }
                       onChange={toggleSelectAll}
                     />
+                    {resizeHandle(0)}
                 </th>
                 <th className="sortable" onClick={() => toggleSort("category")}>
                   费用类别{sortIndicator("category")}
+                  {resizeHandle(1)}
                 </th>
                 <th className="sortable" onClick={() => toggleSort("content")}>
                   开支内容{sortIndicator("content")}
+                  {resizeHandle(2)}
                 </th>
                 <th className="sortable" onClick={() => toggleSort("specification")}>
                   规格型号{sortIndicator("specification")}
+                  {resizeHandle(3)}
                 </th>
                 <th className="sortable" onClick={() => toggleSort("supplier")}>
                   供应商{sortIndicator("supplier")}
+                  {resizeHandle(4)}
                 </th>
                 <th className="sortable" onClick={() => toggleSort("amount")}>
                   报账金额(元){sortIndicator("amount")}
+                  {resizeHandle(5)}
                 </th>
                 <th className="sortable" onClick={() => toggleSort("date")}>
                   报账日期{sortIndicator("date")}
+                  {resizeHandle(6)}
                 </th>
                 <th className="sortable" onClick={() => toggleSort("remarks")}>
                   备注{sortIndicator("remarks")}
+                  {resizeHandle(7)}
                 </th>
-                <th>凭证附件</th>
+                <th>凭证附件{resizeHandle(8)}</th>
               </tr>
             </thead>
             <tbody>
@@ -704,13 +764,13 @@ export default function ExpenseManagementPage({
                       onChange={() => toggleSelect(e.id)}
                     />
                   </td>
-                  <td>{e.category}</td>
-                  <td style={{ textAlign: "left" }}>{e.content}</td>
-                  <td>{e.specification ?? ""}</td>
-                  <td>{e.supplier ?? ""}</td>
+                  <td title={e.category}>{e.category}</td>
+                  <td style={{ textAlign: "left" }} title={e.content}>{e.content}</td>
+                  <td title={e.specification ?? ""}>{e.specification ?? ""}</td>
+                  <td title={e.supplier ?? ""}>{e.supplier ?? ""}</td>
                   <td className="num">{fmt(e.amount ?? 0)}</td>
-                  <td>{e.date ?? ""}</td>
-                  <td>{e.remarks ?? ""}</td>
+                  <td style={{ textAlign: "center" }}>{e.date ?? ""}</td>
+                  <td title={e.remarks ?? ""}>{e.remarks ?? ""}</td>
                   <td className="voucher-cell">
                     {/* 行内附件按钮：有附件→attach 图标，无附件→add 图标 */}
                     <button

@@ -605,6 +605,12 @@ body {
   color: var(--text);
 }
 
+/* 金额单元格统一右对齐（支出列表/明细弹窗/批量导入预览等） */
+.data-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .data-table tbody tr:hover td {
   background-color: var(--hover);
 }
@@ -1534,7 +1540,35 @@ input[type="date"] {
 }
 
 .expense-table {
-  table-layout: auto;
+  /* fixed 布局：列宽由 colgroup 决定（表头右侧把手拖拽调整），
+     内容超出显示省略号 + title 悬停提示 */
+  table-layout: fixed;
+}
+
+.expense-table th,
+.expense-table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 表头列宽拖拽把手 */
+.th-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 3;
+  user-select: none;
+  touch-action: none;
+}
+
+.th-resizer:hover,
+.th-resizer.active {
+  background-color: var(--accent);
+  opacity: 0.4;
 }
 
 /* 底部统计表：10 类 + 合计列，列宽收紧 */
