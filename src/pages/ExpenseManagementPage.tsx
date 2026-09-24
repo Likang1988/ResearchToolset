@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { EMPTY_RANGE_START, todayStr } from "../dateDefaults";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
 import ExpenseFormDialog, {
@@ -129,11 +130,17 @@ export default function ExpenseManagementPage({
   const boundsInitRef = useRef(false);
   useEffect(() => {
     if (boundsInitRef.current) return;
-    if (!dateRange.min && !dateRange.max) return;
-    boundsInitRef.current = true;
-    setFilterStartDate(dateRange.min);
-    setFilterEndDate(dateRange.max);
-  }, [dateRange]);
+    if (dateRange.min || dateRange.max) {
+      boundsInitRef.current = true;
+      setFilterStartDate(dateRange.min);
+      setFilterEndDate(dateRange.max);
+    } else if (!loading) {
+      // 数据已加载且为空（或全无日期值）：兜底 2020-01-01 ～ 今天，框内仍显示真实日期
+      boundsInitRef.current = true;
+      setFilterStartDate(EMPTY_RANGE_START);
+      setFilterEndDate(todayStr());
+    }
+  }, [dateRange, loading]);
 
   // 导出下拉菜单（导出Excel / 导出附件 合并为「导出」按钮）
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
@@ -304,8 +311,8 @@ export default function ExpenseManagementPage({
     setFilterMinAmount("");
     setFilterMaxAmount("");
     // 重置回默认日期范围（等价于不过滤，同时始终显示真实日期）
-    setFilterStartDate(dateRange.min);
-    setFilterEndDate(dateRange.max);
+    setFilterStartDate(dateRange.min || EMPTY_RANGE_START);
+    setFilterEndDate(dateRange.max || todayStr());
     setFilterKeyword("");
     setSortKey("date");
     setSortDir("desc");

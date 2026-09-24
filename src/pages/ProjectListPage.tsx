@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { EMPTY_RANGE_START, todayStr } from "../dateDefaults";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import ProjectFormDialog, { ProjectFormData } from "../components/ProjectFormDialog";
 import { emitProjectUpdated } from "../data/events";
@@ -69,11 +70,17 @@ export default function ProjectListPage() {
   const boundsInitRef = useRef(false);
   useEffect(() => {
     if (boundsInitRef.current) return;
-    if (!dateRange.min && !dateRange.max) return;
-    boundsInitRef.current = true;
-    setStartDate(dateRange.min);
-    setEndDate(dateRange.max);
-  }, [dateRange]);
+    if (dateRange.min || dateRange.max) {
+      boundsInitRef.current = true;
+      setStartDate(dateRange.min);
+      setEndDate(dateRange.max);
+    } else if (!loading) {
+      // 数据已加载且为空（或全无日期值）：兜底 2020-01-01 ～ 今天，框内仍显示真实日期
+      boundsInitRef.current = true;
+      setStartDate(EMPTY_RANGE_START);
+      setEndDate(todayStr());
+    }
+  }, [dateRange, loading]);
 
   // 对话框状态
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -330,8 +337,8 @@ export default function ProjectListPage() {
     setKeyword("");
     setFilterType("全部类别");
     // 重置回默认日期范围（等价于不过滤，同时始终显示真实日期）
-    setStartDate(dateRange.min);
-    setEndDate(dateRange.max);
+    setStartDate(dateRange.min || EMPTY_RANGE_START);
+    setEndDate(dateRange.max || todayStr());
   };
 
   if (loading) {
