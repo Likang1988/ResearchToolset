@@ -869,6 +869,44 @@ fn list_actionlogs(
     logging::list_actionlogs(&conn, limit).map_err(|e| format!("查询操作日志失败: {e}"))
 }
 
+/// 操作日志条件查询：返回 (当页行, 匹配总数)。
+#[tauri::command]
+fn query_action_logs(
+    state: State<'_, DbState>,
+    log_type: Option<String>,
+    action: Option<String>,
+    keyword: Option<String>,
+    start: Option<String>,
+    end: Option<String>,
+    limit: Option<i64>,
+    offset: Option<i64>,
+) -> Result<(Vec<Actionlog>, i64), String> {
+    let conn = state.conn.lock().map_err(|e| format!("数据库锁失败: {e}"))?;
+    let q = logging::LogQuery { log_type, action, keyword, start, end };
+    logging::query_actionlogs(
+        &conn,
+        &q,
+        limit.unwrap_or(200).clamp(1, 500),
+        offset.unwrap_or(0).max(0),
+    )
+    .map_err(|e| format!("查询操作日志失败: {e}"))
+}
+
+/// 操作日志筛选选项（类型、动作的去重列表）。
+#[tauri::command]
+fn action_log_facets(state: State<'_, DbState>) -> Result<(Vec<String>, Vec<String>), String> {
+    let conn = state.conn.lock().map_err(|e| format!("数据库锁失败: {e}"))?;
+    logging::actionlog_facets(&conn).map_err(|e| format!("查询日志筛选项失败: {e}"))
+}
+
+/// 清理 keep_days 天之前的操作日志，返回删除条数。
+#[tauri::command]
+fn prune_action_logs(state: State<'_, DbState>, keep_days: i64) -> Result<usize, String> {
+    let conn = state.conn.lock().map_err(|e| format!("数据库锁失败: {e}"))?;
+    logging::prune_actionlogs(&conn, keep_days.max(0))
+        .map_err(|e| format!("清理操作日志失败: {e}"))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let database_path = resolve_startup_db_path();
@@ -989,6 +1027,9 @@ pub fn run() {
             delete_activities,
             export_activities_excel,
             list_actionlogs,
+            query_action_logs,
+            action_log_facets,
+            prune_action_logs,
             calculate_indirect_cost,
             export_tree_list,
             import_tree_list

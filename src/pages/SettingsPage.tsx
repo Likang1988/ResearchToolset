@@ -144,6 +144,65 @@ export default function SettingsPage() {
   const [dbPath, setDbPath] = useState("");
   const [dbBusy, setDbBusy] = useState(false);
   const [dbError, setDbError] = useState("");
+  // 操作日志：筛选 / 分页 / 清理
+  const LOG_PAGE = 200;
+  const [logFilters, setLogFilters] = useState({
+    logType: "",
+    action: "",
+    keyword: "",
+    start: "",
+    end: "",
+  });
+  const [keywordDraft, setKeywordDraft] = useState("");
+  const [logFacets, setLogFacets] = useState<[string[], string[]]>([[], []]);
+  const [logTotal, setLogTotal] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [keepDays, setKeepDays] = useState(180);
+  const [confirmPrune, setConfirmPrune] = useState(false);
+  const [pruneBusy, setPruneBusy] = useState(false);
+  const [pruneMsg, setPruneMsg] = useState<string | null>(null);
+
+  const invokeLogQuery = (f: typeof logFilters, offset: number) =>
+    invoke<[ActionLog[], number]>("query_action_logs", {
+      logType: f.logType || null,
+      action: f.action || null,
+      keyword: f.keyword || null,
+      start: f.start || null,
+      end: f.end || null,
+      limit: LOG_PAGE,
+      offset,
+    });
+
+  const commitKeyword = () => {
+    if (keywordDraft !== logFilters.keyword) setLogFilters({ ...logFilters, keyword: keywordDraft });
+  };
+
+  const loadMoreLogs = () => {
+    setLoadingMore(true);
+    invokeLogQuery(logFilters, logs.length)
+      .then(([rows, total]) => {
+        setLogs((prev) => [...prev, ...rows]);
+        setLogTotal(total);
+      })
+      .catch((e) => setError(String(e)))
+      .finally(() => setLoadingMore(false));
+  };
+
+  const doPrune = async () => {
+    setPruneBusy(true);
+    try {
+      const n = await invoke<number>("prune_action_logs", {
+        keepDays: Math.max(0, Math.floor(keepDays)),
+      });
+      setPruneMsg(`已清理 ${n} 条旧日志`);
+      setReloadKey((k) => k + 1);
+    } catch (e) {
+      setPruneMsg(String(e));
+    } finally {
+      setPruneBusy(false);
+      setConfirmPrune(false);
+    }
+  };
 
   const pickTheme = (mode: ThemeMode) => {
     setTheme(mode);
@@ -187,17 +246,18 @@ export default function SettingsPage() {
     }
   };
 
-  // 挂载及 rebuild 后重新加载日志；顺带查询当前数据库路径
+  // 挂载/筛选变化/维护操作后重新加载日志；顺带查询当前数据库路径与筛选项
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     invoke<string>("db_path")
       .then(setDbPath)
       .catch((e) => setDbError(String(e)));
-    invoke<ActionLog[]>("list_actionlogs")
-      .then((data) => {
+    invokeLogQuery(logFilters, 0)
+      .then(([rows, total]) => {
         if (!cancelled) {
-          setLogs(data);
+          setLogs(rows);
+          setLogTotal(total);
           setError(null);
         }
       })
@@ -207,10 +267,16 @@ export default function SettingsPage() {
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
+    invoke<[string[], string[]]>("action_log_facets")
+      .then((f) => {
+        if (!cancelled) setLogFacets(f);
+      })
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [reloadKey]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reloadKey, logFilters]);
 
   const doRebuild = () => {
     setRebuildBusy(true);
@@ -427,6 +493,69 @@ export default function SettingsPage() {
         </ExpandCard>
 
         <ExpandCard title="操作日志">
+          <div className="expense-filter" style={{ marginBottom: 8 }}>
+            <label>类型:</label>
+            <select
+              value={logFilters.logType}
+              onChange={(e) => setLogFilters({ ...logFilters, logType: e.target.value })}
+            >
+              <option value="">全部类型</option>
+              {logFacets[0].map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+            <label>动作:</label>
+            <select
+              value={logFilters.action}
+              onChange={(e) => setLogFilters({ ...logFilters, action: e.target.value })}
+            >
+              <option value="">全部动作</option>
+              {logFacets[1].map((a) => (
+                <option key={a} value={a}>{a}</option>
+              ))}
+            </select>
+            <label>关键词:</label>
+            <input
+              type="text"
+              placeholder="描述 / 相关信息"
+              value={keywordDraft}
+              onChange={(e) => setKeywordDraft(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && commitKeyword()}
+              onBlur={commitKeyword}
+              style={{ width: 160 }}
+            />
+            <label>时间:</label>
+            <input
+              type="date"
+              value={logFilters.start}
+              onChange={(e) => setLogFilters({ ...logFilters, start: e.target.value })}
+            />
+            <span>至</span>
+            <input
+              type="date"
+              value={logFilters.end}
+              onChange={(e) => setLogFilters({ ...logFilters, end: e.target.value })}
+            />
+            <button
+              onClick={() => {
+                setKeywordDraft("");
+                setLogFilters({ logType: "", action: "", keyword: "", start: "", end: "" });
+              }}
+            >
+              重置
+            </button>
+            <div className="filter-actions">
+              <button onClick={() => setConfirmPrune(true)} disabled={pruneBusy}>
+                清理旧日志
+              </button>
+            </div>
+          </div>
+          {pruneMsg && (
+            <div className="help-log-status">
+              {pruneMsg}
+              <button className="close-btn" onClick={() => setPruneMsg(null)}>&times;</button>
+            </div>
+          )}
           {loading ? (
             <div className="help-log-status">正在加载操作日志…</div>
           ) : error ? (
@@ -434,38 +563,83 @@ export default function SettingsPage() {
               {error}
             </div>
           ) : logs.length === 0 ? (
-            <div className="help-log-status">暂无操作日志</div>
+            <div className="help-log-status">没有符合条件的操作日志</div>
           ) : (
-            <div className="help-log-wrap">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>时间</th>
-                    <th>类型</th>
-                    <th>动作</th>
-                    <th>描述</th>
-                    <th>相关信息</th>
-                    <th>原数据</th>
-                    <th>新数据</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {logs.map((log) => {
-                    const diff = findDiff(log.old_data, log.new_data);
-                    return (
-                      <tr key={log.id}>
-                        <td className="help-log-cell-nowrap">{log.timestamp ?? ""}</td>
-                        <td>{log.type}</td>
-                        <td>{log.action}</td>
-                        <td>{log.description}</td>
-                        <td>{log.related_info ?? ""}</td>
-                        <td className="help-log-cell-diff">{diffText("old", diff)}</td>
-                        <td className="help-log-cell-diff">{diffText("new", diff)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <>
+              <div className="help-log-status">
+                共 {logTotal} 条，已显示 {logs.length} 条
+              </div>
+              <div className="help-log-wrap">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>时间</th>
+                      <th>类型</th>
+                      <th>动作</th>
+                      <th>描述</th>
+                      <th>相关信息</th>
+                      <th>原数据</th>
+                      <th>新数据</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {logs.map((log) => {
+                      const diff = findDiff(log.old_data, log.new_data);
+                      return (
+                        <tr key={log.id}>
+                          <td className="help-log-cell-nowrap">{log.timestamp ?? ""}</td>
+                          <td>{log.type}</td>
+                          <td>{log.action}</td>
+                          <td>{log.description}</td>
+                          <td>{log.related_info ?? ""}</td>
+                          <td className="help-log-cell-diff">{diffText("old", diff)}</td>
+                          <td className="help-log-cell-diff">{diffText("new", diff)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {logs.length < logTotal && (
+                <div style={{ textAlign: "center", marginTop: 8 }}>
+                  <button onClick={loadMoreLogs} disabled={loadingMore}>
+                    {loadingMore ? "加载中…" : `加载更多（还有 ${logTotal - logs.length} 条）`}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+          {confirmPrune && (
+            <div className="dialog-overlay" onClick={() => setConfirmPrune(false)}>
+              <div
+                className="dialog-container"
+                style={{ width: 440 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="dialog-header">
+                  <h2>清理操作日志</h2>
+                  <button className="close-btn" onClick={() => setConfirmPrune(false)}>
+                    &times;
+                  </button>
+                </div>
+                <div className="dialog-body">
+                  将删除早于保留期的日志，保留最近{" "}
+                  <input
+                    type="number"
+                    min={0}
+                    value={keepDays}
+                    onChange={(e) => setKeepDays(Number(e.target.value))}
+                    style={{ width: 64 }}
+                  />{" "}
+                  天。清理行为本身会记入日志。确定继续？
+                </div>
+                <div className="dialog-footer">
+                  <button onClick={() => setConfirmPrune(false)}>取消</button>
+                  <button className="danger-btn" onClick={doPrune} disabled={pruneBusy}>
+                    {pruneBusy ? "清理中…" : "确认清理"}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </ExpandCard>

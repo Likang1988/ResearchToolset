@@ -1,1 +1,1 @@
-D:\PortableApps\ResearchToolset\database\database.db
+D:\SynoDrive\Databases\科研工具database.db
