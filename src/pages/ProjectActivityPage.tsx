@@ -5,7 +5,7 @@
 // + Excel 导出（export_activities_excel，9 列不含附件列）+ 附件打包导出（无子目录）
 // 注意：academic_activities 为全局表（无 project_id），本页无项目下拉。
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
@@ -41,16 +41,6 @@ interface ActivityAttachmentContext {
   base_folder: string | null;
 }
 
-// 本地时区 YYYY-MM-DD
-const dateStr = (d: Date) => {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-};
-
-// 默认日期范围：当年 1 月 1 日 ～ 今天（本地时区）
-const defaultStartDate = () => dateStr(new Date(new Date().getFullYear(), 0, 1));
-const defaultEndDate = () => dateStr(new Date());
-
 export default function ProjectActivityPage() {
   const [allActivities, setAllActivities] = useState<AcademicActivity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,8 +71,32 @@ export default function ProjectActivityPage() {
   const [keyword, setKeyword] = useState("");
   const [filterType, setFilterType] = useState<string>("全部类型");
   const [filterStatus, setFilterStatus] = useState<string>("全部状态");
-  const [startDate, setStartDate] = useState(defaultStartDate());
-  const [endDate, setEndDate] = useState(defaultEndDate());
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  // 默认日期范围：现有活动最早/最晚开始日期（直接显示真实日期，
+  // 规避 WebView2 空态占位符混排「yyyy/mm/日」，与项目清单页/支出管理页做法一致）
+  const dateRange = useMemo(() => {
+    let min = "";
+    let max = "";
+    for (const a of allActivities) {
+      const d = a.start_date;
+      if (!d) continue;
+      if (!min || d < min) min = d;
+      if (!max || d > max) max = d;
+    }
+    return { min, max };
+  }, [allActivities]);
+
+  // 首次拿到数据时填充默认范围（用户手动清空后不再回填）
+  const boundsInitRef = useRef(false);
+  useEffect(() => {
+    if (boundsInitRef.current) return;
+    if (!dateRange.min && !dateRange.max) return;
+    boundsInitRef.current = true;
+    setStartDate(dateRange.min);
+    setEndDate(dateRange.max);
+  }, [dateRange]);
 
   // 加载活动列表
   const refresh = async () => {
@@ -144,8 +158,9 @@ export default function ProjectActivityPage() {
     setKeyword("");
     setFilterType("全部类型");
     setFilterStatus("全部状态");
-    setStartDate(defaultStartDate());
-    setEndDate(defaultEndDate());
+    // 重置回默认日期范围（同时始终显示真实日期）
+    setStartDate(dateRange.min);
+    setEndDate(dateRange.max);
   };
 
   // 行选择

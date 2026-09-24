@@ -3,7 +3,7 @@
 // + 新增/编辑/删除（OutcomeFormDialog）+ 附件 5 个操作（查看/路径/下载/替换/删除/上传）
 // + Excel 导出（export_outcomes_excel）+ 附件打包导出（成果附件_{financial_code}）
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { openPath, revealItemInDir } from "@tauri-apps/plugin-opener";
@@ -44,17 +44,6 @@ interface OutcomeAttachmentContext {
   base_folder: string | null;
 }
 
-// 本地时区 YYYY-MM-DD
-const dateStr = (d: Date) => {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-};
-
-// 默认日期范围：去年 1 月 1 日 ～ 今天（本地时区）
-const defaultStartDate = () =>
-  dateStr(new Date(new Date().getFullYear() - 1, 0, 1));
-const defaultEndDate = () => dateStr(new Date());
-
 export default function ProjectOutcomePage() {
   // 项目下拉（"" = 全部成果）
   const [projects, setProjects] = useState<Project[]>([]);
@@ -89,8 +78,32 @@ export default function ProjectOutcomePage() {
   const [keyword, setKeyword] = useState("");
   const [filterType, setFilterType] = useState<string>("全部类型");
   const [filterStatus, setFilterStatus] = useState<string>("全部状态");
-  const [startDate, setStartDate] = useState(defaultStartDate());
-  const [endDate, setEndDate] = useState(defaultEndDate());
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  // 默认日期范围：现有成果最早/最晚发表·授权日期（直接显示真实日期，
+  // 规避 WebView2 空态占位符混排「yyyy/mm/日」，与项目清单页/支出管理页做法一致）
+  const dateRange = useMemo(() => {
+    let min = "";
+    let max = "";
+    for (const o of allOutcomes) {
+      const d = o.publish_date;
+      if (!d) continue;
+      if (!min || d < min) min = d;
+      if (!max || d > max) max = d;
+    }
+    return { min, max };
+  }, [allOutcomes]);
+
+  // 首次拿到数据时填充默认范围（用户手动清空后不再回填）
+  const boundsInitRef = useRef(false);
+  useEffect(() => {
+    if (boundsInitRef.current) return;
+    if (!dateRange.min && !dateRange.max) return;
+    boundsInitRef.current = true;
+    setStartDate(dateRange.min);
+    setEndDate(dateRange.max);
+  }, [dateRange]);
 
   const selectedProject =
     projectChoice === "" ? null : (projects.find((p) => p.id === Number(projectChoice)) ?? null);
@@ -166,8 +179,9 @@ export default function ProjectOutcomePage() {
     setKeyword("");
     setFilterType("全部类型");
     setFilterStatus("全部状态");
-    setStartDate(defaultStartDate());
-    setEndDate(defaultEndDate());
+    // 重置回默认日期范围（等价于不过滤，同时始终显示真实日期）
+    setStartDate(dateRange.min);
+    setEndDate(dateRange.max);
   };
 
   // 行选择
