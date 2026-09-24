@@ -100,7 +100,7 @@ fn add_project_inner(conn: &Connection, data: ProjectNew) -> Result<i64, DbError
         ),
         "系统用户",
         None,
-        Some(&project_fields_str(
+        Some(&project_fields_json(
             &data.name,
             &data.financial_code,
             &data.project_code,
@@ -189,7 +189,7 @@ fn update_project_inner(conn: &Connection, id: i64, data: ProjectNew) -> Result<
     )?;
 
     // 记录编辑项目的活动
-    let old_data = project_fields_str(
+    let old_data = project_fields_json(
         &old_name,
         &old_financial_code,
         &old_project_code,
@@ -199,7 +199,7 @@ fn update_project_inner(conn: &Connection, id: i64, data: ProjectNew) -> Result<
         old_budget,
         &old_director,
     );
-    let new_data = project_fields_str(
+    let new_data = project_fields_json(
         &data.name,
         &data.financial_code,
         &data.project_code,
@@ -317,9 +317,8 @@ fn delete_project_inner(conn: &Connection, id: i64) -> Result<(), DbError> {
     Ok(())
 }
 
-/// 操作日志 old_data/new_data 的项目字段串。
-/// 金额缺失时输出 `0.0`。
-fn project_fields_str(
+/// 操作日志 old_data/new_data 的项目字段 JSON（键与支出/预算日志统一为英文）。
+fn project_fields_json(
     name: &str,
     financial_code: &Option<String>,
     project_code: &Option<String>,
@@ -329,17 +328,17 @@ fn project_fields_str(
     total_budget: Option<f64>,
     director: &Option<String>,
 ) -> String {
-    format!(
-        "名称: {}, 财务编号: {}, 项目编号: {}, 类型: {}, 开始日期: {}, 结束日期: {}, 总经费: {}, 负责人: {}",
-        name,
-        financial_code.as_deref().unwrap_or(""),
-        project_code.as_deref().unwrap_or(""),
-        project_type.as_deref().unwrap_or(""),
-        start_date.as_deref().unwrap_or(""),
-        end_date.as_deref().unwrap_or(""),
-        total_budget.map(|v| v.to_string()).unwrap_or_else(|| "0.0".to_string()),
-        director.as_deref().unwrap_or(""),
-    )
+    serde_json::json!({
+        "name": name,
+        "financial_code": financial_code,
+        "project_code": project_code,
+        "project_type": project_type,
+        "start_date": start_date,
+        "end_date": end_date,
+        "total_budget": total_budget,
+        "director": director,
+    })
+    .to_string()
 }
 
 // ---------------------------------------------------------------------------
@@ -870,8 +869,8 @@ mod tests {
             )
             .unwrap();
         assert_eq!(cnt, 1);
-        assert!(old_data.contains("名称: 测试项目"));
-        assert!(old_data.contains("财务编号: F001"));
+        assert!(old_data.contains(r#""name":"测试项目""#));
+        assert!(old_data.contains(r#""financial_code":"F001""#));
 
         // 删除日志
         delete_project(&conn, id).unwrap();

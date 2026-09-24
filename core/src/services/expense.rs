@@ -344,7 +344,25 @@ fn insert_expense_row(conn: &Connection, input: &ExpenseInput) -> Result<i64, Db
 fn add_expense_inner(conn: &Connection, input: ExpenseInput) -> Result<i64, DbError> {
     let expense_id = insert_expense_row(conn, &input)?;
     let description = format!("添加支出：{}，金额：{:.2}元", input.content, input.amount);
-    write_expense_log(conn, &input, Some(expense_id), "添加", &description, None, None)?;
+    let new_data = serde_json::json!({
+        "category": input.category,
+        "content": input.content,
+        "specification": input.specification,
+        "supplier": input.supplier,
+        "amount": input.amount,
+        "date": input.date,
+        "remarks": input.remarks,
+        "voucher_path": input.voucher_path,
+    });
+    write_expense_log(
+        conn,
+        &input,
+        Some(expense_id),
+        "添加",
+        &description,
+        None,
+        Some(&new_data.to_string()),
+    )?;
     Ok(expense_id)
 }
 

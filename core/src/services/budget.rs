@@ -531,8 +531,8 @@ fn update_annual_budget_inner(
             year
         ),
         "系统用户",
-        Some(&format!("年度: {year}, 预算额: {old_amount}")),
-        Some(&format!("年度: {year}, 预算额: {total_amount}")),
+        Some(&serde_json::json!({ "year": year, "amount": old_amount }).to_string()),
+        Some(&serde_json::json!({ "year": year, "amount": total_amount }).to_string()),
         None,
         None,
         None,
@@ -693,8 +693,8 @@ fn update_total_budget_inner(
         "编辑",
         "编辑了项目总预算",
         "系统用户",
-        Some(&format!("总预算额: {old_amount}")),
-        Some(&format!("总预算额: {total_amount}")),
+        Some(&serde_json::json!({ "amount": old_amount }).to_string()),
+        Some(&serde_json::json!({ "amount": total_amount }).to_string()),
         None,
         None,
         None,
@@ -1560,8 +1560,8 @@ mod tests {
             )
             .unwrap();
         assert_eq!(act, "编辑");
-        assert!(old_data.as_deref().unwrap_or("").contains("预算额: 100"));
-        assert!(new_data.as_deref().unwrap_or("").contains("预算额: 200"));
+        assert!(old_data.as_deref().unwrap_or("").contains(r#""amount":100"#));
+        assert!(new_data.as_deref().unwrap_or("").contains(r#""amount":200"#));
 
         // 编辑总预算 → 1 条"编辑"（old_data 为原 0 总额）
         let total_id: i64 = conn
@@ -1581,8 +1581,8 @@ mod tests {
             )
             .unwrap();
         assert_eq!(act, "编辑");
-        assert!(old_data.as_deref().unwrap_or("").contains("总预算额: 0"));
-        assert!(new_data.as_deref().unwrap_or("").contains("总预算额: 50"));
+        assert!(old_data.as_deref().unwrap_or("").contains(r#""amount":0"#));
+        assert!(new_data.as_deref().unwrap_or("").contains(r#""amount":50"#));
 
         // 删除年度预算 → 1 条"删除"（budget_id 关联）
         delete_annual_budget(&conn, bid).unwrap();

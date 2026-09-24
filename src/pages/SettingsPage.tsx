@@ -85,16 +85,51 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 
 // diff 值格式化：字符串原样，数字/布尔转文本，对象 JSON 紧凑序列化
 function fmtValue(v: unknown): string {
-  if (v === null || v === undefined) return "null";
+  if (v === null || v === undefined) return "";
   if (typeof v === "object") return JSON.stringify(v);
   return String(v);
 }
 
-// 单侧 diff 文本：`key: value` 每行一条
+// JSON 快照里的英文字段名 → 中文显示名（与后端日志统一后的键集对齐；查不到回退原名）
+const FIELD_LABELS: Record<string, string> = {
+  name: "名称",
+  financial_code: "财务编号",
+  project_code: "项目编号",
+  project_type: "类型",
+  start_date: "开始日期",
+  end_date: "结束日期",
+  total_budget: "总经费",
+  director: "负责人",
+  year: "年度",
+  amount: "金额",
+  category: "经费类别",
+  content: "事由",
+  date: "日期",
+  supplier: "供应商",
+  specification: "规格型号",
+  unit: "单位",
+  quantity: "数量",
+  unit_price: "单价",
+  remarks: "备注",
+  voucher_path: "凭证文件",
+  contract_no: "合同编号",
+  invoice_no: "发票号",
+  code: "编码",
+  status: "状态",
+  progress: "进度",
+  duration: "工期",
+  responsible: "负责人",
+  level: "层级",
+  id: "ID",
+};
+
+// 单侧 diff 文本：`字段: 值` 每行一条；该侧为 null/空的字段不显示（避免 null 噪音）
 function diffText(side: "old" | "new", diff: Record<string, { old: unknown; new: unknown }>): string {
   const lines: string[] = [];
   for (const [key, values] of Object.entries(diff)) {
-    lines.push(`${key}: ${fmtValue(values[side])}`);
+    const text = fmtValue(values[side]);
+    if (!text) continue;
+    lines.push(key ? `${FIELD_LABELS[key] ?? key}: ${text}` : text);
   }
   return lines.join("\n");
 }
