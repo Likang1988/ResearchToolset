@@ -110,6 +110,31 @@ export default function ExpenseManagementPage({
   const [filterStartDate, setFilterStartDate] = useState<string>("");
   const [filterEndDate, setFilterEndDate] = useState<string>("");
   const [filterKeyword, setFilterKeyword] = useState<string>("");
+
+  // 日期筛选默认值：支出列表最早 ~ 最晚报账日期（直接显示真实日期，
+  // 规避 WebView2 空态占位符混排「yyyy/mm/日」，与项目清单页做法一致）
+  const dateRange = useMemo(() => {
+    let min = "";
+    let max = "";
+    for (const e of allExpenses) {
+      const d = e.date;
+      if (!d) continue;
+      if (!min || d < min) min = d;
+      if (!max || d > max) max = d;
+    }
+    return { min, max };
+  }, [allExpenses]);
+
+  // 首次拿到数据时填充默认范围（用户手动清空后不再回填）
+  const boundsInitRef = useRef(false);
+  useEffect(() => {
+    if (boundsInitRef.current) return;
+    if (!dateRange.min && !dateRange.max) return;
+    boundsInitRef.current = true;
+    setFilterStartDate(dateRange.min);
+    setFilterEndDate(dateRange.max);
+  }, [dateRange]);
+
   // 导出下拉菜单（导出Excel / 导出附件 合并为「导出」按钮）
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
 
@@ -278,8 +303,9 @@ export default function ExpenseManagementPage({
     setFilterCategory("全部");
     setFilterMinAmount("");
     setFilterMaxAmount("");
-    setFilterStartDate("");
-    setFilterEndDate("");
+    // 重置回默认日期范围（等价于不过滤，同时始终显示真实日期）
+    setFilterStartDate(dateRange.min);
+    setFilterEndDate(dateRange.max);
     setFilterKeyword("");
     setSortKey("date");
     setSortDir("desc");
