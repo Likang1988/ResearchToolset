@@ -17,14 +17,11 @@ import SettingsPage from "./pages/SettingsPage";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import { NAV_ITEMS, DEFAULT_PAGE } from "./data/nav";
 import { initTheme } from "./theme";
-import { initDateInputHints } from "./dateInputHint";
 import "./App.css";
 import "./styles/fluent.css";
 
 // 启动即上色（模块加载期，早于首帧渲染，避免主题闪烁）
 initTheme();
-// 日期输入框空态占位统一（observer 兜底首帧与后续动态节点）
-initDateInputHints();
 
 function App() {
   const [active, setActive] = useState(DEFAULT_PAGE);

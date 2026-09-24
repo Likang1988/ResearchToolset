@@ -1521,29 +1521,6 @@ input.disabled-input {
 input[type="date"] {
   flex-shrink: 0;
 }
-
-/* 日期空态占位统一（src/dateInputHint.ts 包装结构）：
-   隐藏跟随系统区域的 native 字段文本，叠加纯格式提示，杜绝 locale 混杂 */
-.rt-date-wrap {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  flex: none;
-}
-.rt-date-wrap:not(.rt-date-filled) input[type="date"]::-webkit-datetime-edit {
-  visibility: hidden;
-}
-.rt-date-ghost {
-  position: absolute;
-  left: 7px;
-  color: var(--text-muted);
-  font-size: 13px;
-  pointer-events: none;
-  user-select: none;
-}
-.rt-date-wrap.rt-date-filled .rt-date-ghost {
-  display: none;
-}
 .expense-filter button {
   padding: 4px 10px;
   background-color: var(--bg);
