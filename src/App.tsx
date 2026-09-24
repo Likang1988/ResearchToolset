@@ -17,11 +17,14 @@ import SettingsPage from "./pages/SettingsPage";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import { NAV_ITEMS, DEFAULT_PAGE } from "./data/nav";
 import { initTheme } from "./theme";
+import { initDateWheelAdjust } from "./dateWheel";
 import "./App.css";
 import "./styles/fluent.css";
 
 // 启动即上色（模块加载期，早于首帧渲染，避免主题闪烁）
 initTheme();
+// 日期输入框滚轮调节（全应用统一接管）
+initDateWheelAdjust();
 
 function App() {
   const [active, setActive] = useState(DEFAULT_PAGE);
